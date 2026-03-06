@@ -9,7 +9,7 @@ let state = {
     serverUrl: 'dms.mistium.com',
     priorityServer: null,
     validatorsByServer: {},
-    server: {},
+    server: null,
     channelsByServer: {},
     currentChannel: null,
     messagesByServer: {},
@@ -419,6 +419,10 @@ function updateTitleWithPings() {
     if (pingCount > 0) {
         document.title = `(${pingCount}) ${state.server}${state.currentChannel ? ' - ' + state.currentChannel.name : ''}`;
     } else {
+        if (!state.server) {
+            document.title = 'OriginChats';
+            return;
+        }
         document.title = `${state.server.name}${state.currentChannel ? ' - ' + state.currentChannel.name : ''}`;
     }
 }
@@ -1472,12 +1476,12 @@ function switchServer(url) {
         if (key.startsWith(`${url}:`)) delete state.unreadPings[key];
     });
     renderGuildSidebar();
-    updateTitleWithPings();
     state.currentChannel = null;
 
     if (!wsConnections[url] || wsConnections[url].status !== 'connected') connectToServer(url);
 
     const server = state.servers.find(s => s.url === url);
+    state.server = server;
     const serverName = server ? server.name : (url === 'dms.mistium.com' ? 'Direct Messages' : url);
     document.getElementById('server-name').innerHTML = `<span>${serverName}</span>`;
 
@@ -1524,6 +1528,7 @@ function switchServer(url) {
         document.getElementById('messages').innerHTML = '';
     }
 
+    updateTitleWithPings();
     renderMembers(state.currentChannel);
     state.switchingServer = false;
 }
@@ -1784,21 +1789,26 @@ const pingRegex = /@[^ ,.\W]+([ \n]|$)/g;
 
 async function handleMessage(msg, serverUrl) {
     switch (msg.cmd || msg.type) {
-        case 'handshake':
+        case 'handshake': {
             if (!state.channelsByServer[serverUrl]) state.channelsByServer[serverUrl] = [];
             if (!state.messagesByServer[serverUrl]) state.messagesByServer[serverUrl] = {};
             if (!state.pingsByServer[serverUrl]) state.pingsByServer[serverUrl] = {};
             if (!state.usersByServer[serverUrl]) state.usersByServer[serverUrl] = {};
 
-            state.server = msg.val.server;
-            state.server.url = serverUrl;
-            if (serverUrl === 'dms.mistium.com') state.server.name = 'Direct Messages';
+            const server = msg.val.server;
+            server.url = serverUrl;
+            if (serverUrl === 'dms.mistium.com') {
+                server.name = 'Direct Messages';
+                if (state.server === null) {
+                    state.server = server;
+                }
+            }
 
             authRetries[serverUrl] = 0;
             if (authRetryTimeouts[serverUrl]) { clearTimeout(authRetryTimeouts[serverUrl]); authRetryTimeouts[serverUrl] = null; }
 
             serverValidatorKeys[serverUrl] = msg.val.validator_key;
-            saveServer(state.server);
+            saveServer(server);
 
             const serverChannelHeader = document.getElementById('server-channel-header');
             if (serverUrl === 'dms.mistium.com') {
@@ -1814,7 +1824,7 @@ async function handleMessage(msg, serverUrl) {
             updateGuildActiveState();
             authenticateServer(serverUrl);
             break;
-
+        }
         case 'ready':
             if (!state.usersByServer[serverUrl]) state.usersByServer[serverUrl] = {};
             state.currentUserByServer[serverUrl] = msg.user;
@@ -2251,10 +2261,8 @@ async function selectChannel(channel) {
 
         if (state.unreadPings[channel.name]) delete state.unreadPings[channel.name];
         if (state.unreadReplies[channel.name]) delete state.unreadReplies[channel.name];
-        updateTitleWithPings();
         if (state.unreadReplies[channel.name]) delete state.unreadReplies[channel.name];
         renderChannels();
-        updateTitleWithPings();
 
         document.querySelectorAll('.channel-item').forEach(el => el.classList.remove('active'));
         const noteItem = Array.from(document.querySelectorAll('.channel-item')).find(el => el.querySelector('[data-channel-name]')?.dataset.channelName === 'notes');
@@ -2359,6 +2367,7 @@ async function selectChannel(channel) {
     textbox.value = "";
     textbox.placeholder = window.canSendMessages ? `Type a message...` : `Cannot send messages here.`;
     textbox.disabled = !window.canSendMessages;
+    updateTitleWithPings();
 }
 
 function selectHomeChannel() {
