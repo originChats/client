@@ -4290,7 +4290,6 @@ function initAppearanceSettings() {
     const wallpaperOpacity = document.getElementById('wallpaper-opacity');
     const wallpaperOpacitySlider = document.getElementById('wallpaper-opacity-slider');
     const themePreviews = document.querySelectorAll('.theme-preview-option');
-    const borderRadiusSlider = document.getElementById('border-radius-slider');
     const fontFamilySelect = document.getElementById('font-family-select');
     const messageGrouping = document.getElementById('message-grouping');
     const enableAnimations = document.getElementById('enable-animations');
@@ -4317,13 +4316,6 @@ function initAppearanceSettings() {
     if (messageGrouping) {
         const v = localStorage.getItem('originchats_message_grouping') !== 'false';
         messageGrouping.checked = v;
-    }
-    if (borderRadiusSlider) {
-        const r = parseInt(localStorage.getItem('originchats_border_radius') || '12');
-        borderRadiusSlider.value = r;
-        const span = document.getElementById('border-radius-value');
-        if (span) span.textContent = r + 'px';
-        applyBorderRadius(r);
     }
     if (fontFamilySelect) { const f = localStorage.getItem('originchats_font_family') || 'system'; fontFamilySelect.value = f; applyFontFamily(f); }
 
@@ -4374,15 +4366,6 @@ function initAppearanceSettings() {
     if (messageGrouping) {
         messageGrouping.addEventListener('change', (e) => { localStorage.setItem('originchats_message_grouping', e.target.checked); applyMessageGrouping(e.target.checked); });
     }
-    if (borderRadiusSlider) {
-        borderRadiusSlider.addEventListener('input', (e) => {
-            const r = parseInt(e.target.value);
-            const span = document.getElementById('border-radius-value');
-            if (span) span.textContent = r + 'px';
-            localStorage.setItem('originchats_border_radius', r);
-            applyBorderRadius(r);
-        });
-    }
     if (fontFamilySelect) {
         fontFamilySelect.addEventListener('change', (e) => { localStorage.setItem('originchats_font_family', e.target.value); applyFontFamily(e.target.value); });
     }
@@ -4432,12 +4415,6 @@ function applyMessageGrouping(enabled) {
     document.body.classList.toggle('no-message-grouping', !enabled);
     const messages = state.messagesByServer[state.serverUrl]?.[state.currentChannel?.name];
     if (messages) renderMessages(messages, false);
-}
-
-function applyBorderRadius(radius) {
-    document.documentElement.style.setProperty('--border-radius', radius + 'px');
-    document.documentElement.style.setProperty('--chat-radius', Math.max(radius, 12) + 'px');
-    document.documentElement.style.setProperty('--avatar-radius', Math.floor(radius / 2) + 'px');
 }
 
 function applyFontFamily(font) {
@@ -4512,7 +4489,6 @@ document.addEventListener('DOMContentLoaded', () => {
         [localStorage.getItem('originchats_font_size'), v => applyFontSize(v)],
         [localStorage.getItem('originchats_theme'), v => applyTheme(v)],
         [localStorage.getItem('originchats_message_grouping'), v => applyMessageGrouping(v === 'true')],
-        [localStorage.getItem('originchats_border_radius'), v => applyBorderRadius(parseInt(v))],
         [localStorage.getItem('originchats_font_family'), v => applyFontFamily(v)],
         [localStorage.getItem('originchats_enable_animations'), v => applyAnimations(v === 'true')],
         [localStorage.getItem('originchats_reduce_motion'), v => v === 'true' && applyReduceMotion(true)],
