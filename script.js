@@ -21,8 +21,10 @@ let state = {
     serverPingsByServer: {},
     memberListDrawn: false,
     unreadPings: {},
+    unreadReplies: {},
     unreadCountsByServer: {},
     unreadByChannel: {},
+    readTimesByServer: {},
     _avatarCache: {},
     _avatarLoading: {},
     typingUsersByServer: {},
@@ -349,6 +351,50 @@ async function saveServers() {
     }
 }
 
+async function loadReadTimes() {
+    const path = '/application data/chats@mistium/read_times.json';
+    try {
+        await originFS.createFolders('/application data/chats@mistium');
+        const content = await originFS.readFileContent(path);
+        return JSON.parse(content);
+    } catch (error) {
+        return {};
+    }
+}
+
+async function saveReadTimes() {
+    const path = '/application data/chats@mistium/read_times.json';
+    const content = JSON.stringify(state.readTimesByServer);
+    try {
+        await originFS.createFolders('/application data/chats@mistium');
+        if (await originFS.exists(path)) {
+            await originFS.writeFile(path, content);
+        } else {
+            await originFS.createFile(path, content);
+        }
+        await originFS.commit();
+    } catch (error) {
+        console.error('Failed to save read times:', error);
+    }
+}
+
+function isChannelUnread(channel, serverUrl) {
+    if (!channel.last_message) return false;
+    const readTime = state.readTimesByServer[serverUrl]?.[channel.name];
+    if (readTime === undefined) return true;
+    return channel.last_message > readTime;
+}
+
+function hasServerUnread(serverUrl) {
+    const channels = state.channelsByServer[serverUrl];
+    if (!channels || channels.length === 0) return false;
+    return channels.some(channel => {
+        if (!checkPermission(channel.permissions?.view, state.currentUser?.roles)) return false;
+        if (channel.type === 'separator' || channel.name === 'cmds') return false;
+        return typeof isChannelUnread === 'function' && isChannelUnread(channel, serverUrl);
+    });
+}
+
 function getChannelDisplayName(channel) {
     return channel.display_name || channel.name;
 }
@@ -365,6 +411,16 @@ function playPingSound() {
     gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
     oscillator.start(audioContext.currentTime);
     oscillator.stop(audioContext.currentTime + 0.3);
+}
+
+function updateTitleWithPings() {
+    const channelKey = `${state.serverUrl}:${state.currentChannel?.name}`;
+    const pingCount = (state.unreadPings[channelKey] || 0) + (state.unreadReplies[channelKey] || 0);
+    if (pingCount > 0) {
+        document.title = `(${pingCount}) ${state.server}${state.currentChannel ? ' - ' + state.currentChannel.name : ''}`;
+    } else {
+        document.title = `${state.server}${state.currentChannel ? ' - ' + state.currentChannel.name : ''}`;
+    }
 }
 
 window.onload = async function () {
@@ -406,6 +462,8 @@ window.onload = async function () {
 
     const savedDMServers = localStorage.getItem('originchats_dm_servers');
     if (savedDMServers) state.dmServers = JSON.parse(savedDMServers);
+
+    state.readTimesByServer = await loadReadTimes();
 
     state.servers.forEach(server => {
         if (!state.unreadCountsByServer[server.url]) state.unreadCountsByServer[server.url] = 0;
@@ -1049,7 +1107,7 @@ function renderGuildSidebar() {
         }
 
         const homePill = homeGuild.querySelector('.guild-pill');
-        if (homePill) homePill.classList.toggle('unread', state.unreadCountsByServer['dms.mistium.com'] > 0);
+        if (homePill) homePill.classList.toggle('unread', state.unreadCountsByServer['dms.mistium.com'] > 0 || hasServerUnread('dms.mistium.com'));
 
         const existingPing = homeGuild.querySelector('.guild-ping');
         if (state.serverPingsByServer['dms.mistium.com'] > 0) {
@@ -1088,7 +1146,10 @@ function renderGuildSidebar() {
             const pill = document.createElement('div');
             pill.className = 'guild-pill';
             const channelKey = `dms.mistium.com:${dmServer.channel}`;
-            if (state.unreadByChannel[channelKey] > 0) pill.classList.add('unread');
+            const channels = state.channelsByServer['dms.mistium.com'] || [];
+            const dmChannel = channels.find(c => c.name === dmServer.channel);
+            const hasTimestampUnread = dmChannel && typeof isChannelUnread === 'function' && isChannelUnread(dmChannel, 'dms.mistium.com');
+            if (state.unreadByChannel[channelKey] > 0 || hasTimestampUnread) pill.classList.add('unread');
 
             item.appendChild(icon);
             item.appendChild(pill);
@@ -1167,7 +1228,7 @@ function renderGuildSidebar() {
 
         const pill = document.createElement('div');
         pill.className = 'guild-pill';
-        if (state.unreadCountsByServer[server.url] > 0) pill.classList.add('unread');
+        if (state.unreadCountsByServer[server.url] > 0 || hasServerUnread(server.url)) pill.classList.add('unread');
 
         item.appendChild(icon);
         item.appendChild(pill);
@@ -1404,7 +1465,14 @@ function switchServer(url) {
     localStorage.setItem('serverUrl', url);
     state.unreadCountsByServer[url] = 0;
     if (state.serverPingsByServer[url]) state.serverPingsByServer[url] = 0;
+    Object.keys(state.unreadReplies).forEach(key => {
+        if (key.startsWith(`${url}:`)) delete state.unreadReplies[key];
+    });
+    Object.keys(state.unreadPings).forEach(key => {
+        if (key.startsWith(`${url}:`)) delete state.unreadPings[key];
+    });
     renderGuildSidebar();
+    updateTitleWithPings();
     state.currentChannel = null;
 
     if (!wsConnections[url] || wsConnections[url].status !== 'connected') connectToServer(url);
@@ -1774,6 +1842,7 @@ async function handleMessage(msg, serverUrl) {
             console.log('[DEBUG] channels_get received for server:', serverUrl, 'msg.val:', msg.val);
             state.channelsByServer[serverUrl] = msg.val;
             state.loadingChannelsByServer[serverUrl] = false;
+            renderGuildSidebar();
             if (state.serverUrl === serverUrl) {
                 renderChannels();
                 if (!state.currentChannel && state.channels.length > 0 && serverUrl !== 'dms.mistium.com') {
@@ -1918,9 +1987,24 @@ async function handleMessage(msg, serverUrl) {
                         playPingSound();
                         const notifBody = msg.message.content.length > 100 ? msg.message.content.substring(0, 100) + '...' : msg.message.content;
                         showNotification(`${msg.message.user} mentioned you in #${msg.channel}`, notifBody, msg.channel);
+                        updateTitleWithPings();
                         if (!state.serverPingsByServer[serverUrl]) state.serverPingsByServer[serverUrl] = 0;
                         state.serverPingsByServer[serverUrl]++;
                         renderGuildSidebar();
+                    }
+                }
+                if (msg.message.reply_to && state.messagesByServer[serverUrl]?.[msg.channel]) {
+                    const originalMsg = state.messagesByServer[serverUrl][msg.channel].find(m => m.id === msg.message.reply_to.id);
+                    if (originalMsg && originalMsg.user === state.currentUser.username) {
+                        if (state.serverUrl !== serverUrl || msg.channel !== state.currentChannel?.name) {
+                            if (!state.unreadReplies[msg.channel]) state.unreadReplies[msg.channel] = 0;
+                            state.unreadReplies[msg.channel]++;
+                            if (state.serverUrl === serverUrl) renderChannels();
+                        }
+                        playPingSound();
+                        const notifBody = msg.message.content.length > 100 ? msg.message.content.substring(0, 100) + '...' : msg.message.content;
+                        showNotification(`${msg.message.user} replied to your message in #${msg.channel}`, notifBody, msg.channel);
+                        updateTitleWithPings();
                     }
                 }
             }
@@ -2166,7 +2250,11 @@ async function selectChannel(channel) {
         channelNameEl.appendChild(document.createTextNode('Notes'));
 
         if (state.unreadPings[channel.name]) delete state.unreadPings[channel.name];
+        if (state.unreadReplies[channel.name]) delete state.unreadReplies[channel.name];
+        updateTitleWithPings();
+        if (state.unreadReplies[channel.name]) delete state.unreadReplies[channel.name];
         renderChannels();
+        updateTitleWithPings();
 
         document.querySelectorAll('.channel-item').forEach(el => el.classList.remove('active'));
         const noteItem = Array.from(document.querySelectorAll('.channel-item')).find(el => el.querySelector('[data-channel-name]')?.dataset.channelName === 'notes');
@@ -2232,6 +2320,13 @@ async function selectChannel(channel) {
     channelNameEl.appendChild(document.createTextNode(getChannelDisplayName(channel)));
 
     if (state.unreadPings[channel.name]) delete state.unreadPings[channel.name];
+
+    if (!state.readTimesByServer[state.serverUrl]) state.readTimesByServer[state.serverUrl] = {};
+    const readTime = channel.last_message;
+    if (readTime && state.readTimesByServer[state.serverUrl][channel.name] !== readTime) {
+        state.readTimesByServer[state.serverUrl][channel.name] = readTime;
+        saveReadTimes();
+    }
 
     Object.keys(state.pendingMessageFetchesByChannel).forEach(key => {
         if (key !== channelKey && key.startsWith(`${state.serverUrl}:`)) delete state.pendingMessageFetchesByChannel[key];
@@ -2477,7 +2572,7 @@ function getAvatar(username, size = null) {
     img.src = avatarUrl;
     img.onload = () => {
         if (!state._avatarLoading[username]) state._avatarLoading[username] = fetchAvatarBase64(username);
-        state._avatarLoading[username].then(dataUri => { state._avatarCache[username] = dataUri; img.src = dataUri; }).catch(() => {});
+        state._avatarLoading[username].then(dataUri => { state._avatarCache[username] = dataUri; img.src = dataUri; }).catch(() => { });
     };
     img.onerror = () => { img.src = defaultAvatar; };
     return img;
@@ -2536,7 +2631,7 @@ function getDaySeparator(timestamp) {
     yesterday.setDate(yesterday.getDate() - 1);
     let text = date.toDateString() === now.toDateString() ? 'Today'
         : date.toDateString() === yesterday.toDateString() ? 'Yesterday'
-        : date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+            : date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
 
     const separator = document.createElement('div');
     separator.className = 'day-separator';
@@ -2625,7 +2720,7 @@ async function renderMessages(scrollToBottom = true) {
         try {
             observer = new MutationObserver(() => { if (!state._olderLoading && nearBottom()) scrollBottom(); });
             observer.observe(container, { childList: true, subtree: true });
-        } catch {}
+        } catch { }
         container.querySelectorAll('img').forEach(img => {
             if (!img.complete) {
                 const handler = () => { if (!state._olderLoading && nearBottom()) scrollBottom(); };
@@ -3080,13 +3175,15 @@ function openMessageContextMenu(event, msg) {
     }
     items.push(
         { label: 'Reply to message', icon: 'message-circle', callback: () => replyToMessage(msg) },
-        { label: 'Add reaction', icon: 'smile', callback: () => {
-            const anchor = document.createElement('div');
-            anchor.style.cssText = `position: absolute; left: ${event.clientX}px; top: ${event.clientY}px;`;
-            document.body.appendChild(anchor);
-            openReactionPicker(msg.id, anchor);
-            setTimeout(() => anchor.remove(), 100);
-        }},
+        {
+            label: 'Add reaction', icon: 'smile', callback: () => {
+                const anchor = document.createElement('div');
+                anchor.style.cssText = `position: absolute; left: ${event.clientX}px; top: ${event.clientY}px;`;
+                document.body.appendChild(anchor);
+                openReactionPicker(msg.id, anchor);
+                setTimeout(() => anchor.remove(), 100);
+            }
+        },
         { label: 'Delete message', icon: 'trash-2', callback: () => deleteMessage(msg) }
     );
     showContextMenu(event, items);
@@ -3094,17 +3191,19 @@ function openMessageContextMenu(event, msg) {
 
 function openLinkContextMenu(event, url) {
     showContextMenu(event, [
-        { label: 'Copy URL', icon: 'copy', callback: () => {
-            navigator.clipboard.writeText(url).catch(() => {
-                const ta = document.createElement('textarea');
-                ta.value = url;
-                ta.style.cssText = 'position: fixed; left: -9999px;';
-                document.body.appendChild(ta);
-                ta.select();
-                try { document.execCommand('copy'); } catch {}
-                document.body.removeChild(ta);
-            });
-        }},
+        {
+            label: 'Copy URL', icon: 'copy', callback: () => {
+                navigator.clipboard.writeText(url).catch(() => {
+                    const ta = document.createElement('textarea');
+                    ta.value = url;
+                    ta.style.cssText = 'position: fixed; left: -9999px;';
+                    document.body.appendChild(ta);
+                    ta.select();
+                    try { document.execCommand('copy'); } catch { }
+                    document.body.removeChild(ta);
+                });
+            }
+        },
         { label: 'Open in new tab', icon: 'external-link', callback: () => window.open(url, '_blank', 'noopener,noreferrer') }
     ]);
 }
@@ -4089,11 +4188,13 @@ if (input) {
 
 function showDMContextMenu(event, dmServer) {
     showContextMenu(event, [
-        { label: 'Remove from sidebar', icon: 'x-circle', callback: () => {
-            state.dmServers = state.dmServers.filter(dm => dm.channel !== dmServer.channel);
-            localStorage.setItem('originchats_dm_servers', JSON.stringify(state.dmServers));
-            renderGuildSidebar();
-        }}
+        {
+            label: 'Remove from sidebar', icon: 'x-circle', callback: () => {
+                state.dmServers = state.dmServers.filter(dm => dm.channel !== dmServer.channel);
+                localStorage.setItem('originchats_dm_servers', JSON.stringify(state.dmServers));
+                renderGuildSidebar();
+            }
+        }
     ]);
 }
 

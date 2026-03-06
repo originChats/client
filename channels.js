@@ -389,12 +389,13 @@ function updateChannelElement(element, channel, index) {
   const nameSpan = element.querySelector('span[data-channel-name]');
   if (nameSpan && channel.type !== 'home' && channel.type !== 'relationships') {
     const channelKey = `${state.serverUrl}:${channel.name}`;
-    const hasUnread = state.unreadByChannel[channelKey] > 0;
+    const hasOldUnread = state.unreadByChannel[channelKey] > 0;
+    const hasNewUnread = typeof isChannelUnread === 'function' && isChannelUnread(channel, state.serverUrl);
     const hasPings = state.unreadPings[channel.name] > 0;
 
     nameSpan.textContent = getChannelDisplayName(channel);
 
-    if (hasUnread || hasPings) {
+    if (hasOldUnread || hasNewUnread || hasPings) {
       nameSpan.style.fontWeight = '600';
       nameSpan.style.color = 'var(--text)';
     } else {
@@ -509,7 +510,9 @@ function updateChannelActiveState(element, channelName, index) {
 
 function addChannelIndicators(element, channel) {
     const channelKey = `${state.serverUrl}:${channel.name}`;
-    const hasUnread = state.unreadByChannel[channelKey] > 0;
+    const hasOldUnread = state.unreadByChannel[channelKey] > 0;
+    const hasNewUnread = typeof isChannelUnread === 'function' && isChannelUnread(channel, state.serverUrl);
+    const hasUnread = hasOldUnread || hasNewUnread;
     const hasPings = state.unreadPings[channel.name] > 0;
 
     let badge = element.querySelector('.ping-badge');
@@ -555,7 +558,9 @@ function addChannelIndicators(element, channel) {
 
 function updateChannelIndicators(element, channel) {
     const channelKey = `${state.serverUrl}:${channel.name}`;
-    const hasUnread = state.unreadByChannel[channelKey] > 0;
+    const hasOldUnread = state.unreadByChannel[channelKey] > 0;
+    const hasNewUnread = typeof isChannelUnread === 'function' && isChannelUnread(channel, state.serverUrl);
+    const hasUnread = hasOldUnread || hasNewUnread;
     const hasPings = state.unreadPings[channel.name] > 0;
 
     let badge = element.querySelector('.ping-badge');
