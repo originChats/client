@@ -367,13 +367,19 @@
       }
     },
 
-    _closeSearch: function () {
-      window.MembersContent.render({ type: 'members', channel: window.state?.currentChannel });
-    },
+_closeSearch: function () {
+  if (window.isMediumScreen && window.isMediumScreen() && window.closeMembersOverlay) {
+    window.closeMembersOverlay();
+  }
+  window.MembersContent.render({ type: 'members', channel: window.state?.currentChannel });
+},
 
-    _closePinned: function () {
-      window.MembersContent.render({ type: 'members', channel: window.state?.currentChannel });
-    },
+_closePinned: function () {
+  if (window.isMediumScreen && window.isMediumScreen() && window.closeMembersOverlay) {
+    window.closeMembersOverlay();
+  }
+  window.MembersContent.render({ type: 'members', channel: window.state?.currentChannel });
+},
 
     _formatTime: function (timestamp) {
       const date = new Date(timestamp * 1000);

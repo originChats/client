@@ -1137,14 +1137,50 @@ p {
     color: var(--text);
 }
 
-@media (min-width: 769px) {
-    .members-header {
-        display: none;
-    }
+@media (min-width: 1051px) {
+  .members-header {
+    display: none;
+  }
+}
+
+@media (min-width: 769px) and (max-width: 1050px) {
+  .members-header {
+    display: flex;
+  }
+
+  #members-list {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 280px;
+    max-width: 85vw;
+    background: var(--surface);
+    z-index: 1000;
+    transform: translateX(100%);
+    box-shadow: -4px 0 24px rgba(0, 0, 0, 0.5);
+    border-radius: 16px 0 0 16px;
+    border-left: 1px solid var(--border);
+    padding: 0;
+  }
+
+  #members-list.open {
+    transform: translateX(0);
+  }
+
+  .main-content-area>#members-list {
+    width: 280px;
+    max-width: 85vw;
+    border-left: none;
+  }
+
+  #chat-screen.overlay-active .main-content-area {
+    filter: blur(4px);
+  }
 }
 
 @media (max-width: 768px) {
-    .channels {
+  .channels {
         position: fixed;
         left: 56px;
         /* Start after guild sidebar on mobile */
@@ -1318,22 +1354,6 @@ p {
     gap: 0;
     overscroll-behavior-y: contain;
     position: relative;
-}
-
-.virtual-scroll-viewport {
-    flex: 1;
-    overflow-y: auto;
-    padding: var(--space-3) var(--space-4) var(--space-4);
-}
-
-.virtual-scroll-content {
-    position: relative;
-}
-
-.virtual-scroll-content>* {
-    position: absolute;
-    left: 0;
-    right: 0;
 }
 
 .messages::before {
@@ -5297,12 +5317,6 @@ body {
     overscroll-behavior-x: none;
 }
 
-.virtual-scroll-viewport {
-    overflow-x: hidden;
-    touch-action: pan-y;
-    overscroll-behavior-x: none;
-}
-
 .account-modal {
     display: none;
     position: fixed;
@@ -6114,11 +6128,7 @@ body {
         padding: 0;
         gap: 0;
     }
-
-    .virtual-scroll-viewport {
-        padding: 12px 12px 40px;
-    }
-
+    
     .message-group {
         padding: 4px 0;
     }

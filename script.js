@@ -43,7 +43,6 @@ let state = {
     friendRequests: [],
     blockedUsers: [],
     scrollPositionsByChannel: {},
-    virtualScrollers: {},
     autoScrollEnabled: true,
     _pendingChannelSwitch: null
 };
@@ -632,21 +631,54 @@ function toggleMenu() {
     chatScreen.classList.toggle('overlay-active');
 }
 
+function isMediumScreen() {
+  const width = window.innerWidth;
+  return width >= 769 && width <= 1050;
+}
+window.isMediumScreen = isMediumScreen;
+
 function toggleMembersList() {
+  if (isMediumScreen()) {
+    const membersList = document.getElementById('members-list');
+    if (membersList.classList.contains('open')) {
+      closeMembersOverlay();
+      window.MembersContent?.render({ type: 'members', channel: window.state?.currentChannel });
+    } else {
+      openMembersOverlay();
+    }
+  } else {
     const membersList = document.getElementById('members-list');
     const overlay = document.querySelector('.overlay');
     const chatScreen = document.getElementById('chat-screen');
     membersList.classList.toggle('open');
     overlay.classList.toggle('active');
     chatScreen.classList.toggle('overlay-active');
+  }
 }
 
+function openMembersOverlay() {
+  const membersList = document.getElementById('members-list');
+  const overlay = document.querySelector('.overlay');
+  const chatScreen = document.getElementById('chat-screen');
+  membersList.classList.add('open');
+  overlay.classList.add('active');
+  chatScreen.classList.add('overlay-active');
+}
+
+function closeMembersOverlay() {
+  const membersList = document.getElementById('members-list');
+  const overlay = document.querySelector('.overlay');
+  const chatScreen = document.getElementById('chat-screen');
+  membersList.classList.remove('open');
+  overlay.classList.remove('active');
+  chatScreen.classList.remove('overlay-active');
+}
+window.closeMembersOverlay = closeMembersOverlay;
+
 function closeMenu() {
-    document.querySelector('.channels').classList.remove('open');
-    document.querySelector('.guild-sidebar').classList.remove('open');
-    document.getElementById('members-list').classList.remove('open');
-    document.querySelector('.overlay').classList.remove('active');
-    document.getElementById('chat-screen').classList.remove('overlay-active');
+  document.querySelector('.channels').classList.remove('open');
+  document.querySelector('.guild-sidebar').classList.remove('open');
+  closeMembersOverlay();
 }
 
 let accountCache = {};
@@ -1668,37 +1700,15 @@ async function handleMessage(msg, serverUrl) {
             const req = state._loadingOlder?.[ch];
             const isOlder = !!req && req.start > 0;
             if (isOlder && existing) {
-                const scroller = state.virtualScrollers?.[channelKey];
-                if (scroller && state.serverUrl === serverUrl && ch === state.currentChannel?.name) {
-                    const newItems = [];
-                    let prevUser = null, prevTime = 0;
-                    const firstNew = msg.messages[msg.messages.length - 1];
-                    const lastNewDate = firstNew ? new Date(firstNew.timestamp * 1000).toDateString() : null;
-
-                    for (const m of msg.messages) {
-                        const sameUserRecent = prevUser === m.user && (m.timestamp - prevTime) < 300;
-                        newItems.push({ type: 'message', data: m, isSameUserRecent: sameUserRecent });
-                        prevUser = m.user;
-                        prevTime = m.timestamp;
-                    }
-
-                    if (existing.length > 0) {
-                        const oldestExisting = existing[0];
-                        const existingDate = new Date(oldestExisting.timestamp * 1000).toDateString();
-                        if (lastNewDate && existingDate !== lastNewDate) {
-                            newItems.push({ type: 'separator', timestamp: existing[0].timestamp });
-                        }
-                    }
-
-                    scroller.prependItems(newItems);
-
+                {
                     const merged = [...msg.messages, ...existing];
                     const seen = new Set();
-                    state.messagesByServer[serverUrl][ch] = merged.filter(m => { if (seen.has(m.id)) return false; seen.add(m.id); return true; });
-                } else {
-                    const merged = [...msg.messages, ...existing];
-                    const seen = new Set();
-                    state.messagesByServer[serverUrl][ch] = merged.filter(m => { if (seen.has(m.id)) return false; seen.add(m.id); return true; });
+                    state.messagesByServer[serverUrl][ch] = merged
+                        .filter(m => {
+                            if (seen.has(m.id)) return false;
+                            seen.add(m.id);
+                            return true;
+                        });
                 }
                 state._olderStart[ch] = req.start;
                 state._loadingOlder[ch] = null;
@@ -2153,14 +2163,15 @@ async function selectChannel(channel) {
     const targetItem = Array.from(document.querySelectorAll('.channel-item')).find(el => el.querySelector('[data-channel-name]')?.textContent === channel.name);
     if (targetItem) targetItem.classList.add('active');
 
-    state._pendingChannelSwitch = channelKey;
-    if (!state.messagesByServer[state.serverUrl]?.[channel.name]) {
-        state.pendingMessageFetchesByChannel[channelKey] = true;
-        wsSend({ cmd: 'messages_get', channel: channel.name }, state.serverUrl);
-    } else {
-        renderMessages();
-        state._pendingChannelSwitch = null;
-    }
+state._pendingChannelSwitch = channelKey;
+  state.autoScrollEnabled = true;
+  if (!state.messagesByServer[state.serverUrl]?.[channel.name]) {
+    state.pendingMessageFetchesByChannel[channelKey] = true;
+    wsSend({ cmd: 'messages_get', channel: channel.name }, state.serverUrl);
+  } else {
+    renderMessages();
+    state._pendingChannelSwitch = null;
+  }
 
     renderMembers(channel);
     updateTypingIndicator();
@@ -2452,40 +2463,34 @@ state._olderCooldown = {};
 
 function scrollToBottom() {
     if (!state.currentChannel) return;
-    const channelKey = `${state.serverUrl}:${state.currentChannel.name}`;
-    const scroller = state.virtualScrollers?.[channelKey];
-    if (scroller) {
-        scroller.scrollToBottom();
-        state.autoScrollEnabled = true;
-    } else {
-        const messagesEl = document.getElementById('messages');
-        if (messagesEl) {
-            messagesEl.scrollTop = messagesEl.scrollHeight;
-        }
+    const messagesEl = document.getElementById('messages');
+    if (messagesEl) {
+        messagesEl.scrollTop = messagesEl.scrollHeight;
     }
     updateScrollButton();
 }
 
 function updateScrollButton() {
-    const scrollBtn = document.getElementById('scroll-to-bottom');
-    if (!scrollBtn) return;
+  const scrollBtn = document.getElementById('scroll-to-bottom');
+  if (!scrollBtn) return;
 
-    if (!state.currentChannel) {
-        scrollBtn.style.display = 'none';
-        return;
-    }
+  if (!state.currentChannel) {
+    scrollBtn.style.display = 'none';
+    return;
+  }
 
-    const channelKey = `${state.serverUrl}:${state.currentChannel.name}`;
-    const scroller = state.virtualScrollers?.[channelKey];
+  const channelKey = `${state.serverUrl}:${state.currentChannel.name}`;
+  const container = document.getElementById('messages');
 
-    if (!scroller) {
-        scrollBtn.style.display = 'none';
-        return;
-    }
+  let isNearBottom;
+  if (container) {
+    isNearBottom = isElementNearBottom(container, 80);
+  } else {
+    scrollBtn.style.display = 'none';
+    return;
+  }
 
-    const isNearBottom = scroller.isNearBottom(80);
-    scrollBtn.style.display = isNearBottom ? 'none' : 'flex';
-    state.autoScrollEnabled = isNearBottom;
+  scrollBtn.style.display = isNearBottom ? 'none' : 'flex';
 }
 
 function attachImageScrollHandler(img) {
@@ -2901,8 +2906,7 @@ function appendMessage(msg) {
     }
 
 const channelKey = `${state.serverUrl}:${state.currentChannel.name}`;
-  const scroller = state.virtualScrollers?.[channelKey];
-  const isNearBottom = scroller ? scroller.isNearBottom(80) : isElementNearBottom(container, 80);
+  const isNearBottom = isElementNearBottom(container, 80);
   if (isNearBottom) {
     state.autoScrollEnabled = true;
   }
@@ -3305,12 +3309,11 @@ function setupInfiniteScroll() {
   container.addEventListener('scroll', (e) => {
     if (!state.currentChannel) return;
     const channelKey = `${state.serverUrl}:${state.currentChannel.name}`;
-    const scroller = state.virtualScrollers?.[channelKey];
-    const scrollEl = scroller?.scrollEl || container.querySelector('.virtual-scroll-viewport') || container;
+    const scrollEl = container.querySelector('.virtual-scroll-viewport') || container;
 
     state.scrollPositionsByChannel[channelKey] = scrollEl.scrollTop;
 
-    const isNearBottom = scroller ? scroller.isNearBottom(80) : isElementNearBottom(scrollEl, 80);
+    const isNearBottom = isElementNearBottom(scrollEl, 80);
     state.autoScrollEnabled = isNearBottom;
     updateScrollButton();
 
@@ -4569,19 +4572,25 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 window.openMessageSearch = function () {
-    if (!window.MembersContent) return;
-    if (window.state?.serverUrl === 'dms.mistium.com' && (!window.state?.currentChannel || ['home', 'relationships', 'notes', 'new_message'].includes(window.state.currentChannel.name))) {
-        return;
-    }
-    if (!window.state?.currentChannel) return;
-    window.MembersContent.render({ type: 'search', channel: window.state.currentChannel });
+  if (!window.MembersContent) return;
+  if (window.state?.serverUrl === 'dms.mistium.com' && (!window.state?.currentChannel || ['home', 'relationships', 'notes', 'new_message'].includes(window.state.currentChannel.name))) {
+    return;
+  }
+  if (!window.state?.currentChannel) return;
+  if (isMediumScreen()) {
+    openMembersOverlay();
+  }
+  window.MembersContent.render({ type: 'search', channel: window.state.currentChannel });
 };
 
 window.openPinnedMessages = function () {
-    if (!window.MembersContent) return;
-    if (window.state?.serverUrl === 'dms.mistium.com' && (!window.state?.currentChannel || ['home', 'relationships', 'notes', 'new_message'].includes(window.state.currentChannel.name))) {
-        return;
-    }
-    if (!window.state?.currentChannel) return;
-    window.MembersContent.render({ type: 'pinned', channel: window.state.currentChannel });
+  if (!window.MembersContent) return;
+  if (window.state?.serverUrl === 'dms.mistium.com' && (!window.state?.currentChannel || ['home', 'relationships', 'notes', 'new_message'].includes(window.state.currentChannel.name))) {
+    return;
+  }
+  if (!window.state?.currentChannel) return;
+  if (isMediumScreen()) {
+    openMembersOverlay();
+  }
+  window.MembersContent.render({ type: 'pinned', channel: window.state.currentChannel });
 };
