@@ -817,6 +817,20 @@ p {
     white-space: nowrap;
 }
 
+.main-header-channel-description {
+    color: var(--text-dim);
+    font-size: 14px;
+    margin-left: 12px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 400px;
+}
+
+.main-header-channel-description:empty {
+    display: none;
+}
+
 .main-header-actions {
     flex-shrink: 0;
     gap: 8px;

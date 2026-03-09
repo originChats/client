@@ -2093,6 +2093,9 @@ async function selectChannel(channel) {
         const mainHeaderChannelName = document.getElementById('main-header-channel-name');
         if (mainHeaderChannelName) mainHeaderChannelName.textContent = 'Notes';
 
+        const mainHeaderChannelDesc = document.getElementById('main-header-channel-description');
+        if (mainHeaderChannelDesc) mainHeaderChannelDesc.textContent = 'Your personal notes';
+
         const mainMessagesHeader = document.getElementById('main-messages-header');
         if (mainMessagesHeader) mainMessagesHeader.style.display = 'none';
 
@@ -2168,6 +2171,11 @@ async function selectChannel(channel) {
         mainHeaderChannelName.textContent = getChannelDisplayName(channel);
     }
 
+    const mainHeaderChannelDesc = document.getElementById('main-header-channel-description');
+    if (mainHeaderChannelDesc) {
+        mainHeaderChannelDesc.textContent = channel.description || '';
+    }
+
     const mainMessagesHeader = document.getElementById('main-messages-header');
     if (mainMessagesHeader) {
         mainMessagesHeader.style.display = '';
@@ -2240,6 +2248,9 @@ function selectHomeChannel() {
 
     const mainHeaderChannelName = document.getElementById('main-header-channel-name');
     if (mainHeaderChannelName) mainHeaderChannelName.textContent = 'Home';
+
+    const mainHeaderChannelDesc = document.getElementById('main-header-channel-description');
+    if (mainHeaderChannelDesc) mainHeaderChannelDesc.textContent = 'Welcome to the server';
 
     const mainMessagesHeader = document.getElementById('main-messages-header');
     if (mainMessagesHeader) mainMessagesHeader.style.display = 'none';
@@ -2347,6 +2358,9 @@ function selectRelationshipsChannel() {
 
     const mainHeaderChannelName = document.getElementById('main-header-channel-name');
     if (mainHeaderChannelName) mainHeaderChannelName.textContent = 'Friends';
+
+    const mainHeaderChannelDesc = document.getElementById('main-header-channel-description');
+    if (mainHeaderChannelDesc) mainHeaderChannelDesc.textContent = 'Your friends list';
 
     const mainMessagesHeader = document.getElementById('main-messages-header');
     if (mainMessagesHeader) mainMessagesHeader.style.display = 'none';
