@@ -1917,7 +1917,6 @@ body.font-serif {
 
 .settings-field label {
   color: var(--text-dim);
-  display: block;
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.5px;
@@ -2680,6 +2679,7 @@ body.font-serif {
 }
 
 .appearance-font-name {
+  display: flex;
   font-size: 14px;
   font-weight: 600;
 }
