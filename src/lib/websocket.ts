@@ -188,11 +188,18 @@ export function finishMessageFetch(sUrl: string, channelName: string): void {
   }
 }
 
+const pendingReplyFetchesByServer: Record<string, Set<string>> = {};
+
 export function fetchMissingReplyMessage(
   sUrl: string,
   channelName: string,
   replyToId: string,
 ): void {
+  if (!pendingReplyFetchesByServer[sUrl]) {
+    pendingReplyFetchesByServer[sUrl] = new Set();
+  }
+  if (pendingReplyFetchesByServer[sUrl].has(replyToId)) return;
+  pendingReplyFetchesByServer[sUrl].add(replyToId);
   wsSend({ cmd: "message_get", channel: channelName, id: replyToId }, sUrl);
 }
 
@@ -937,6 +944,7 @@ async function handleMessage(msg: any, sUrl: string): Promise<void> {
       const channel = msg.channel;
       const message = msg.message;
       if (!channel || !message) break;
+      pendingReplyFetchesByServer[sUrl]?.delete(message.id);
       if (!messagesByServer.value[sUrl][channel]) {
         messagesByServer.value = {
           ...messagesByServer.value,
