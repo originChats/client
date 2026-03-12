@@ -17,7 +17,6 @@ import {
   serversAttempted,
   unreadByChannel,
   unreadPings,
-  unreadCountsByServer,
   serverPingsByServer,
   rolesByServer,
   slashCommandsByServer,
@@ -48,10 +47,17 @@ import {
   upsertBanner,
 } from "./ui-signals";
 
+import { readTimes as dbReadTimes } from "./db";
+
 // ── Reconnect config ──────────────────────────────────────────────────────────
 const RECONNECT_BASE_DELAY_MS = 2000;
 const RECONNECT_MAX_DELAY_MS = 30000;
 const RECONNECT_MAX_ATTEMPTS = 10;
+
+/** Debounce timers for persisting read times to IDB when the user is
+ *  actively viewing a channel and new messages arrive. Keyed by
+ *  "serverUrl:channelName". Flushed at most once per second per channel. */
+const _readTimeFlushTimers: Record<string, ReturnType<typeof setTimeout>> = {};
 
 /** Stable banner IDs keyed by server URL so we can upsert them. */
 const reconnectBannerIds: Record<string, string> = {};
@@ -703,10 +709,6 @@ async function handleMessage(msg: any, sUrl: string): Promise<void> {
           ...unreadByChannel.value,
           [channelKey]: (unreadByChannel.value[channelKey] || 0) + 1,
         };
-        unreadCountsByServer.value = {
-          ...unreadCountsByServer.value,
-          [sUrl]: (unreadCountsByServer.value[sUrl] || 0) + 1,
-        };
 
         if (
           sUrl === DM_SERVER_URL &&
@@ -756,6 +758,31 @@ async function handleMessage(msg: any, sUrl: string): Promise<void> {
 
         if (serverUrl.value === sUrl) renderChannelsSignal.value++;
         renderGuildSidebarSignal.value++;
+      } else if (isCurrentView) {
+        const msgTimestamp =
+          typeof msg.message.timestamp === "number"
+            ? msg.message.timestamp
+            : Date.now() / 1000;
+
+        readTimesByServer.value = {
+          ...readTimesByServer.value,
+          [sUrl]: {
+            ...(readTimesByServer.value[sUrl] ?? {}),
+            [msg.channel]: msgTimestamp,
+          },
+        };
+
+        if (_readTimeFlushTimers[channelKey]) {
+          clearTimeout(_readTimeFlushTimers[channelKey]);
+        }
+        _readTimeFlushTimers[channelKey] = setTimeout(() => {
+          delete _readTimeFlushTimers[channelKey];
+          dbReadTimes
+            .set(sUrl, readTimesByServer.value[sUrl] ?? {})
+            .catch((e) =>
+              console.warn("[message_new] Failed to persist read time:", e),
+            );
+        }, 1000);
       } else if (!isCurrentView && isMuted) {
         // Still update DM sidebar presence even when muted, but no badge.
         if (sUrl === DM_SERVER_URL) {

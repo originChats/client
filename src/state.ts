@@ -61,7 +61,6 @@ export const typingUsersByServer = signal<
   Record<string, Record<string, Map<string, number>>>
 >({});
 export const serverPingsByServer = signal<Record<string, number>>({});
-export const unreadCountsByServer = signal<Record<string, number>>({});
 
 export interface PingMessage {
   id: string;

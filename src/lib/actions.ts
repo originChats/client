@@ -197,6 +197,11 @@ export function markChannelAsRead(channelName: string): void {
     console.warn("[markChannelAsRead] Failed to save read times:", e);
   }
 
+  saveReadTimes().catch((e) =>
+    console.warn("[markChannelAsRead] Failed to sync read times to cloud:", e),
+  );
+
+  renderChannelsSignal.value++;
   renderGuildSidebarSignal.value++;
 }
 
@@ -242,6 +247,10 @@ export function markServerAsRead(sUrl: string): void {
   } catch (e) {
     console.warn("[markServerAsRead] Failed to save read times:", e);
   }
+
+  saveReadTimes().catch((e) =>
+    console.warn("[markServerAsRead] Failed to sync read times to cloud:", e),
+  );
 
   renderChannelsSignal.value++;
   renderGuildSidebarSignal.value++;

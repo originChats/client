@@ -8,7 +8,6 @@ import {
   currentUser,
   wsStatus,
   readTimesByServer,
-  unreadCountsByServer,
   serverPingsByServer,
   unreadByChannel,
   DM_SERVER_URL,
@@ -247,7 +246,12 @@ export function GuildSidebar() {
         {servers.value.map((server, index) => {
           const serverMuted = serverNotifSettings.value[server.url] === "none";
           const hasUnread =
-            !serverMuted && (unreadCountsByServer.value[server.url] || 0) > 0;
+            !serverMuted &&
+            Object.keys(unreadByChannel.value).some(
+              (key) =>
+                key.startsWith(`${server.url}:`) &&
+                (unreadByChannel.value[key] ?? 0) > 0,
+            );
           const pingCount = serverMuted
             ? 0
             : serverPingsByServer.value[server.url] || 0;
