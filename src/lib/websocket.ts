@@ -400,8 +400,8 @@ export async function reconnectServer(sUrl: string): Promise<boolean> {
   delete reconnectBannerIds[sUrl];
   reconnectAttempts[sUrl] = 0;
 
-  // Clear all cached message state for this server
-  messagesByServer.value = { ...messagesByServer.value, [sUrl]: {} };
+  // Mark all channels as dirty so they re-fetch when selected, but keep
+  // existing messages visible until fresh data arrives.
   if (loadedChannelsByServer[sUrl]) {
     loadedChannelsByServer[sUrl].clear();
   }
@@ -570,8 +570,8 @@ export function connectToServer(sUrl: string, manual = false): void {
     reconnectTimeouts[sUrl] = 0;
   }
 
-  // Clear all cached message state for this server
-  messagesByServer.value = { ...messagesByServer.value, [sUrl]: {} };
+  // Mark all channels as dirty so they re-fetch when selected, but keep
+  // existing messages visible until fresh data arrives.
   if (loadedChannelsByServer[sUrl]) {
     loadedChannelsByServer[sUrl].clear();
   }
