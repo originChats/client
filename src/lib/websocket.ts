@@ -1385,6 +1385,27 @@ async function handleMessage(msg: any, sUrl: string): Promise<void> {
       pinnedLoading.value = false;
       break;
     }
+    case "user_connect": {
+      if (!usersByServer.value[sUrl]) {
+        usersByServer.value = { ...usersByServer.value, [sUrl]: {} };
+      }
+      const key = msg.user.username?.toLowerCase();
+      if (key) {
+        usersByServer.value = {
+          ...usersByServer.value,
+          [sUrl]: {
+            ...usersByServer.value[sUrl],
+            [key]: {
+              ...usersByServer.value[sUrl][key],
+              ...msg.user,
+              status: "online",
+            },
+          },
+        };
+        renderMembersSignal.value++;
+      }
+      break;
+    }
     case "user_join": {
       if (!usersByServer.value[sUrl]) {
         usersByServer.value = { ...usersByServer.value, [sUrl]: {} };
@@ -1397,6 +1418,23 @@ async function handleMessage(msg: any, sUrl: string): Promise<void> {
         },
       };
       renderMembersSignal.value++;
+      break;
+    }
+    case "user_disconnect": {
+      const uKey = msg.username?.toLowerCase();
+      if (usersByServer.value[sUrl]?.[uKey]) {
+        usersByServer.value = {
+          ...usersByServer.value,
+          [sUrl]: {
+            ...usersByServer.value[sUrl],
+            [uKey]: {
+              ...usersByServer.value[sUrl][uKey],
+              status: "offline",
+            },
+          },
+        };
+        renderMembersSignal.value++;
+      }
       break;
     }
     case "user_leave": {

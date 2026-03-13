@@ -1,0 +1,104 @@
+.checkbox-root {
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.checkbox-root.disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.checkbox-input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+.checkbox-box {
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
+  border: 2px solid var(--border, #2a2a33);
+  background: var(--surface, #0a0a0c);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease;
+  flex-shrink: 0;
+}
+
+.checkbox-input:checked + .checkbox-box {
+  background: var(--primary, #4e5058);
+  border-color: var(--primary, #4e5058);
+}
+
+.checkbox-input:checked + .checkbox-box::after {
+  content: "";
+  display: block;
+  width: 5px;
+  height: 9px;
+  border: 2px solid #fff;
+  border-top: none;
+  border-left: none;
+  transform: rotate(45deg) translateY(-1px);
+}
+
+.checkbox-root:hover .checkbox-box {
+  border-color: var(--primary, #4e5058);
+}
+
+.checkbox-input:focus-visible + .checkbox-box {
+  outline: 2px solid var(--primary, #4e5058);
+  outline-offset: 2px;
+}
+
+.appearance-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  background: var(--surface, #0a0a0c);
+  border: 1px solid var(--border, #2a2a33);
+  border-radius: 8px;
+  cursor: pointer;
+  gap: 12px;
+  transition: background 0.15s ease;
+}
+
+.appearance-toggle-row:hover {
+  background: var(--surface-hover, #1f1f26);
+}
+
+.appearance-toggle-text {
+  flex: 1;
+}
+
+.appearance-toggle-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  background: var(--surface-light, #141419);
+  color: var(--text-dim, #a0a0a0);
+}
+
+.appearance-toggle-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text, #ededed);
+}
+
+.appearance-toggle-desc {
+  font-size: 12px;
+  color: var(--text-dim, #a0a0a0);
+  margin-top: 2px;
+}
