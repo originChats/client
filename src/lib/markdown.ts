@@ -147,6 +147,14 @@ export function parseMarkdown(
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;");
 
+  // Extract URLs early so they don't get affected by markdown parsing
+  const urlPlaceholders: Array<{ placeholder: string; url: string }> = [];
+  text = text.replace(/(https?:\/\/[^\s"\']+\.[^\s"\']+)/g, (match, url) => {
+    const placeholder = `§URL_${urlPlaceholders.length}§${Math.random().toString(36).substring(2, 11)}§`;
+    urlPlaceholders.push({ placeholder, url });
+    return placeholder;
+  });
+
   text = text.replace(/`([^`]+)`/g, (match, code) => {
     return `<code>${code}</code>`;
   });
@@ -184,6 +192,51 @@ export function parseMarkdown(
   text = text.replace(/\*(.+?)\*/g, (_, content) => `<em>${content}</em>`);
   text = text.replace(/_(.+?)_/g, (_, content) => `<em>${content}</em>`);
 
+  // Restore URLs and process them
+  for (const { placeholder, url } of urlPlaceholders) {
+    const rawUrl = url;
+    embedLinks.push(rawUrl);
+    const safeUrl = escapeAttribute(rawUrl);
+    const safeDisplayText = escapeHtml(rawUrl);
+
+    if (YOUTUBE_REGEX.test(rawUrl)) {
+      text = text.replace(
+        placeholder,
+        `<a href="${safeUrl}" target="_blank" rel="noopener noreferrer">${safeDisplayText}</a>`,
+      );
+      continue;
+    }
+
+    if (rawUrl.match(/tenor\.com\/view\/[\w-]+-\d+(?:\?.*)?$/i)) {
+      text = text.replace(
+        placeholder,
+        `<a href="${safeUrl}" class="tenor-embed" target="_blank" rel="noopener noreferrer">${safeDisplayText}</a>`,
+      );
+      continue;
+    }
+
+    if (hasExtension(rawUrl, VIDEO_EXTENSIONS)) {
+      text = text.replace(
+        placeholder,
+        `<a href="${safeUrl}" target="_blank" rel="noopener noreferrer">${safeDisplayText}</a>`,
+      );
+      continue;
+    }
+
+    if (hasExtension(rawUrl, IMAGE_EXTENSIONS)) {
+      text = text.replace(
+        placeholder,
+        `<div class="image-placeholder" data-image-url="${safeUrl}"></div>`,
+      );
+      continue;
+    }
+
+    text = text.replace(
+      placeholder,
+      `<a href="${safeUrl}" class="potential-image" target="_blank" rel="noopener noreferrer" data-image-url="${safeDisplayText}">${safeDisplayText}</a>`,
+    );
+  }
+
   text = text.replace(/@&amp;([a-zA-Z0-9_]+)/g, (match, roleName) => {
     console.log(mentionCtx, match, roleName);
     if (
@@ -212,38 +265,6 @@ export function parseMarkdown(
       return match;
     }
     return `<span class="channel-mention" data-channel="${escapeAttribute(channelName)}">#${channelName}</span>`;
-  });
-
-  text = text.replace(/(https?:\/\/[^\s"']+\.[^\s"']+)/g, (match, url) => {
-    // url is already HTML-escaped (& → &amp; etc.); unescape to get the raw URL
-    // for use in href/src attributes, then re-escape for attribute context.
-    const rawUrl = url
-      .replace(/&amp;/g, "&")
-      .replace(/&lt;/g, "<")
-      .replace(/&gt;/g, ">")
-      .replace(/&quot;/g, '"')
-      .replace(/&#x27;/g, "'");
-    embedLinks.push(rawUrl);
-    const safeUrl = escapeAttribute(rawUrl);
-    const safeDisplayText = url; // already HTML-escaped
-
-    if (YOUTUBE_REGEX.test(rawUrl)) {
-      return `<a href="${safeUrl}" target="_blank" rel="noopener noreferrer">${safeDisplayText}</a>`;
-    }
-
-    if (rawUrl.match(/tenor\.com\/view\/[\w-]+-\d+(?:\?.*)?$/i)) {
-      return `<a href="${safeUrl}" class="tenor-embed" target="_blank" rel="noopener noreferrer">${safeDisplayText}</a>`;
-    }
-
-    if (hasExtension(rawUrl, VIDEO_EXTENSIONS)) {
-      return `<a href="${safeUrl}" target="_blank" rel="noopener noreferrer">${safeDisplayText}</a>`;
-    }
-
-    if (hasExtension(rawUrl, IMAGE_EXTENSIONS)) {
-      return `<div class="image-placeholder" data-image-url="${safeUrl}"></div>`;
-    }
-
-    return `<a href="${safeUrl}" class="potential-image" target="_blank" rel="noopener noreferrer" data-image-url="${safeDisplayText}">${safeDisplayText}</a>`;
   });
 
   text = text.replace(/\n(?!<\/?(h[1-6]|pre|blockquote))/g, "<br>");
