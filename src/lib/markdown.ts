@@ -155,8 +155,12 @@ export function parseMarkdown(
     return placeholder;
   });
 
+  // Extract inline code early so markdown doesn't affect it
+  const inlineCodeBlocks: Array<{ placeholder: string; code: string }> = [];
   text = text.replace(/`([^`]+)`/g, (match, code) => {
-    return `<code>${code}</code>`;
+    const placeholder = `§INLINECODE_${inlineCodeBlocks.length}§${Math.random().toString(36).substring(2, 11)}§`;
+    inlineCodeBlocks.push({ placeholder, code });
+    return placeholder;
   });
 
   text = text.replace(/^#{6} (.*)$/gm, (_, content) => `<h6>${content}</h6>`);
@@ -191,6 +195,11 @@ export function parseMarkdown(
 
   text = text.replace(/\*(.+?)\*/g, (_, content) => `<em>${content}</em>`);
   text = text.replace(/_(.+?)_/g, (_, content) => `<em>${content}</em>`);
+
+  // Restore inline code
+  for (const { placeholder, code } of inlineCodeBlocks) {
+    text = text.replace(placeholder, `<code>${code}</code>`);
+  }
 
   // Restore URLs and process them
   for (const { placeholder, url } of urlPlaceholders) {
