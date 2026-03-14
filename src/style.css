@@ -12908,6 +12908,7 @@ body,
   align-items: center;
   gap: var(--space-3);
   border-radius: var(--radius-sm);
+  padding-left: 17px;
   cursor: pointer;
   transition: background var(--anim-fast);
 }

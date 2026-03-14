@@ -4,6 +4,7 @@ import {
   currentThread,
   channelsByServer,
   threadsByServer,
+  threadMessagesByServer,
   messagesByServer,
   loadedChannelsByServer,
   reachedOldestByServer,
@@ -38,6 +39,7 @@ import {
   offlinePushServers,
   pushSubscriptionsByServer,
   serverCapabilitiesByServer,
+  lastChannelByServer,
   SPECIAL_CHANNELS,
   addThreadToChannel,
   removeThreadFromChannel,
@@ -222,7 +224,7 @@ export async function enablePushForServer(sUrl: string): Promise<void> {
 
   const caps = serverCapabilitiesByServer.value[sUrl] ?? [];
   if (!caps.includes("push_get_vapid")) {
-    console.warn("[Push] Server does not support push notifications.");
+    console.warn(`[Push] ${sUrl} does not support push notifications.`);
     return;
   }
 
@@ -380,7 +382,8 @@ async function authenticateServer(sUrl: string): Promise<void> {
 }
 
 export function closeWebSocket(url: string): void {
-  // Cancel any pending reconnect so we don't reconnect an intentionally-closed socket
+  clearServerState(url);
+
   if (reconnectTimeouts[url]) {
     clearTimeout(reconnectTimeouts[url]);
     delete reconnectTimeouts[url];
@@ -403,33 +406,82 @@ export function closeWebSocket(url: string): void {
   delete wsStatus[url];
 }
 
+export function clearServerState(sUrl: string): void {
+  channelsByServer.value = Object.fromEntries(
+    Object.entries(channelsByServer.value).filter(([key]) => key !== sUrl),
+  );
+
+  messagesByServer.value = Object.fromEntries(
+    Object.entries(messagesByServer.value).filter(([key]) => key !== sUrl),
+  );
+
+  threadsByServer.value = Object.fromEntries(
+    Object.entries(threadsByServer.value).filter(([key]) => key !== sUrl),
+  );
+
+  threadMessagesByServer.value = Object.fromEntries(
+    Object.entries(threadMessagesByServer.value).filter(
+      ([key]) => key !== sUrl,
+    ),
+  );
+
+  usersByServer.value = Object.fromEntries(
+    Object.entries(usersByServer.value).filter(([key]) => key !== sUrl),
+  );
+
+  currentUserByServer.value = Object.fromEntries(
+    Object.entries(currentUserByServer.value).filter(([key]) => key !== sUrl),
+  );
+
+  rolesByServer.value = Object.fromEntries(
+    Object.entries(rolesByServer.value).filter(([key]) => key !== sUrl),
+  );
+
+  slashCommandsByServer.value = Object.fromEntries(
+    Object.entries(slashCommandsByServer.value).filter(([key]) => key !== sUrl),
+  );
+
+  typingUsersByServer.value = Object.fromEntries(
+    Object.entries(typingUsersByServer.value).filter(([key]) => key !== sUrl),
+  );
+
+  serverCapabilitiesByServer.value = Object.fromEntries(
+    Object.entries(serverCapabilitiesByServer.value).filter(
+      ([key]) => key !== sUrl,
+    ),
+  );
+
+  delete loadedChannelsByServer[sUrl];
+  delete reachedOldestByServer[sUrl];
+  delete pendingMessageFetchesByServer[sUrl];
+  delete pendingReplyFetchesByServer[sUrl];
+
+  readTimesByServer.value = Object.fromEntries(
+    Object.entries(readTimesByServer.value).filter(([key]) => key !== sUrl),
+  );
+
+  serverPingsByServer.value = Object.fromEntries(
+    Object.entries(serverPingsByServer.value).filter(([key]) => key !== sUrl),
+  );
+
+  renderChannelsSignal.value++;
+  renderMessagesSignal.value++;
+  renderMembersSignal.value++;
+}
+
 export { authenticateServer };
 
 export async function reconnectServer(sUrl: string): Promise<boolean> {
-  // Cancel any pending auto-reconnect timer
   if (reconnectTimeouts[sUrl]) {
     clearTimeout(reconnectTimeouts[sUrl]);
     delete reconnectTimeouts[sUrl];
   }
-  // Dismiss any existing reconnect banner
   const bannerId = reconnectBannerIds[sUrl] || `reconnect-${sUrl}`;
   dismissBanner(bannerId);
   delete reconnectBannerIds[sUrl];
   reconnectAttempts[sUrl] = 0;
 
-  // Mark all channels as dirty so they re-fetch when selected, but keep
-  // existing messages visible until fresh data arrives.
-  if (loadedChannelsByServer[sUrl]) {
-    loadedChannelsByServer[sUrl].clear();
-  }
-  if (reachedOldestByServer[sUrl]) {
-    reachedOldestByServer[sUrl].clear();
-  }
-
-  // Clear any in-flight fetch state so channels aren't permanently locked
-  // after a mid-fetch disconnect.
-  delete pendingMessageFetchesByServer[sUrl];
-  delete pendingReplyFetchesByServer[sUrl];
+  clearServerState(sUrl);
 
   if (wsConnections[sUrl]) {
     const existing = wsConnections[sUrl];
@@ -554,10 +606,11 @@ function scheduleReconnect(sUrl: string): void {
 
   reconnectAttempts[sUrl] = attempt;
 
-  const delay = Math.min(
-    RECONNECT_BASE_DELAY_MS * Math.pow(2, attempt - 1),
-    RECONNECT_MAX_DELAY_MS,
-  );
+  const delay =
+    Math.min(
+      RECONNECT_BASE_DELAY_MS * Math.pow(2, attempt - 1),
+      RECONNECT_MAX_DELAY_MS,
+    ) / 2;
 
   const label = serverLabel(sUrl);
   const bannerId = `reconnect-${sUrl}`;
@@ -595,19 +648,7 @@ export function connectToServer(sUrl: string, _manual = false): void {
     reconnectTimeouts[sUrl] = 0;
   }
 
-  // Mark all channels as dirty so they re-fetch when selected, but keep
-  // existing messages visible until fresh data arrives.
-  if (loadedChannelsByServer[sUrl]) {
-    loadedChannelsByServer[sUrl].clear();
-  }
-  if (reachedOldestByServer[sUrl]) {
-    reachedOldestByServer[sUrl].clear();
-  }
-
-  // Clear any in-flight fetch state so channels aren't permanently locked
-  // after a mid-fetch disconnect.
-  delete pendingMessageFetchesByServer[sUrl];
-  delete pendingReplyFetchesByServer[sUrl];
+  clearServerState(sUrl);
 
   if (wsConnections[sUrl]) {
     const existing = wsConnections[sUrl];
@@ -627,6 +668,7 @@ export function connectToServer(sUrl: string, _manual = false): void {
   const ws = new WebSocket(`wss://${sUrl}`);
 
   const closeHandler = () => {
+    clearServerState(sUrl);
     const conn = wsConnections[sUrl];
     if (conn) {
       conn.status = "disconnected";
@@ -639,6 +681,7 @@ export function connectToServer(sUrl: string, _manual = false): void {
 
   const errorHandler = () => {
     console.error(`WebSocket error for ${sUrl}`);
+    clearServerState(sUrl);
     const conn = wsConnections[sUrl];
     if (conn) conn.status = "error";
     wsStatus[sUrl] = "error";
@@ -728,6 +771,12 @@ async function handleMessage(msg: any, sUrl: string): Promise<void> {
           ? msg.val.capabilities
           : DEFAULT_CAPABILITIES,
       };
+      if (Notification.permission === "granted") {
+        const { enablePushForServer } = await import("../lib/websocket");
+        if (!offlinePushServers.value[sUrl]) {
+          enablePushForServer(sUrl);
+        }
+      }
       // Always apply the authoritative icon and name from the handshake so
       // the local cache never gets out of sync with what the server reports.
       if (msg.val.server) {
@@ -777,20 +826,19 @@ async function handleMessage(msg: any, sUrl: string): Promise<void> {
       wsSend({ cmd: "users_list" }, sUrl);
       wsSend({ cmd: "users_online" }, sUrl);
       if (serverHas("roles_list")) wsSend({ cmd: "roles_list" }, sUrl);
-      // Request slash commands — not all servers support this, so we send
-      // it opportunistically and handle it only if the server responds.
       if (serverHas("slash_list")) wsSend({ cmd: "slash_list" }, sUrl);
-      // Request pings since the earliest unread read-time for this server.
-      // We use the minimum read-time across all known channels so we don't
-      // miss pings in channels that haven't been opened in a while. Channels
-      // with no read-time entry default to 0 (beginning of time) but we only
-      // include them if the server has channel data; the response handler
-      // filters each ping against its channel's specific read-time.
       if (sUrl !== DM_SERVER_URL && serverHas("pings_get")) {
-        const channelReadTimes = readTimesByServer.value[sUrl] || {};
-        const readValues = Object.values(channelReadTimes);
-        // Use the minimum (oldest) read-time so we catch pings in all
-        // channels the user hasn't visited since that time.
+        let channelReadTimes = readTimesByServer.value[sUrl];
+        if (!channelReadTimes || Object.keys(channelReadTimes).length === 0) {
+          channelReadTimes = await dbReadTimes.get(sUrl);
+          if (channelReadTimes && Object.keys(channelReadTimes).length > 0) {
+            readTimesByServer.value = {
+              ...readTimesByServer.value,
+              [sUrl]: channelReadTimes,
+            };
+          }
+        }
+        const readValues = Object.values(channelReadTimes || {});
         const since =
           readValues.length > 0 ? Math.min(...(readValues as number[])) : 0;
         wsSend({ cmd: "list_pings", since }, sUrl);
@@ -825,6 +873,25 @@ async function handleMessage(msg: any, sUrl: string): Promise<void> {
         sUrl !== DM_SERVER_URL
       ) {
         selectChannel(channelsByServer.value[sUrl][0]);
+      }
+      // After reconnect, if we're on this server and have a last channel saved,
+      // switch to it to refetch messages
+      if (serverUrl.value === sUrl && lastChannelByServer.value[sUrl]) {
+        const lastChannelName = lastChannelByServer.value[sUrl];
+        const channelList = channelsByServer.value[sUrl] || [];
+        const targetChannel = channelList.find(
+          (c) => c.name === lastChannelName,
+        );
+        if (targetChannel) {
+          selectChannel(targetChannel);
+        } else if (channelList.length > 0) {
+          const textChannels = channelList.filter(
+            (c) => c.type === "text" || c.type === "voice",
+          );
+          if (textChannels.length > 0) {
+            selectChannel(textChannels[0]);
+          }
+        }
       }
       break;
     }

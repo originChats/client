@@ -17,6 +17,7 @@ import {
   currentUserByServer,
   serverPingsByServer,
   threadsByServer,
+  lastChannelByServer,
   DM_SERVER_URL,
   SPECIAL_CHANNELS,
   setPendingDMAddUsername,
@@ -79,6 +80,10 @@ export function selectChannel(channel: {
   }
 
   // Persist the last-visited channel for this server
+  lastChannelByServer.value = {
+    ...lastChannelByServer.value,
+    [sUrl]: channel.name,
+  };
   try {
     dbSession.set(`lastChannel_${sUrl}`, channel.name);
   } catch {}
