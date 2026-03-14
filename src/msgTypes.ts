@@ -27,12 +27,14 @@ interface MessagesGet {
     start: number;
     end: number;
   };
+  thread_id?: string;
 }
 
 interface MessageGet {
   cmd: "message_get";
   channel: string;
   message: Message;
+  thread_id?: string;
 }
 
 interface MessageNew {
@@ -48,24 +50,28 @@ interface MessageEdit {
   content: string;
   message: Message;
   channel: string;
+  thread_id?: string;
 }
 
 interface MessageDelete {
   cmd: "message_delete";
   id: string;
   channel: string;
+  thread_id?: string;
 }
 
 interface MessagePin {
   cmd: "message_pin";
   id: string;
   channel: string;
+  thread_id?: string;
 }
 
 interface MessageUnpin {
   cmd: "message_unpin";
   id: string;
   channel: string;
+  thread_id?: string;
 }
 
 interface Typing {

@@ -1156,10 +1156,13 @@ export function MessageArea() {
           "message-input",
         ) as HTMLTextAreaElement;
         if (input && input.value.trim()) {
+          const isThread =
+            currentChannel.value?.type === "thread" && currentThread.value;
           wsSend({
             cmd: "message_edit",
             id: editingMessage.id,
             channel: currentChannel.value?.name,
+            ...(isThread && { thread_id: currentThread.value?.id }),
             content: input.value.trim(),
           });
           setEditingMessage(null);
@@ -1526,11 +1529,14 @@ export function MessageArea() {
           message:
             "Are you sure you want to delete this message? This action cannot be undone.",
           onConfirm: () => {
+            const isThread =
+              currentChannel.value?.type === "thread" && currentThread.value;
             wsSend(
               {
                 cmd: "message_delete",
                 id: msg.id,
                 channel: currentChannel.value?.name,
+                ...(isThread && { thread_id: currentThread.value?.id }),
               },
               serverUrl.value,
             );
@@ -1547,12 +1553,15 @@ export function MessageArea() {
     const liveMsg = channelMsgs.find((m) => m.id === msg.id);
     const liveUsers: string[] = (liveMsg?.reactions?.[emoji] ?? []) as string[];
     const hasReacted = liveUsers.includes(currentUser.value?.username);
+    const isThread =
+      currentChannel.value?.type === "thread" && currentThread.value;
     wsSend(
       {
         cmd: hasReacted ? "message_react_remove" : "message_react_add",
         id: msg.id,
         emoji,
         channel: currentChannel.value?.name,
+        ...(isThread && { thread_id: currentThread.value?.id }),
       },
       serverUrl.value,
     );

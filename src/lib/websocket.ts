@@ -92,6 +92,11 @@ import {
 
 let audioCtx: AudioContext | null = null;
 
+// Helper: get the message key (thread_id or channel) for storing/finding messages
+function getMessageKey(msg: { thread_id?: string; channel: string }): string {
+  return msg.thread_id || msg.channel;
+}
+
 // Helper: immutably update voice_state for a channel in channelsByServer
 function _vcUpdateChannelState(
   sUrl: string,
@@ -1255,15 +1260,16 @@ async function handleMessage(msg: any, sUrl: string): Promise<void> {
         messagesByServer.value = { ...messagesByServer.value, [sUrl]: {} };
 
       const channel = msgGet.channel;
+      const messageKey = getMessageKey(msgGet);
 
-      finishMessageFetch(sUrl, channel);
+      finishMessageFetch(sUrl, messageKey);
 
       // Mark this channel as loaded so future message_new events are stored
       if (!loadedChannelsByServer[sUrl])
         loadedChannelsByServer[sUrl] = new Set();
-      loadedChannelsByServer[sUrl].add(channel);
+      loadedChannelsByServer[sUrl].add(messageKey);
 
-      const existingMsgs = messagesByServer.value[sUrl][channel] || [];
+      const existingMsgs = messagesByServer.value[sUrl][messageKey] || [];
 
       const newMessages = (msgGet.messages || []).map((m) => {
         const normalised: Record<string, string[]> = {};
@@ -1284,21 +1290,21 @@ async function handleMessage(msg: any, sUrl: string): Promise<void> {
       if (existingMsgs.length > 0 && newMessages.length < SCROLL_UP_LIMIT) {
         if (!reachedOldestByServer[sUrl])
           reachedOldestByServer[sUrl] = new Set();
-        reachedOldestByServer[sUrl].add(channel);
+        reachedOldestByServer[sUrl].add(messageKey);
       }
 
       messagesByServer.value = {
         ...messagesByServer.value,
         [sUrl]: {
           ...messagesByServer.value[sUrl],
-          [channel]: mergedMsgs,
+          [messageKey]: mergedMsgs,
         },
       };
 
       renderMessagesSignal.value++;
 
       console.log(
-        `[messages_get] Received ${newMessages.length} messages for channel ${channel}. Total: ${mergedMsgs.length}`,
+        `[messages_get] Received ${newMessages.length} messages for ${msgGet.thread_id ? `thread ${msgGet.thread_id}` : `channel ${channel}`}. Total: ${mergedMsgs.length}`,
       );
 
       if (
@@ -1318,15 +1324,16 @@ async function handleMessage(msg: any, sUrl: string): Promise<void> {
       const msgGet = msg as MessageGet;
       const channel = msgGet.channel;
       const message = msgGet.message;
+      const messageKey = getMessageKey(msgGet);
       if (!channel || !message) break;
       pendingReplyFetchesByServer[sUrl]?.delete(message.id);
-      if (!messagesByServer.value[sUrl][channel]) {
+      if (!messagesByServer.value[sUrl][messageKey]) {
         messagesByServer.value = {
           ...messagesByServer.value,
-          [sUrl]: { ...messagesByServer.value[sUrl], [channel]: [] },
+          [sUrl]: { ...messagesByServer.value[sUrl], [messageKey]: [] },
         };
       }
-      const existingMsgs = messagesByServer.value[sUrl][channel];
+      const existingMsgs = messagesByServer.value[sUrl][messageKey];
       const alreadyExists = existingMsgs.some((m) => m.id === message.id);
       if (!alreadyExists) {
         const insertIdx = existingMsgs.findIndex(
@@ -1342,7 +1349,7 @@ async function handleMessage(msg: any, sUrl: string): Promise<void> {
               ];
         messagesByServer.value = {
           ...messagesByServer.value,
-          [sUrl]: { ...messagesByServer.value[sUrl], [channel]: newMsgs },
+          [sUrl]: { ...messagesByServer.value[sUrl], [messageKey]: newMsgs },
         };
         renderMessagesSignal.value++;
       }
@@ -1350,18 +1357,16 @@ async function handleMessage(msg: any, sUrl: string): Promise<void> {
     }
     case "message_edit": {
       const msgEdit = msg as MessageEdit;
-      if (!messagesByServer.value[sUrl]?.[msgEdit.channel]) break;
-      const editedMsgs = messagesByServer.value[sUrl][msgEdit.channel].map(
-        (m) =>
-          m.id === msg.id
-            ? { ...m, content: msgEdit.content, edited: true }
-            : m,
+      const messageKey = getMessageKey(msgEdit);
+      if (!messagesByServer.value[sUrl]?.[messageKey]) break;
+      const editedMsgs = messagesByServer.value[sUrl][messageKey].map((m) =>
+        m.id === msg.id ? { ...m, content: msgEdit.content, edited: true } : m,
       );
       messagesByServer.value = {
         ...messagesByServer.value,
         [sUrl]: {
           ...messagesByServer.value[sUrl],
-          [msgEdit.channel]: editedMsgs,
+          [messageKey]: editedMsgs,
         },
       };
       renderMessagesSignal.value++;
@@ -1369,15 +1374,16 @@ async function handleMessage(msg: any, sUrl: string): Promise<void> {
     }
     case "message_delete": {
       const msgDel = msg as MessageDelete;
-      if (!messagesByServer.value[sUrl]?.[msgDel.channel]) break;
-      const filteredMsgs = messagesByServer.value[sUrl][msgDel.channel].filter(
+      const messageKey = getMessageKey(msgDel);
+      if (!messagesByServer.value[sUrl]?.[messageKey]) break;
+      const filteredMsgs = messagesByServer.value[sUrl][messageKey].filter(
         (m) => m.id !== msgDel.id,
       );
       messagesByServer.value = {
         ...messagesByServer.value,
         [sUrl]: {
           ...messagesByServer.value[sUrl],
-          [msgDel.channel]: filteredMsgs,
+          [messageKey]: filteredMsgs,
         },
       };
       renderMessagesSignal.value++;
@@ -1407,8 +1413,9 @@ async function handleMessage(msg: any, sUrl: string): Promise<void> {
     }
     case "message_react_add":
     case "message_react_remove": {
-      if (!messagesByServer.value[sUrl]?.[msg.channel]) break;
-      const reactMsg = messagesByServer.value[sUrl][msg.channel].find(
+      const reactMessageKey = getMessageKey(msg as any);
+      if (!messagesByServer.value[sUrl]?.[reactMessageKey]) break;
+      const reactMsg = messagesByServer.value[sUrl][reactMessageKey].find(
         (m: any) => m.id === msg.id,
       );
       if (reactMsg) {
@@ -1446,8 +1453,9 @@ async function handleMessage(msg: any, sUrl: string): Promise<void> {
     }
     case "message_pin": {
       const msgPin = msg as MessagePin;
-      if (!messagesByServer.value[sUrl]?.[msgPin.channel]) break;
-      const pinMsg = messagesByServer.value[sUrl][msg.channel].find(
+      const messageKey = getMessageKey(msgPin);
+      if (!messagesByServer.value[sUrl]?.[messageKey]) break;
+      const pinMsg = messagesByServer.value[sUrl][messageKey].find(
         (m) => m.id === msgPin.id,
       );
       if (pinMsg) {
