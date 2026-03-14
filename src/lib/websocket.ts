@@ -1837,6 +1837,8 @@ async function handleMessage(msg: any, sUrl: string): Promise<void> {
       console.error(`[${sUrl}] Server error:`, errText);
       break;
     }
+    case "ping":
+      break;
 
     default:
       console.debug(`[${sUrl}] Unhandled message type:`, msg.cmd || msg.type);
