@@ -79,7 +79,7 @@ export function ThreadContextMenu({
   };
 
   const handleCopyLink = () => {
-    const link = `${serverUrl.value}/channel/${thread.parent_channel}/thread/${thread.id}`;
+    const link = `${window.location.origin}/app/${serverUrl.value}/projects/${thread.id}`;
     navigator.clipboard.writeText(link);
     onClose();
   };
