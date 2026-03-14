@@ -5,6 +5,7 @@ import {
   slashCommands,
   rolesByServer,
   serverUrl,
+  currentChannel,
 } from "../state";
 import { avatarUrl } from "../utils";
 import { emojiImgUrl } from "../lib/emoji";
@@ -110,7 +111,17 @@ function searchUsers(query: string): AutocompleteItem[] {
   const q = query.toLowerCase();
   const results: AutocompleteItem[] = [];
 
-  for (const [username] of Object.entries(userMap)) {
+  const channel = currentChannel.value;
+  const viewRoles = channel?.permissions?.view;
+
+  const eligibleUsers = Object.values(userMap).filter((u) => {
+    if (!viewRoles || viewRoles.length === 0) return true;
+    const userRoles = u.roles || [];
+    return viewRoles.some((r) => userRoles.includes(r));
+  });
+
+  for (const u of eligibleUsers) {
+    const username = u.username;
     if (username.toLowerCase().includes(q)) {
       results.push({
         type: "user",
