@@ -236,6 +236,15 @@ function App() {
     requestNotificationPermission();
     setupVisibilityHandler();
 
+    if (Notification.permission === "granted") {
+      const { enablePushForServer } = await import("./lib/websocket");
+      for (const server of loadedServers) {
+        if (!offlinePushServers.value[server.url]) {
+          enablePushForServer(server.url);
+        }
+      }
+    }
+
     const pendingServer = sessionStorage.getItem("pendingServerJoin") ?? null;
 
     if (pendingServer && pendingServer !== DM_SERVER_URL) {

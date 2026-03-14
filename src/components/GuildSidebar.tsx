@@ -11,15 +11,10 @@ import {
   unreadByChannel,
   DM_SERVER_URL,
   serverNotifSettings,
-  offlinePushServers,
   getChannelNotifLevel,
   type NotificationLevel,
 } from "../state";
-import {
-  wsSend,
-  enablePushForServer,
-  disablePushForServer,
-} from "../lib/websocket";
+import { wsSend } from "../lib/websocket";
 import {
   switchServer,
   markServerAsRead,
@@ -109,7 +104,6 @@ export function GuildSidebar() {
     e.preventDefault();
     const currentLevel: NotificationLevel =
       serverNotifSettings.value[server.url] ?? "mentions";
-    const pushEnabled = offlinePushServers.value[server.url] ?? false;
 
     const setServerNotif = (level: NotificationLevel) => {
       if (level === "mentions") {
@@ -153,17 +147,6 @@ export function GuildSidebar() {
             fn: () => setServerNotif("none"),
           },
         ],
-      },
-      {
-        label: pushEnabled ? "Offline Push: On ✓" : "Offline Push: Off",
-        icon: pushEnabled ? "BellRing" : "BellOff",
-        fn: () => {
-          if (pushEnabled) {
-            disablePushForServer(server.url);
-          } else {
-            enablePushForServer(server.url);
-          }
-        },
       },
       { separator: true, label: "", fn: () => {} },
       {

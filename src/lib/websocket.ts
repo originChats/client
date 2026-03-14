@@ -214,6 +214,12 @@ export async function enablePushForServer(sUrl: string): Promise<void> {
     return;
   }
 
+  const caps = serverCapabilitiesByServer.value[sUrl] ?? [];
+  if (!caps.includes("push_get_vapid")) {
+    console.warn("[Push] Server does not support push notifications.");
+    return;
+  }
+
   // Ask the server for its VAPID public key.
   // The server will respond with a `push_vapid` message handled below.
   wsSend({ cmd: "push_get_vapid" }, sUrl);
