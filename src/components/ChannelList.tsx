@@ -221,7 +221,11 @@ export function ChannelList() {
     <div
       id="channels"
       className={`channels${mobileSidebarOpen.value ? " open" : ""}`}
-      style={{ width: `${channelListWidth.value}px` }}
+      style={
+        window.innerWidth > 768
+          ? { width: `${channelListWidth.value}px` }
+          : undefined
+      }
     >
       <div
         ref={resizeRef}
