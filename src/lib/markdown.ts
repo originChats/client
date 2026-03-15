@@ -200,8 +200,14 @@ export function parseMarkdown(
     (_, content) => `<strong>${content}</strong>`,
   );
 
-  text = text.replace(/\*(.+?)\*/g, (_, content) => `<em>${content}</em>`);
-  text = text.replace(/_(.+?)_/g, (_, content) => `<em>${content}</em>`);
+  text = text.replace(
+    /(^|\s)\*([^\s*](?:.*?[^\s*])?)\*(?=$|\s)/g,
+    (_, prefix, content) => `${prefix}<em>${content}</em>`,
+  );
+  text = text.replace(
+    /(^|\s)_([^\s_](?:.*?[^\s_])?)_(?=$|\s)/g,
+    (_, prefix, content) => `${prefix}<em>${content}</em>`,
+  );
 
   // Restore inline code
   for (const { placeholder, code } of inlineCodeBlocks) {
