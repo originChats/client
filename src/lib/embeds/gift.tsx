@@ -1,5 +1,6 @@
 import { useState, useEffect } from "preact/hooks";
 import { getGift, claimGift } from "../rotur-api";
+import { Icon } from "../../components/Icon";
 
 interface GiftEmbedProps {
   giftCode: string;
@@ -49,18 +50,7 @@ export function GiftEmbed({ giftCode, originalUrl }: GiftEmbedProps) {
         <div className="gift-card gift-error">
           <div className="gift-card-header">
             <div className="gift-icon">
-              <svg
-                viewBox="0 0 24 24"
-                width="32"
-                height="32"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-              >
-                <circle cx="12" cy="12" r="10" />
-                <line x1="12" y1="8" x2="12" y2="12" />
-                <line x1="12" y1="16" x2="12.01" y2="16" />
-              </svg>
+              <Icon name="Gift" size={32} />
             </div>
             <div className="gift-card-title">Gift Not Found</div>
           </div>

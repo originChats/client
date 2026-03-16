@@ -17,6 +17,7 @@ import { avatarUrl } from "../utils";
 export function MembersList() {
   useSignalEffect(() => {
     renderMembersSignal.value;
+    users.value;
   });
 
   const { showUserMenu, closeUserMenu, userMenu } = useUserContextMenu();
@@ -33,22 +34,20 @@ export function MembersList() {
   }>;
 
   if (isDM) {
-    const channelName = currentChannel.value?.name;
-    const channelMessages = channelName
-      ? Object.values(messages.value[channelName] || {})
-      : [];
-    const uniqueUsernames = [
-      ...new Set(channelMessages.map((m: any) => m.user).filter(Boolean)),
-    ];
-    memberList = uniqueUsernames.map((username) => ({
-      username,
-      nickname: users.value[username?.toLowerCase()]?.nickname,
-      status: users.value[username?.toLowerCase()]?.status,
-      color: users.value[username?.toLowerCase()]?.color || null,
-      roles: users.value[username?.toLowerCase()]?.roles || [],
-    }));
-
-    if (memberList.length === 0) return null;
+    const viewRoles = currentChannel.value?.permissions?.view;
+    memberList = Object.values(users.value)
+      .filter((u) => {
+        if (!viewRoles || viewRoles.length === 0) return true;
+        const userRoles = u.roles || [];
+        return viewRoles.some((r) => userRoles.includes(r));
+      })
+      .map((u) => ({
+        username: u.username,
+        nickname: u.nickname,
+        status: u.status,
+        color: u.color || null,
+        roles: u.roles || [],
+      }));
   } else {
     const viewRoles = currentChannel.value?.permissions?.view;
     memberList = Object.values(users.value)
