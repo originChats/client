@@ -30,5 +30,13 @@
     "icon": "https://milosantos.com/files/milo_pfp.png",
     "url": "originchats.milosantos.com",
     "tags": ["hangout"]
+  },
+  {
+    "name": "CloudLink",
+    "owner": "mikedev",
+    "created_at": 1773678480000,
+    "icon": "https://raw.githubusercontent.com/cloudlink-delta/branding/refs/heads/main/icon.svg",
+    "url": "cl.mikedev101.cc/chats",
+    "tags": ["community"]
   }
 ]
