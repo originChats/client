@@ -1095,11 +1095,7 @@ async function handleMessage(msg: any, sUrl: string): Promise<void> {
       let myUsername = currentUserByServer.value[sUrl]?.username;
       const isOwnMessage = msgNew.message.user === myUsername;
 
-      if (
-        !isCurrentView &&
-        !isMuted &&
-        !(sUrl === DM_SERVER_URL && isOwnMessage)
-      ) {
+      if (!isCurrentView && !isMuted && !isOwnMessage) {
         const keyToIncrement = isThreadMessage ? threadKey! : channelKey;
         unreadByChannel.value = {
           ...unreadByChannel.value,
@@ -1163,6 +1159,18 @@ async function handleMessage(msg: any, sUrl: string): Promise<void> {
 
         if (serverUrl.value === sUrl) renderChannelsSignal.value++;
         renderGuildSidebarSignal.value++;
+      } else if (isOwnMessage && !isCurrentView) {
+        const keyToClear = isThreadMessage ? threadKey! : channelKey;
+        if (unreadByChannel.value[keyToClear]) {
+          const newUnreads = { ...unreadByChannel.value };
+          delete newUnreads[keyToClear];
+          unreadByChannel.value = newUnreads;
+        }
+        if (unreadPings.value[keyToClear]) {
+          const newPings = { ...unreadPings.value };
+          delete newPings[keyToClear];
+          unreadPings.value = newPings;
+        }
       } else if (isCurrentView) {
         const msgTimestamp = msgNew.message.timestamp;
 
