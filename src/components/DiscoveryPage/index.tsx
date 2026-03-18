@@ -10,40 +10,8 @@ interface DiscoveryServer {
   owner: string;
   created_at: number;
   icon: string | null;
-  tags?: string[];
+  tags: string[];
   description?: string;
-}
-
-// Derive tags from server metadata heuristically
-function deriveTags(server: DiscoveryServer): string[] {
-  if (server.tags) return server.tags;
-  const tags: string[] = [];
-  const nameLower = server.name.toLowerCase();
-  const urlLower = server.url.toLowerCase();
-  if (nameLower.includes("origin") || urlLower.includes("origin"))
-    tags.push("official");
-  if (nameLower.includes("chat") || nameLower.includes("talk"))
-    tags.push("chat");
-  if (
-    nameLower.includes("dev") ||
-    nameLower.includes("code") ||
-    nameLower.includes("tech")
-  )
-    tags.push("tech");
-  if (nameLower.includes("game") || nameLower.includes("play"))
-    tags.push("gaming");
-  if (nameLower.includes("art") || nameLower.includes("creative"))
-    tags.push("creative");
-  if (nameLower.includes("music") || nameLower.includes("sound"))
-    tags.push("music");
-  if (
-    nameLower.includes("happy") ||
-    nameLower.includes("fun") ||
-    nameLower.includes("land")
-  )
-    tags.push("community");
-  if (tags.length === 0) tags.push("community");
-  return tags;
 }
 
 const ALL_TAGS = [
@@ -115,7 +83,7 @@ export function DiscoveryPage() {
   };
 
   const visibleServers = (serverList ?? []).filter((s) => {
-    const tags = deriveTags(s);
+    const tags = s.tags;
     const matchesTag = activeTag === "all" || tags.includes(activeTag);
     const q = search.trim().toLowerCase();
     const matchesSearch =
@@ -130,7 +98,7 @@ export function DiscoveryPage() {
   // Only show tags that have at least one server
   const availableTags = ALL_TAGS.filter((tag) => {
     if (tag === "all") return true;
-    return (serverList ?? []).some((s) => deriveTags(s).includes(tag));
+    return (serverList ?? []).some((s) => s.tags.includes(tag));
   });
 
   return (
@@ -226,7 +194,7 @@ export function DiscoveryPage() {
                 </p>
                 <div className="discovery-page-grid">
                   {visibleServers.map((s) => {
-                    const tags = deriveTags(s);
+                    const tags = s.tags;
                     const alreadyJoined = servers.value.some(
                       (sv) => sv.url === s.url,
                     );
@@ -381,7 +349,7 @@ export function DiscoveryPage() {
                   <span>
                     Open a pull request on the{" "}
                     <a
-                      href="https://github.com/originChats/originChats-client"
+                      href="https://github.com/Mistium/originChats-client"
                       target="_blank"
                       rel="noreferrer"
                     >
