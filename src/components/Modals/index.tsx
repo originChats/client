@@ -50,6 +50,7 @@ import {
 } from "../../state";
 import { Icon, ServerIcon } from "../Icon";
 import { Checkbox } from "../Checkbox";
+import { LoadingButton } from "../LoadingButton";
 import {
   switchServer,
   logout,
@@ -497,13 +498,13 @@ export function SettingsModal() {
                 />
                 <div className="settings-field-footer">
                   <span className="settings-char-count">{bio.length}/1000</span>
-                  <button
-                    className="settings-btn-confirm"
-                    disabled={saving}
+                  <LoadingButton
+                    isLoading={saving}
                     onClick={() => updateField("bio", bio)}
+                    className="settings-btn-confirm"
                   >
-                    {saving ? "Saving..." : "Save Bio"}
-                  </button>
+                    Save Bio
+                  </LoadingButton>
                 </div>
               </div>
 
@@ -519,13 +520,13 @@ export function SettingsModal() {
                 />
                 <div className="settings-field-footer">
                   <span></span>
-                  <button
-                    className="settings-btn-confirm"
-                    disabled={saving}
+                  <LoadingButton
+                    isLoading={saving}
                     onClick={() => updateField("pronouns", pronouns)}
+                    className="settings-btn-confirm"
                   >
-                    {saving ? "Saving..." : "Save Pronouns"}
-                  </button>
+                    Save Pronouns
+                  </LoadingButton>
                 </div>
               </div>
 
@@ -555,15 +556,15 @@ export function SettingsModal() {
                 <label>Credits (RC)</label>
                 <div className="settings-value account-credits-row">
                   <span>{profile?.currency?.toLocaleString() || "0"} RC</span>
-                  <button
-                    className="settings-btn-confirm"
-                    disabled={dailyClaiming}
+                  <LoadingButton
+                    isLoading={dailyClaiming}
                     onClick={handleClaimDaily}
+                    className="settings-btn-confirm"
                     title="Claim your daily RC reward"
                   >
                     <Icon name="Gift" size={14} />
-                    {dailyClaiming ? "Claiming..." : "Claim Daily"}
-                  </button>
+                    Claim Daily
+                  </LoadingButton>
                 </div>
                 {dailyMsg && (
                   <div
@@ -638,14 +639,13 @@ export function SettingsModal() {
 }
 
 function MediaServersTab() {
-  const [serversList, setServersList] =
-    useState<MediaServer[]>(getMediaServers());
-  const [editing, setEditing] = useState<string | null>(null);
+  const [serversList, setServersList] = useState<MediaServer[]>([]);
   const [showForm, setShowForm] = useState(false);
+  const [editing, setEditing] = useState<string | null>(null);
   const [serverType, setServerType] = useState<"rotur" | "custom">("rotur");
 
   const [formName, setFormName] = useState("");
-  const [formUrl, setFormUrl] = useState("https://photos.rotur.dev");
+  const [formUrl, setFormUrl] = useState("");
   const [formUploadUrl, setFormUploadUrl] = useState("");
   const [formMethod, setFormMethod] = useState("POST");
   const [formFileParam, setFormFileParam] = useState("");
@@ -659,6 +659,7 @@ function MediaServersTab() {
   const [formHeaders, setFormHeaders] = useState<
     Array<{ key: string; value: string }>
   >([]);
+  const [formSaving, setFormSaving] = useState(false);
 
   const refresh = () => setServersList(getMediaServers());
 
@@ -709,7 +710,8 @@ function MediaServersTab() {
     setShowForm(true);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    setFormSaving(true);
     let config: MediaServer;
 
     if (serverType === "rotur") {
@@ -745,8 +747,15 @@ function MediaServersTab() {
       };
     }
 
-    addMediaServer(config).then(refresh);
-    setShowForm(false);
+    try {
+      await addMediaServer(config);
+      refresh();
+      setShowForm(false);
+    } catch (e) {
+      console.error("Failed to save media server:", e);
+    } finally {
+      setFormSaving(false);
+    }
   };
 
   const handleDelete = (id: string) => {
@@ -1010,12 +1019,13 @@ function MediaServersTab() {
           <button
             className="btn btn-secondary"
             onClick={() => setShowForm(false)}
+            disabled={formSaving}
           >
             Cancel
           </button>
-          <button className="btn btn-primary" onClick={handleSave}>
+          <LoadingButton isLoading={formSaving} onClick={handleSave}>
             Save
-          </button>
+          </LoadingButton>
         </div>
       </div>
     );

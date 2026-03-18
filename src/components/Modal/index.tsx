@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "preact/hooks";
 import { Icon } from "../Icon";
+import { useFocusTrap } from "../../lib/useFocusTrap";
 import type { VNode } from "preact";
 
 export interface ModalProps {
@@ -19,6 +20,8 @@ export function Modal({
   size = "md",
   showClose = true,
 }: ModalProps) {
+  const dialogRef = useFocusTrap(isOpen);
+
   useEffect(() => {
     if (!isOpen) return;
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
@@ -38,12 +41,26 @@ export function Modal({
 
   return (
     <div className="modal-overlay active" onClick={handleBackdropClick}>
-      <div className={`dialog dialog-${size}`}>
+      <div
+        ref={dialogRef}
+        className={`dialog dialog-${size}`}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={title ? "dialog-title" : undefined}
+      >
         {(title || showClose) && (
           <div className="dialog-header">
-            {title && <span className="dialog-title">{title}</span>}
+            {title && (
+              <span id="dialog-title" className="dialog-title">
+                {title}
+              </span>
+            )}
             {showClose && (
-              <button className="dialog-close icon-btn" onClick={onClose}>
+              <button
+                className="dialog-close icon-btn"
+                onClick={onClose}
+                aria-label="Close dialog"
+              >
                 <Icon name="X" size={16} />
               </button>
             )}

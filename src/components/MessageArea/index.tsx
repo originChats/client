@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "preact/hooks";
 import { Fragment, type h, type ComponentChildren } from "preact";
 import { useSignalEffect } from "@preact/signals";
 import { parseEmojisInContainer, emojiImgUrl } from "../../lib/emoji";
+import { SkeletonMessageList } from "../Skeleton";
 import styles from "./MessageArea.module.css";
 import {
   currentChannel,
@@ -2172,7 +2173,11 @@ export function MessageArea() {
                 <div className="loading-throbber" />
               </div>
             )}
-            {currentMessages.length === 0 ? (
+            {currentMessages.length === 0 && channelLoading ? (
+              <div style={{ padding: "20px" }}>
+                <SkeletonMessageList count={3} />
+              </div>
+            ) : currentMessages.length === 0 ? (
               <div className="empty-channel-message">
                 <div className="empty-channel-icon">💬</div>
                 <div className="empty-channel-title">
@@ -2702,7 +2707,7 @@ function GiftModal({ isOpen, onClose, onGiftCreated }: GiftModalProps) {
             </svg>
             Send a Gift
           </div>
-          <button className="icon-btn" onClick={handleClose}>
+          <button className="icon-btn" onClick={handleClose} aria-label="Close">
             <Icon name="X" size={18} />
           </button>
         </div>
@@ -2828,7 +2833,11 @@ function ReactionModal({ emoji, users, onClose }: ReactionModalProps) {
               {users.length} {users.length === 1 ? "person" : "people"}
             </span>
           </div>
-          <button className="icon-btn reaction-modal-close" onClick={onClose}>
+          <button
+            className="icon-btn reaction-modal-close"
+            onClick={onClose}
+            aria-label="Close"
+          >
             <Icon name="X" size={16} />
           </button>
         </div>

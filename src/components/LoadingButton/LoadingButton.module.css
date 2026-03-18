@@ -1,0 +1,72 @@
+.loadingButton {
+  align-items: center;
+  background: var(--primary);
+  border: none;
+  border-radius: var(--radius-md);
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  font-size: 14px;
+  font-weight: 500;
+  gap: 8px;
+  justify-content: center;
+  padding: 10px 16px;
+  transition: all var(--anim-fast) ease;
+  position: relative;
+  min-width: 100px;
+}
+
+.loadingButton:hover:not(:disabled) {
+  background: var(--primary-hover);
+  transform: translateY(-1px);
+}
+
+.loadingButton:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.loadingButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.loadingButton.secondary {
+  background: var(--surface-light);
+  color: var(--text);
+}
+
+.loadingButton.secondary:hover:not(:disabled) {
+  background: var(--surface-hover);
+}
+
+.loadingButton.danger {
+  background: var(--danger);
+}
+
+.loadingButton.danger:hover:not(:disabled) {
+  background: #c53030;
+}
+
+.loadingButton.loading {
+  pointer-events: none;
+}
+
+.spinner {
+  animation: spin 0.8s linear infinite;
+  height: 16px;
+  width: 16px;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.loadingButtonText {
+  transition: opacity var(--anim-fast) ease;
+}
+
+.loadingButton.loading .loadingButtonText {
+  opacity: 0.8;
+}
