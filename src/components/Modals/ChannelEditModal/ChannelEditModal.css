@@ -152,6 +152,31 @@
   color: var(--text-dim, #a0a0a0);
 }
 
+.webhook-token-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 8px 12px;
+  background: var(--input-bg, #0a0a0c);
+  border-radius: 4px;
+  border: 1px solid var(--border, #2a2a33);
+}
+
+.webhook-token-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-dim, #a0a0a0);
+}
+
+.webhook-token-value {
+  flex: 1;
+  font-size: 13px;
+  color: var(--text, #ededed);
+  font-family: monospace;
+  word-break: break-all;
+}
+
 .webhook-card-actions {
   display: flex;
   gap: 4px;
@@ -243,6 +268,28 @@
   text-transform: uppercase;
   color: var(--header-secondary, #a0a0a0);
   margin-bottom: 8px;
+}
+
+.tag-input-description {
+  font-size: 12px;
+  color: var(--text-dim, #a0a0a0);
+  margin-bottom: 8px;
+  line-height: 1.4;
+}
+
+.permissions-description {
+  margin-bottom: 20px;
+  padding: 12px 16px;
+  background: var(--surface-light, #141419);
+  border-radius: 4px;
+  border-left: 3px solid var(--primary, #00a8fc);
+}
+
+.permissions-description p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-dim, #a0a0a0);
+  line-height: 1.5;
 }
 
 .tag-input-container {

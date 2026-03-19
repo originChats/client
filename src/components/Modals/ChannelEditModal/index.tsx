@@ -25,10 +25,14 @@ interface ChannelPermissions {
   view: string[];
   send: string[];
   delete: string[];
+  delete_own: string[];
+  edit_own: string[];
+  pin: string[];
+  react: string[];
   create_thread: string[];
 }
 
-type Tab = "overview" | "webhooks";
+type Tab = "overview" | "permissions" | "webhooks";
 
 export function ChannelEditModal() {
   const [activeTab, setActiveTab] = useState<Tab>("overview");
@@ -38,9 +42,12 @@ export function ChannelEditModal() {
     view: [],
     send: [],
     delete: [],
+    delete_own: [],
+    edit_own: [],
+    pin: [],
+    react: [],
     create_thread: [],
   });
-  const [wallpaper, setWallpaper] = useState("");
   const [size, setSize] = useState(20);
   const [loading, setLoading] = useState(false);
 
@@ -51,6 +58,7 @@ export function ChannelEditModal() {
 
   const [showRegenerateConfirm, setShowRegenerateConfirm] = useState("");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState("");
+  const [revealedTokens, setRevealedTokens] = useState<Set<string>>(new Set());
 
   const sUrl = serverUrl.value;
   const channelName = showChannelEditModal.value;
@@ -80,9 +88,12 @@ export function ChannelEditModal() {
       view: channel.permissions?.view || [],
       send: channel.permissions?.send || [],
       delete: channel.permissions?.delete || [],
+      delete_own: channel.permissions?.delete_own || [],
+      edit_own: channel.permissions?.edit_own || [],
+      pin: channel.permissions?.pin || [],
+      react: channel.permissions?.react || [],
       create_thread: channel.permissions?.create_thread || [],
     });
-    setWallpaper((channel as any).wallpaper || "");
     setSize((channel as any).size || 20);
   }, [channel]);
 
@@ -120,7 +131,6 @@ export function ChannelEditModal() {
           display_name: displayName.trim(),
           description: description.trim(),
           permissions,
-          wallpaper: wallpaper.trim(),
           size: channel.type === "separator" ? size : undefined,
         },
       },
@@ -222,14 +232,20 @@ export function ChannelEditModal() {
             </div>
           </div>
           <nav className="server-settings-nav">
-            {(["overview", "webhooks"] as Tab[]).map((tab) => (
+            {(["overview", "permissions", "webhooks"] as Tab[]).map((tab) => (
               <button
                 key={tab}
                 className={`server-nav-item ${activeTab === tab ? "active" : ""}`}
                 onClick={() => setActiveTab(tab)}
               >
                 <Icon
-                  name={tab === "overview" ? "Settings" : "Globe"}
+                  name={
+                    tab === "overview"
+                      ? "Settings"
+                      : tab === "permissions"
+                        ? "Lock"
+                        : "Globe"
+                  }
                   size={16}
                 />
                 {tab.charAt(0).toUpperCase() + tab.slice(1)}
@@ -277,57 +293,6 @@ export function ChannelEditModal() {
               </div>
 
               <div className="settings-field">
-                <label>Permissions</label>
-                <TagInput
-                  label="View"
-                  values={permissions.view}
-                  availableRoles={availableRoles}
-                  onChange={(values) =>
-                    setPermissions({ ...permissions, view: values })
-                  }
-                />
-                <TagInput
-                  label="Send"
-                  values={permissions.send}
-                  availableRoles={availableRoles}
-                  onChange={(values) =>
-                    setPermissions({ ...permissions, send: values })
-                  }
-                />
-                <TagInput
-                  label="Delete"
-                  values={permissions.delete}
-                  availableRoles={availableRoles}
-                  onChange={(values) =>
-                    setPermissions({ ...permissions, delete: values })
-                  }
-                />
-                {channel.type === "forum" && (
-                  <TagInput
-                    label="Create Thread"
-                    values={permissions.create_thread}
-                    availableRoles={availableRoles}
-                    onChange={(values) =>
-                      setPermissions({ ...permissions, create_thread: values })
-                    }
-                  />
-                )}
-              </div>
-
-              <div className="settings-field">
-                <label>Wallpaper URL</label>
-                <input
-                  type="text"
-                  className="input"
-                  value={wallpaper}
-                  onInput={(e) =>
-                    setWallpaper((e.target as HTMLInputElement).value)
-                  }
-                  placeholder="https://example.com/wallpaper.png"
-                />
-              </div>
-
-              <div className="settings-field">
                 <label>Channel Type</label>
                 <div className="settings-value">{channel.type}</div>
               </div>
@@ -369,6 +334,94 @@ export function ChannelEditModal() {
             </div>
           )}
 
+          {activeTab === "permissions" && (
+            <div className="server-section-body channel-edit-overview">
+              <div className="permissions-description">
+                <p>
+                  Configure which roles can perform specific actions in this
+                  channel. Add roles to each permission to grant access.
+                </p>
+              </div>
+
+              <div className="settings-field">
+                <TagInput
+                  label="View"
+                  description="Roles that can see the channel"
+                  values={permissions.view}
+                  availableRoles={availableRoles}
+                  onChange={(values) =>
+                    setPermissions({ ...permissions, view: values })
+                  }
+                />
+                <TagInput
+                  label="Send"
+                  description="Roles that can send messages"
+                  values={permissions.send}
+                  availableRoles={availableRoles}
+                  onChange={(values) =>
+                    setPermissions({ ...permissions, send: values })
+                  }
+                />
+                <TagInput
+                  label="Delete"
+                  description="Roles that can delete any message"
+                  values={permissions.delete}
+                  availableRoles={availableRoles}
+                  onChange={(values) =>
+                    setPermissions({ ...permissions, delete: values })
+                  }
+                />
+                <TagInput
+                  label="Delete Own"
+                  description="Roles that can delete their own messages (defaults to all if omitted)"
+                  values={permissions.delete_own}
+                  availableRoles={availableRoles}
+                  onChange={(values) =>
+                    setPermissions({ ...permissions, delete_own: values })
+                  }
+                />
+                <TagInput
+                  label="Edit Own"
+                  description="Roles that can edit their own messages (defaults to all if omitted)"
+                  values={permissions.edit_own}
+                  availableRoles={availableRoles}
+                  onChange={(values) =>
+                    setPermissions({ ...permissions, edit_own: values })
+                  }
+                />
+                <TagInput
+                  label="Pin"
+                  description="Roles that can pin messages (defaults to owner only if omitted)"
+                  values={permissions.pin}
+                  availableRoles={availableRoles}
+                  onChange={(values) =>
+                    setPermissions({ ...permissions, pin: values })
+                  }
+                />
+                <TagInput
+                  label="React"
+                  description="Roles that can add/remove reactions to messages"
+                  values={permissions.react}
+                  availableRoles={availableRoles}
+                  onChange={(values) =>
+                    setPermissions({ ...permissions, react: values })
+                  }
+                />
+                {channel.type === "forum" && (
+                  <TagInput
+                    label="Create Thread"
+                    description="Roles that can create new threads"
+                    values={permissions.create_thread}
+                    availableRoles={availableRoles}
+                    onChange={(values) =>
+                      setPermissions({ ...permissions, create_thread: values })
+                    }
+                  />
+                )}
+              </div>
+            </div>
+          )}
+
           {activeTab === "webhooks" && (
             <div className="server-section-body">
               <div className="webhook-cards-header">
@@ -397,12 +450,40 @@ export function ChannelEditModal() {
                             Created {formatDate(webhook.created_at)}
                           </div>
                         </div>
-                        {(webhook as any).token && (
-                          <div className="channel-edit-alert">
-                            <div className="channel-edit-alert-content">
-                              <strong>New Token:</strong>{" "}
-                              {(webhook as any).token}
-                            </div>
+                        {webhook.token && (
+                          <div className="webhook-token-row">
+                            <span className="webhook-token-label">Token:</span>
+                            <span className="webhook-token-value">
+                              {revealedTokens.has(webhook.id)
+                                ? webhook.token
+                                : "••••••••••••••••"}
+                            </span>
+                            <button
+                              className="settings-icon-btn"
+                              onClick={() => {
+                                const newRevealed = new Set(revealedTokens);
+                                if (newRevealed.has(webhook.id)) {
+                                  newRevealed.delete(webhook.id);
+                                } else {
+                                  newRevealed.add(webhook.id);
+                                }
+                                setRevealedTokens(newRevealed);
+                              }}
+                              title={
+                                revealedTokens.has(webhook.id)
+                                  ? "Hide"
+                                  : "Reveal"
+                              }
+                            >
+                              <Icon
+                                name={
+                                  revealedTokens.has(webhook.id)
+                                    ? "EyeOff"
+                                    : "Eye"
+                                }
+                                size={14}
+                              />
+                            </button>
                             <button
                               className="settings-icon-btn"
                               onClick={() => copyWebhookUrl(webhook)}
@@ -544,12 +625,19 @@ export function ChannelEditModal() {
 
 interface TagInputProps {
   label: string;
+  description?: string;
   values: string[];
   availableRoles: Role[];
   onChange: (values: string[]) => void;
 }
 
-function TagInput({ label, values, availableRoles, onChange }: TagInputProps) {
+function TagInput({
+  label,
+  description,
+  values,
+  availableRoles,
+  onChange,
+}: TagInputProps) {
   const [inputValue, setInputValue] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -603,6 +691,9 @@ function TagInput({ label, values, availableRoles, onChange }: TagInputProps) {
   return (
     <div className="tag-input-wrapper">
       <label>{label}</label>
+      {description && (
+        <div className="tag-input-description">{description}</div>
+      )}
       <div className="tag-input-container" ref={containerRef}>
         {values.map((value) => (
           <span key={value} className="tag">

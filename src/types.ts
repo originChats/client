@@ -8,6 +8,10 @@ export interface Channel {
     send?: string[];
     create_thread?: string[];
     delete?: string[];
+    delete_own?: string[];
+    edit_own?: string[];
+    pin?: string[];
+    react?: string[];
   };
   voice_state?: VoiceUser[];
   last_message?: number;
