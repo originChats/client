@@ -38,5 +38,13 @@
     "icon": "https://raw.githubusercontent.com/cloudlink-delta/branding/refs/heads/main/icon.svg",
     "url": "cl.mikedev101.cc/chats",
     "tags": ["community"]
+  },
+  {
+    "url": "chats.sdisk.us",
+    "name": "boxedlang place",
+    "owner": "sandisk",
+    "created_at": 1774473410975,
+    "icon": "https://raw.githubusercontent.com/mc20000-01/Imgs/main/boxedLANG%20icon%20(art%20by%20me)%20png.png",
+    "tags": ["esolangs", "programming", "chill"]
   }
 ]
