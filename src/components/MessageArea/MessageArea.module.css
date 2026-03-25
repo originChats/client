@@ -951,11 +951,11 @@
   z-index: 0;
 }
 
-.swipeActionIcon--left {
+.swipeActionIconLeft {
   left: 4px;
 }
 
-.swipeActionIcon--right {
+.swipeActionIconRight {
   right: 4px;
 }
 

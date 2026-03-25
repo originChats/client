@@ -39,9 +39,13 @@ export function SwipeableMessage({
   const applyTranslate = (x: number) => {
     const el = wrapperRef.current;
     if (!el) return;
-    const inner = el.querySelector(".swipe-inner") as HTMLElement | null;
+    const inner = el.querySelector(
+      `.${styles.swipeInner}`,
+    ) as HTMLElement | null;
     if (inner) inner.style.transform = `translateX(${x}px)`;
-    const icon = el.querySelector(".swipe-action-icon") as HTMLElement | null;
+    const icon = el.querySelector(
+      `.${styles.swipeActionIcon}`,
+    ) as HTMLElement | null;
     if (icon) {
       const progress = Math.min(Math.abs(x) / SWIPE_THRESHOLD, 1);
       const scale = 0.4 + 0.6 * progress;
