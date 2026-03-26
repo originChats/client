@@ -38,6 +38,7 @@ import {
   offlinePushServers,
   pushSubscriptionsByServer,
   serverCapabilitiesByServer,
+  attachmentConfigByServer,
   lastChannelByServer,
   SPECIAL_CHANNELS,
   addThreadToChannel,
@@ -779,6 +780,12 @@ async function handleMessage(msg: any, sUrl: string): Promise<void> {
           ? msg.val.capabilities
           : DEFAULT_CAPABILITIES,
       };
+      if (msg.val.attachments) {
+        attachmentConfigByServer.value = {
+          ...attachmentConfigByServer.value,
+          [sUrl]: msg.val.attachments,
+        };
+      }
       // Always apply the authoritative icon and name from the handshake so
       // the local cache never gets out of sync with what the server reports.
       if (msg.val.server) {
@@ -2157,7 +2164,6 @@ async function handleMessage(msg: any, sUrl: string): Promise<void> {
     }
     case "ping":
       break;
-
     default:
       console.debug(`[${sUrl}] Unhandled message type:`, msg.cmd || msg.type);
   }

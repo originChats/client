@@ -138,6 +138,18 @@ export const serverValidatorKeys: Record<string, string> = {};
  * so callers can treat missing capabilities as "not supported".
  */
 export const serverCapabilitiesByServer = signal<Record<string, string[]>>({});
+
+export interface AttachmentConfig {
+  enabled: boolean;
+  max_size: number;
+  allowed_types: string[];
+  max_attachments_per_user: number;
+  permanent_tiers: string[];
+}
+
+export const attachmentConfigByServer = signal<
+  Record<string, AttachmentConfig>
+>({});
 export const authRetries: Record<string, number> = {};
 export const authRetryTimeouts: Record<string, number> = {};
 export const reconnectAttempts: Record<string, number> = {};

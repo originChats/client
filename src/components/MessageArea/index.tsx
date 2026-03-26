@@ -33,6 +33,7 @@ import {
   hasCapability,
   currentUserByServer,
   threadsByServer,
+  attachmentConfigByServer,
 } from "../../state";
 
 import {
@@ -71,13 +72,22 @@ import { ConfirmDialog } from "../Modal";
 import { ImageViewer } from "../ImageViewer";
 import { UnifiedPicker } from "../UnifiedPicker";
 import { uploadImage, getEnabledMediaServer } from "../../lib/media-uploader";
+import {
+  uploadAttachment,
+  mimeTypeToAcceptString,
+  isMimeTypeAllowed,
+  cancelUpload,
+} from "../../lib/attachment-uploader";
+import type { PendingAttachment } from "../../lib/attachment-uploader";
 import { MessageContent } from "../MessageContent";
 import { MessageGroupRow } from "../MessageGroupRow";
 import { MessageActionButtons } from "../MessageActionButtons";
 import { MessageEmbed } from "../MessageEmbed";
 import { WebhookBadge } from "../WebhookBadge";
+import { AttachmentPreview } from "../AttachmentPreview";
 import { openUserPopout } from "../UserPopout";
 import { UserProfileCard } from "../UserProfile";
+import { imageViewerUrl } from "../../lib/ui-signals";
 import { InputAutocomplete, useInputAutocomplete } from "../InputAutocomplete";
 import { SlashCommandInput } from "../SlashCommandInput";
 import type { SlashCommandArgs } from "../SlashCommandInput";
@@ -153,6 +163,10 @@ interface PendingImage {
 let pendingImageUploads: PendingImage[] = [];
 let setPendingImagesRef: ((imgs: PendingImage[]) => void) | null = null;
 
+let pendingAttachmentUploads: PendingAttachment[] = [];
+let setPendingAttachmentsRef: ((atts: PendingAttachment[]) => void) | null =
+  null;
+
 function resetInputHeight() {
   const input = document.getElementById("message-input") as HTMLTextAreaElement;
   if (input) {
@@ -200,9 +214,10 @@ async function sendMessage() {
   const input = document.getElementById("message-input") as HTMLTextAreaElement;
   const content = input?.value?.trim() || "";
   const hasImages = pendingImageUploads.length > 0;
+  const hasAttachments = pendingAttachmentUploads.length > 0;
   const hasText = content.length > 0;
 
-  if (!hasText && !hasImages) return;
+  if (!hasText && !hasImages && !hasAttachments) return;
   if (!currentChannel.value) return;
 
   const thread = currentThread.value;
@@ -216,7 +231,7 @@ async function sendMessage() {
   }
 
   let finalContent = content;
-  if (hasImages) {
+  if (hasImages && !hasCapability("attachment_upload")) {
     const imageUrls = pendingImageUploads.map((img) => img.url);
     if (hasText) {
       finalContent = content + "\n" + imageUrls.join("\n");
@@ -234,6 +249,11 @@ async function sendMessage() {
   pendingImageUploads = [];
   if (setPendingImagesRef) setPendingImagesRef([]);
 
+  // Clear pending attachments
+  const attachmentsToSend = [...pendingAttachmentUploads];
+  pendingAttachmentUploads = [];
+  if (setPendingAttachmentsRef) setPendingAttachmentsRef([]);
+
   const msg: any = {
     cmd: "message_new",
     content: convertChannelMentionsToLinks(
@@ -250,6 +270,9 @@ async function sendMessage() {
         }
       : { channel: currentChannel.value.name }),
   };
+  if (attachmentsToSend.length > 0) {
+    msg.attachments = attachmentsToSend.map((att) => ({ id: att.id }));
+  }
   if (replyTo.value) {
     msg.reply_to = replyTo.value.id;
     if (!replyPing.value) msg.ping = false;
@@ -335,6 +358,12 @@ function RightPanelMessageCard({ msg }: { msg: any }) {
           authorUsername={msg.user}
           pings={msg.pings}
         />
+        {msg.attachments && msg.attachments.length > 0 && (
+          <AttachmentPreview
+            attachments={msg.attachments}
+            hasContent={!!msg.content}
+          />
+        )}
       </div>
       <div className="right-panel-message-actions">
         {canPin && (
@@ -880,7 +909,6 @@ export function MessageArea() {
     message: string;
     onConfirm: () => void;
   } | null>(null);
-  const [imageViewUrl, setImageViewUrl] = useState("");
   const [showPicker, setShowPicker] = useState(false);
   const [pickerTab, setPickerTab] = useState<"emoji" | "gif">("emoji");
   const [reactingToMessage, setReactingToMessage] = useState<Message | null>(
@@ -897,7 +925,11 @@ export function MessageArea() {
     { username: string; color?: string | null }[]
   >([]);
   const [pendingImages, setPendingImages] = useState<PendingImage[]>([]);
+  const [pendingAttachments, setPendingAttachments] = useState<
+    PendingAttachment[]
+  >([]);
   const [uploading, setUploading] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
   const [showPlusMenu, setShowPlusMenu] = useState(false);
   const [showGiftModal, setShowGiftModal] = useState(false);
   const plusMenuRef = useRef<HTMLDivElement>(null);
@@ -952,6 +984,13 @@ export function MessageArea() {
     };
   }, []);
 
+  useEffect(() => {
+    setPendingAttachmentsRef = setPendingAttachments;
+    return () => {
+      setPendingAttachmentsRef = null;
+    };
+  }, []);
+
   // Close plus-button dropdown when clicking outside
   useEffect(() => {
     if (!showPlusMenu) return;
@@ -970,6 +1009,10 @@ export function MessageArea() {
   useEffect(() => {
     pendingImageUploads = pendingImages;
   }, [pendingImages]);
+
+  useEffect(() => {
+    pendingAttachmentUploads = pendingAttachments;
+  }, [pendingAttachments]);
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -1213,6 +1256,92 @@ export function MessageArea() {
   };
 
   const handleFileUpload = async (files: File[]) => {
+    const sUrl = serverUrl.value;
+    const attachmentConfig = attachmentConfigByServer.value[sUrl];
+    const useNativeUpload = hasCapability("attachment_upload");
+
+    if (useNativeUpload) {
+      if (!attachmentConfig) {
+        showError("Attachment configuration not loaded. Please try again.", {
+          autoDismissMs: 5000,
+        });
+        return;
+      }
+      for (const file of files) {
+        if (!isMimeTypeAllowed(file.type, attachmentConfig.allowed_types)) {
+          showError(`File type ${file.type} is not allowed on this server`, {
+            autoDismissMs: 5000,
+          });
+          continue;
+        }
+        if (file.size > attachmentConfig.max_size) {
+          showError(
+            `File ${file.name} exceeds maximum size of ${Math.round(attachmentConfig.max_size / 1024 / 1024)}MB`,
+            { autoDismissMs: 5000 },
+          );
+          continue;
+        }
+        try {
+          setUploading(true);
+
+          const localUrl = URL.createObjectURL(file);
+          const tempId = `temp_${Date.now()}_${Math.random()}`;
+
+          setPendingAttachments((prev) => [
+            ...prev,
+            {
+              id: tempId,
+              name: file.name,
+              mime_type: file.type,
+              size: file.size,
+              url: localUrl,
+              uploading: true,
+              progress: 0,
+              localUrl,
+            },
+          ]);
+
+          const result = await uploadAttachment(
+            file,
+            currentChannel.value?.name || "",
+            tempId,
+            (progress) => {
+              setPendingAttachments((prev) =>
+                prev.map((att) =>
+                  att.id === tempId ? { ...att, progress } : att,
+                ),
+              );
+            },
+          );
+
+          setPendingAttachments((prev) =>
+            prev.map((att) =>
+              att.id === tempId
+                ? {
+                    ...att,
+                    id: result.id,
+                    url: result.url,
+                    uploading: false,
+                    expires_at: result.expires_at,
+                    permanent: result.permanent,
+                  }
+                : att,
+            ),
+          );
+        } catch (error: any) {
+          showError(
+            `Failed to upload ${file.name}: ${error.message || "Unknown error"}`,
+          );
+          setPendingAttachments((prev) =>
+            prev.filter((att) => att.name !== file.name || !att.uploading),
+          );
+        } finally {
+          setUploading(false);
+        }
+      }
+      return;
+    }
+
     const server = await getEnabledMediaServer();
     if (!server) {
       showError(
@@ -1225,23 +1354,8 @@ export function MessageArea() {
     for (const file of files) {
       try {
         setUploading(true);
-        const input = document.getElementById(
-          "message-input",
-        ) as HTMLTextAreaElement;
-        if (input) {
-          input.setAttribute("data-placeholder", input.placeholder);
-          input.placeholder = `Uploading ${file.name}...`;
-          input.disabled = true;
-        }
 
         const imageUrl = await uploadImage(file, server);
-
-        if (input) {
-          input.placeholder =
-            input.getAttribute("data-placeholder") || "Type a message...";
-          input.disabled = false;
-          input.focus();
-        }
 
         setPendingImages((prev) => [
           ...prev,
@@ -1252,14 +1366,6 @@ export function MessageArea() {
           },
         ]);
       } catch (error: any) {
-        const input = document.getElementById(
-          "message-input",
-        ) as HTMLTextAreaElement;
-        if (input) {
-          input.placeholder =
-            input.getAttribute("data-placeholder") || "Type a message...";
-          input.disabled = false;
-        }
         showError(
           `Failed to upload ${file.name}: ${error.message || "Unknown error"}`,
         );
@@ -1271,10 +1377,19 @@ export function MessageArea() {
   };
 
   const handleImageUpload = async (
-    e: h.JSX.TargetedInputEvent<HTMLInputElement>,
+    e: h.JSX.TargetedEvent<HTMLInputElement>,
   ) => {
     const files = e.currentTarget.files;
     if (!files || files.length === 0) return;
+
+    const useNativeUpload = hasCapability("attachment_upload");
+
+    if (useNativeUpload) {
+      const filesArray = Array.from(files);
+      e.currentTarget.value = "";
+      await handleFileUpload(filesArray);
+      return;
+    }
 
     const imageFiles = Array.from(files).filter(
       (f) => f.type.startsWith("image/") || f.type.startsWith("video/"),
@@ -1294,32 +1409,77 @@ export function MessageArea() {
   const handleDragOver = (e: DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const currentTarget = e.currentTarget as HTMLElement | null;
+    if (
+      e.relatedTarget === null ||
+      !currentTarget?.contains(e.relatedTarget as Node)
+    ) {
+      setIsDragging(false);
+    }
   };
 
   const handleDrop = (e: DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    setIsDragging(false);
     if (!e.dataTransfer?.files) return;
-    const imageFiles = Array.from(e.dataTransfer.files).filter((f) =>
-      f.type.startsWith("image/"),
-    );
-    if (imageFiles.length > 0) handleFileUpload(imageFiles);
+    const useNativeUpload = hasCapability("attachment_upload");
+    const files = Array.from(e.dataTransfer.files);
+    if (useNativeUpload) {
+      if (files.length > 0) handleFileUpload(files);
+    } else {
+      const imageFiles = files.filter((f) => f.type.startsWith("image/"));
+      if (imageFiles.length > 0) handleFileUpload(imageFiles);
+    }
   };
 
   const handlePaste = (e: ClipboardEvent) => {
     if (!e.clipboardData) return;
-    const imageFiles = Array.from(e.clipboardData.items)
-      .filter((item) => item.type.indexOf("image") !== -1)
-      .map((item) => item.getAsFile())
-      .filter(Boolean) as File[];
-    if (imageFiles.length > 0) {
-      e.preventDefault();
-      handleFileUpload(imageFiles);
+    const useNativeUpload = hasCapability("attachment_upload");
+    const items = Array.from(e.clipboardData.items);
+    if (useNativeUpload) {
+      const files = items
+        .filter((item) => item.kind === "file")
+        .map((item) => item.getAsFile())
+        .filter(Boolean) as File[];
+      if (files.length > 0) {
+        e.preventDefault();
+        handleFileUpload(files);
+      }
+    } else {
+      const imageFiles = items
+        .filter((item) => item.type.indexOf("image") !== -1)
+        .map((item) => item.getAsFile())
+        .filter(Boolean) as File[];
+      if (imageFiles.length > 0) {
+        e.preventDefault();
+        handleFileUpload(imageFiles);
+      }
     }
   };
 
   const removePendingImage = (id: number) => {
     setPendingImages((prev) => prev.filter((img) => img.id !== id));
+  };
+
+  const removePendingAttachment = (id: string) => {
+    const att = pendingAttachments.find((a) => a.id === id);
+    if (att?.uploading) {
+      cancelUpload(id);
+    }
+    setPendingAttachments((prev) => {
+      const attachment = prev.find((a) => a.id === id);
+      if (attachment?.localUrl) {
+        URL.revokeObjectURL(attachment.localUrl);
+      }
+      return prev.filter((a) => a.id !== id);
+    });
   };
 
   const handleEmojiSelect = (emoji: string) => {
@@ -1398,7 +1558,7 @@ export function MessageArea() {
 
   const handleImageClick = (e: h.JSX.TargetedMouseEvent<HTMLImageElement>) => {
     const url = e.currentTarget.dataset.imageUrl || e.currentTarget.src;
-    setImageViewUrl(url);
+    imageViewerUrl.value = url;
   };
 
   // Event delegation for image clicks and spoiler reveals within messages
@@ -1468,7 +1628,7 @@ export function MessageArea() {
       e.preventDefault();
       e.stopPropagation();
       const url = img.dataset.imageUrl || img.src;
-      if (url) setImageViewUrl(url);
+      if (url) imageViewerUrl.value = url;
     }
   };
 
@@ -1813,6 +1973,12 @@ export function MessageArea() {
                         authorUsername={msg.user}
                         messageEmbeds={msg.embeds}
                       />
+                      {msg.attachments && msg.attachments.length > 0 && (
+                        <AttachmentPreview
+                          attachments={msg.attachments}
+                          hasContent={!!msg.content}
+                        />
+                      )}
                       {msg.edited && (
                         <span className="edited-indicator">(edited)</span>
                       )}
@@ -1862,6 +2028,12 @@ export function MessageArea() {
                         pings={msg.pings}
                         messageEmbeds={msg.embeds}
                       />
+                      {msg.attachments && msg.attachments.length > 0 && (
+                        <AttachmentPreview
+                          attachments={msg.attachments}
+                          hasContent={!!msg.content}
+                        />
+                      )}
                       {msg.edited && (
                         <span className="edited-indicator">(edited)</span>
                       )}
@@ -1879,6 +2051,9 @@ export function MessageArea() {
                   authorUsername={msg.user}
                   pings={msg.pings}
                 />
+                {msg.attachments && msg.attachments.length > 0 && (
+                  <AttachmentPreview attachments={msg.attachments} />
+                )}
                 {msg.edited && (
                   <span className="edited-indicator">(edited)</span>
                 )}
@@ -1998,8 +2173,17 @@ export function MessageArea() {
         <div
           className="messages-container"
           onDragOver={handleDragOver as any}
+          onDragLeave={handleDragLeave as any}
           onDrop={handleDrop as any}
         >
+          {isDragging && (
+            <div className="drag-drop-overlay">
+              <div className="drag-drop-content">
+                <Icon name="Upload" size={48} />
+                <span>Drop files to upload</span>
+              </div>
+            </div>
+          )}
           {channelLoading && currentMessages.length > 0 && (
             <div className="channel-loading-overlay">
               <div className="loading-throbber" />
@@ -2098,7 +2282,7 @@ export function MessageArea() {
                     src={img.url}
                     className="pending-image-preview"
                     alt={img.fileName}
-                    onClick={() => setImageViewUrl(img.url)}
+                    onClick={() => (imageViewerUrl.value = img.url)}
                   />
                   <button
                     className="pending-image-remove"
@@ -2111,6 +2295,102 @@ export function MessageArea() {
                   </button>
                 </div>
               ))}
+            </div>
+          )}
+          {pendingAttachments.length > 0 && (
+            <div className="pending-attachments-container">
+              {pendingAttachments.map((att) => {
+                const daysUntilExpiry = att.expires_at
+                  ? Math.max(
+                      0,
+                      Math.ceil((att.expires_at - Date.now() / 1000) / 86400),
+                    )
+                  : null;
+                const showExpiry =
+                  !att.permanent &&
+                  !att.uploading &&
+                  daysUntilExpiry !== null &&
+                  daysUntilExpiry <= 7;
+
+                return (
+                  <div key={att.id} className="pending-attachment-wrapper">
+                    {att.uploading ? (
+                      <div className="pending-attachment-loading">
+                        <svg
+                          className="upload-progress-ring"
+                          viewBox="0 0 36 36"
+                        >
+                          <circle
+                            className="upload-progress-bg"
+                            cx="18"
+                            cy="18"
+                            r="16"
+                            fill="none"
+                            strokeWidth="3"
+                          />
+                          <circle
+                            className="upload-progress-fill"
+                            cx="18"
+                            cy="18"
+                            r="16"
+                            fill="none"
+                            strokeWidth="3"
+                            strokeDasharray={`${(att.progress || 0) * 100} ${100 - (att.progress || 0) * 100}`}
+                            strokeDashoffset="25"
+                          />
+                        </svg>
+                        <span className="upload-progress-text">
+                          {Math.round((att.progress || 0) * 100)}%
+                        </span>
+                      </div>
+                    ) : att.mime_type.startsWith("image/") ? (
+                      <img
+                        src={att.url}
+                        className="pending-attachment-preview"
+                        alt={att.name}
+                      />
+                    ) : (
+                      <div className="pending-attachment-file">
+                        <Icon
+                          name={
+                            att.mime_type.startsWith("video/")
+                              ? "Video"
+                              : att.mime_type.startsWith("audio/")
+                                ? "Music"
+                                : att.mime_type === "application/pdf"
+                                  ? "FileText"
+                                  : "File"
+                          }
+                          size={24}
+                        />
+                        <span className="pending-attachment-name">
+                          {att.name.length > 12
+                            ? att.name.slice(0, 9) + "..." + att.name.slice(-3)
+                            : att.name}
+                        </span>
+                      </div>
+                    )}
+                    {showExpiry && (
+                      <div className="pending-attachment-expiry">
+                        {daysUntilExpiry === 0
+                          ? "Expires today"
+                          : daysUntilExpiry === 1
+                            ? "Expires in 1 day"
+                            : `Expires in ${daysUntilExpiry} days`}
+                      </div>
+                    )}
+                    <button
+                      className="pending-attachment-remove"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        removePendingAttachment(att.id);
+                      }}
+                    >
+                      <Icon name="X" size={12} />
+                    </button>
+                  </div>
+                );
+              })}
             </div>
           )}
           <div
@@ -2178,8 +2458,19 @@ export function MessageArea() {
                           fileInputRef.current?.click();
                         }}
                       >
-                        <Icon name="Image" size={16} />
-                        <span>Upload Image</span>
+                        <Icon
+                          name={
+                            hasCapability("attachment_upload")
+                              ? "File"
+                              : "Image"
+                          }
+                          size={16}
+                        />
+                        <span>
+                          {hasCapability("attachment_upload")
+                            ? "Upload File"
+                            : "Upload Image"}
+                        </span>
                       </div>
                       <div
                         className="plus-dropdown-item"
@@ -2211,10 +2502,22 @@ export function MessageArea() {
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept="image/*,video/*"
+                  accept={
+                    hasCapability("attachment_upload")
+                      ? (() => {
+                          const types =
+                            attachmentConfigByServer.value[serverUrl.value]
+                              ?.allowed_types;
+                          if (types && types.includes("*")) return "*/*";
+                          return mimeTypeToAcceptString(
+                            types || ["image/*", "video/*"],
+                          );
+                        })()
+                      : "image/*,video/*"
+                  }
                   multiple
                   style={{ display: "none" }}
-                  onInput={handleImageUpload}
+                  onChange={handleImageUpload}
                 />
                 <textarea
                   id="message-input"
@@ -2356,11 +2659,11 @@ export function MessageArea() {
           danger={true}
         />
       )}
-      {imageViewUrl && (
+      {imageViewerUrl.value && (
         <ImageViewer
-          isOpen={!!imageViewUrl}
-          imageUrl={imageViewUrl}
-          onClose={() => setImageViewUrl("")}
+          isOpen={!!imageViewerUrl.value}
+          imageUrl={imageViewerUrl.value}
+          onClose={() => (imageViewerUrl.value = "")}
         />
       )}
       <UnifiedPicker

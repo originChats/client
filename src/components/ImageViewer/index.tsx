@@ -108,6 +108,8 @@ export function ImageViewer({ isOpen, imageUrl, onClose }: ImageViewerProps) {
         ) : (
           <img src={imageUrl} alt="Full size" onError={handleImageError} />
         )}
+      </div>
+      <div className="image-modal-buttons">
         <button
           className={`modal-fav-btn${isFavorite ? " active" : ""}`}
           onClick={toggleFavorite}
@@ -115,14 +117,14 @@ export function ImageViewer({ isOpen, imageUrl, onClose }: ImageViewerProps) {
         >
           <Icon
             name="Star"
-            size={24}
+            size={20}
             fill={isFavorite ? "currentColor" : "none"}
           />
         </button>
+        <button className="modal-close-btn" onClick={onClose} title="Close">
+          <Icon name="X" size={20} />
+        </button>
       </div>
-      <button className="modal-close-btn" onClick={onClose} title="Close">
-        <Icon name="X" size={20} />
-      </button>
     </div>
   );
 }

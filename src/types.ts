@@ -137,6 +137,15 @@ export interface Message {
   };
   webhook?: WebhookInfo;
   embeds?: MessageEmbed[];
+  attachments?: Array<{
+    id: string;
+    name: string;
+    mime_type: string;
+    size: number;
+    url: string;
+    expires_at?: number | null;
+    permanent?: boolean;
+  }>;
 }
 
 export interface Server {

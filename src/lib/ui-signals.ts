@@ -169,6 +169,8 @@ export function closeContextMenu() {
 
 export const showNotificationPrompt = signal(false);
 
+export const imageViewerUrl = signal<string>("");
+
 export const channelListWidth = signal(340);
 
 export const showChannelEditModal = signal<string | null>(null);

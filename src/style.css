@@ -2137,6 +2137,501 @@ a {
   width: 12px;
 }
 
+.pending-attachments-container {
+  background: var(--bg-secondary);
+  border-radius: 24px;
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+  max-height: 120px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 8px;
+}
+
+.pending-attachments-container::-webkit-scrollbar {
+  height: 6px;
+}
+
+.pending-attachments-container::-webkit-scrollbar-track {
+  background: var(--surface);
+  border-radius: 3px;
+}
+
+.pending-attachments-container::-webkit-scrollbar-thumb {
+  background: var(--primary);
+  border-radius: 3px;
+}
+
+.pending-attachment-wrapper {
+  background: var(--surface-light);
+  border: 3px solid var(--border);
+  border-radius: 15px;
+  flex-shrink: 0;
+  height: 80px;
+  overflow: hidden;
+  position: relative;
+  width: 80px;
+}
+
+.pending-attachment-preview {
+  cursor: pointer;
+  height: 100%;
+  object-fit: cover;
+  width: 100%;
+}
+
+.pending-attachment-loading {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  justify-content: center;
+  width: 100%;
+  position: relative;
+}
+
+.upload-progress-ring {
+  width: 48px;
+  height: 48px;
+  transform: rotate(-90deg);
+}
+
+.upload-progress-bg {
+  stroke: var(--border);
+}
+
+.upload-progress-fill {
+  stroke: var(--primary);
+  stroke-linecap: round;
+  transition: stroke-dasharray 0.2s ease;
+}
+
+.upload-progress-text {
+  position: absolute;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.pending-attachment-loading .spinner {
+  animation: spin 1s linear infinite;
+  border: 3px solid var(--border);
+  border-radius: 50%;
+  border-top-color: var(--primary);
+  height: 24px;
+  width: 24px;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.pending-attachment-file {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  justify-content: center;
+  padding: 8px;
+  width: 100%;
+}
+
+.pending-attachment-name {
+  color: var(--text-secondary);
+  font-size: 10px;
+  margin-top: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  width: 100%;
+  text-align: center;
+}
+
+.pending-attachment-expiry {
+  background: rgba(0, 0, 0, 0.8);
+  border-radius: 4px;
+  bottom: 4px;
+  color: var(--warning, #f59e0b);
+  font-size: 9px;
+  left: 50%;
+  padding: 2px 6px;
+  position: absolute;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+.pending-attachment-remove {
+  align-items: center;
+  background: rgba(0, 0, 0, 0.7);
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  height: 20px;
+  justify-content: center;
+  opacity: 0;
+  position: absolute;
+  right: 4px;
+  top: 4px;
+  transition: opacity 0.15s ease;
+  width: 20px;
+}
+
+.pending-attachment-wrapper:hover .pending-attachment-remove {
+  opacity: 1;
+}
+
+.pending-attachment-remove:hover {
+  background: var(--danger);
+}
+
+.pending-attachment-remove svg {
+  color: #fff;
+  height: 12px;
+  width: 12px;
+}
+
+.message-attachments {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+  max-width: 400px;
+}
+
+.message-attachments.no-margin {
+  margin-top: 0;
+}
+
+.message-attachments-images {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.message-attachments-images.grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 4px;
+}
+
+.message-attachments-images.no-bg {
+  gap: 4px;
+}
+
+.message-attachment {
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--surface-light);
+  border: 1px solid var(--border);
+}
+
+.message-attachment.no-bg {
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+}
+
+.message-attachment-image {
+  max-width: 100%;
+  max-height: 300px;
+  object-fit: contain;
+  cursor: pointer;
+  border-radius: 8px;
+  display: block;
+}
+
+.message-attachment-image.expanded {
+  max-height: none;
+}
+
+.message-attachment-image.grid-item {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  max-height: none;
+  aspect-ratio: 1;
+}
+
+.message-attachment-expiry {
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+  background: rgba(0, 0, 0, 0.75);
+  color: var(--warning, #f59e0b);
+  font-size: 11px;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.message-attachment-expiry-inline {
+  color: var(--warning, #f59e0b);
+  font-weight: 500;
+}
+
+.message-attachment-video {
+  max-width: 100%;
+  max-height: 300px;
+  border-radius: 8px;
+  display: block;
+}
+
+.audio-player {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px 18px;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+}
+
+.audio-player-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.audio-player-play-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: none;
+  background: linear-gradient(
+    135deg,
+    var(--primary) 0%,
+    var(--primary-dark, var(--primary)) 100%
+  );
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.audio-player-play-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.audio-player-play-btn:active {
+  transform: scale(0.95);
+}
+
+.audio-player-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.audio-player-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.audio-player-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.audio-player-size {
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+.audio-player-dot {
+  opacity: 0.5;
+  color: var(--text-dim);
+}
+
+.audio-player-time {
+  font-size: 12px;
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+.audio-player-download {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-dim);
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+  flex-shrink: 0;
+}
+
+.audio-player-download:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+
+.audio-player-progress {
+  height: 24px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  padding: 6px 0;
+}
+
+.audio-player-progress-bg {
+  width: 100%;
+  height: 6px;
+  background: var(--border);
+  border-radius: 3px;
+  position: relative;
+  overflow: hidden;
+}
+
+.audio-player-progress-fill {
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    var(--primary) 0%,
+    var(--primary-light, var(--primary)) 100%
+  );
+  border-radius: 3px;
+  transition: width 0.05s linear;
+}
+
+.audio-player-progress-handle {
+  width: 14px;
+  height: 14px;
+  background: #fff;
+  border: 2px solid var(--primary);
+  border-radius: 50%;
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.audio-player-progress:hover .audio-player-progress-handle {
+  opacity: 1;
+}
+
+.message-attachment-file {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  text-decoration: none;
+  color: var(--text);
+  transition: background 0.15s ease;
+  border-radius: 8px;
+}
+
+.message-attachment-file:hover {
+  background: var(--surface);
+}
+
+.message-attachment-file-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: white;
+}
+
+.message-attachment-file-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  flex: 1;
+}
+
+.message-attachment-file-name {
+  font-size: 14px;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.message-attachment-file-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.message-attachment-file-type {
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.message-attachment-file-dot {
+  opacity: 0.5;
+}
+
+.message-attachment-file-size {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.message-attachment-file-download {
+  opacity: 0.5;
+  transition: opacity 0.15s ease;
+  color: var(--text-secondary);
+}
+
+.message-attachment-file:hover .message-attachment-file-download {
+  opacity: 1;
+}
+
+.drag-drop-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  pointer-events: none;
+}
+
+.drag-drop-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  color: var(--text);
+  background: var(--surface);
+  padding: 32px 48px;
+  border-radius: 16px;
+  border: 2px dashed var(--primary);
+}
+
+.drag-drop-content span {
+  font-size: 16px;
+  font-weight: 500;
+}
+
 .reply-bar {
   align-items: center;
   background: var(--surface-light);
@@ -6356,6 +6851,15 @@ pre {
   object-fit: contain;
 }
 
+.image-modal-buttons {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: flex;
+  gap: 8px;
+  z-index: 10;
+}
+
 .image-modal .modal-close-btn {
   align-items: center;
   background: rgba(0, 0, 0, 0.6);
@@ -6368,12 +6872,9 @@ pre {
   justify-content: center;
   opacity: 0.7;
   padding: 8px;
-  position: absolute;
-  right: 10px;
-  top: 10px;
   transition: all 0.2s;
   width: 36px;
-  z-index: 10;
+  position: static;
 }
 
 .image-modal .modal-close-btn:hover {
@@ -6388,25 +6889,23 @@ pre {
 
 .modal-fav-btn {
   align-items: center;
-  backdrop-filter: blur(4px);
   background: rgba(0, 0, 0, 0.6);
   border: none;
   border-radius: 50%;
-  bottom: 20px;
   color: white;
   cursor: pointer;
   display: flex;
-  height: 48px;
+  height: 36px;
   justify-content: center;
-  position: absolute;
-  right: 20px;
+  opacity: 0.7;
   transition: all 0.2s;
-  width: 48px;
+  width: 36px;
+  position: static;
 }
 
 .modal-fav-btn:hover {
   background: rgba(0, 0, 0, 0.8);
-  transform: scale(1.1);
+  opacity: 1;
 }
 
 .modal-fav-btn.active svg {
