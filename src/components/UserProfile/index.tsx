@@ -11,6 +11,7 @@ import {
   roturFollowing,
   roturStatuses,
   friendNicknames,
+  rolesByServer,
 } from "../../state";
 import {
   switchServer,
@@ -332,6 +333,14 @@ export function UserProfileCard({
 
   const joinedDate = profile?.created ? formatJoinDate(profile.created) : null;
 
+  const sUrl = serverUrl.value;
+  const serverRoles = sUrl ? rolesByServer.value[sUrl] || {} : {};
+
+  const getRoleColor = (roleName: string): string | null => {
+    const role = serverRoles[roleName];
+    return role?.color || null;
+  };
+
   // --- Compact (popout) layout ---
   if (compact) {
     if (loading) {
@@ -408,11 +417,20 @@ export function UserProfileCard({
             <div className={styles.profileCardSection}>
               <div className={styles.profileCardSectionTitle}>Roles</div>
               <div className={styles.profileCardRoles}>
-                {userRoles.map((role) => (
-                  <span key={role} className={styles.profileCardRole}>
-                    {role}
-                  </span>
-                ))}
+                {userRoles.map((role) => {
+                  const color = getRoleColor(role);
+                  return (
+                    <span key={role} className={styles.profileCardRole}>
+                      {color && (
+                        <span
+                          className={styles.profileCardRoleColor}
+                          style={{ backgroundColor: color }}
+                        />
+                      )}
+                      {role}
+                    </span>
+                  );
+                })}
               </div>
             </div>
           )}

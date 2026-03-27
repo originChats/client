@@ -6,6 +6,10 @@
   padding: 12px 16px;
 }
 
+.specialChannelsSection {
+  flex-shrink: 0;
+}
+
 @media (max-width: 768px) {
   .channelHeader {
     border-bottom: 1px solid var(--border);
@@ -130,7 +134,6 @@
 
 .channelSeparator {
   border-top: 1px solid var(--border);
-  height: var(--space-3);
   margin-bottom: var(--space-2);
   margin-top: var(--space-2);
 }
@@ -306,6 +309,10 @@
   color: var(--text);
 }
 
+.voiceChannelWrapper {
+  margin-bottom: 2px;
+}
+
 .voiceChannelUserList {
   margin-top: 4px;
   padding-left: 24px;
@@ -390,7 +397,7 @@
   display: flex;
   align-items: center;
 
-  &>svg {
+  & > svg {
     margin-right: 4px;
   }
 }

@@ -94,6 +94,7 @@ import { DMFriendsTab } from "./components/DMFriendsTab";
 import { DMHomeTab } from "./components/DMHomeTab";
 import { NewMessageTab } from "./components/NewMessageTab";
 import { NotesTab } from "./components/NotesTab";
+import { RolesTab } from "./components/RolesTab";
 import { VoiceCallView } from "./components/VoiceCallView";
 import { GlobalContextMenu } from "./components/ContextMenu";
 import { DiscoveryPage } from "./components/DiscoveryPage";
@@ -371,6 +372,8 @@ function App() {
     currentChannel.value?.name === "new_message" &&
     serverUrl.value === DM_SERVER_URL;
   const showDiscovery = currentChannel.value?.name === "discovery";
+  const showRoles =
+    currentChannel.value?.name === "roles" && serverUrl.value !== DM_SERVER_URL;
   const isForumChannel = currentChannel.value?.type === "forum";
   const isThreadSelected = currentChannel.value?.type === "thread";
 
@@ -390,6 +393,8 @@ function App() {
           <ChannelList />
           {voiceCallActive ? (
             <VoiceCallView />
+          ) : showRoles ? (
+            <RolesTab />
           ) : showNotes ? (
             <NotesTab />
           ) : showHome ? (

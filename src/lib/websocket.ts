@@ -1292,7 +1292,6 @@ async function handleMessage(msg: any, sUrl: string): Promise<void> {
         usersByServer.value[sUrl]?.[myUsername?.toLowerCase() || ""]?.roles ||
         [];
       const myRolesLower = myRoles.map((r) => r.toLowerCase());
-      const serverRoles = rolesByServer.value[sUrl] || {};
       const mentionedRoles = msgNew.message.pings?.roles || [];
       const isRolePinged = mentionedRoles.some((r) =>
         myRolesLower.includes(r.toLowerCase()),
@@ -1610,6 +1609,23 @@ async function handleMessage(msg: any, sUrl: string): Promise<void> {
           (r) => user.roles?.includes(r.name),
         )?.color;
         if (roleColor) user.color = roleColor;
+        usersByServer.value = {
+          ...usersByServer.value,
+          [sUrl]: { ...serverUsers },
+        };
+      }
+      break;
+    }
+    case "user_roles_get": {
+      const username = (msg.user as string)?.toLowerCase();
+      if (!username) break;
+      const serverUsers = usersByServer.value[sUrl] || {};
+      const user = serverUsers[username];
+      if (user) {
+        user.roles = msg.roles || [];
+        if (msg.color) {
+          user.color = msg.color;
+        }
         usersByServer.value = {
           ...usersByServer.value,
           [sUrl]: { ...serverUsers },

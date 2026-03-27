@@ -1,0 +1,209 @@
+.rolesContainer {
+  display: flex;
+  height: 100%;
+  width: 100%;
+}
+
+.rolesContent {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow-y: auto;
+  padding: 20px;
+}
+
+.rolesHeader {
+  margin-bottom: 20px;
+}
+
+.rolesHeader h2 {
+  color: var(--text);
+  font-size: 24px;
+  font-weight: 600;
+  margin: 0 0 8px;
+}
+
+.rolesHeader p {
+  color: var(--text-dim);
+  font-size: 14px;
+  margin: 0;
+}
+
+.rolesSections {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.roleCategory {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.categoryHeader {
+  display: flex;
+  align-items: center;
+}
+
+.categoryTitle {
+  color: var(--text-dim);
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.rolesGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.rolePill {
+  align-items: center;
+  background: var(--surface-light);
+  border: none;
+  border-radius: 99px;
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 14px;
+  font-weight: 500;
+  gap: 8px;
+  padding: 10px 16px;
+  transition: all 0.15s ease;
+  user-select: none;
+  display: flex;
+}
+
+.rolePill:hover {
+  background: var(--surface-hover);
+}
+
+.rolePill.assigned {
+  background: var(--surface-hover);
+  color: white;
+}
+
+.rolePill.assigned:hover {
+  filter: brightness(1.1);
+}
+
+.roleDot {
+  border-radius: 50%;
+  height: 12px;
+  width: 12px;
+  background: var(--text-dim);
+  flex-shrink: 0;
+}
+
+.rolePill.assigned .roleDot {
+  background: white;
+}
+
+.roleName {
+  line-height: 1;
+  color: var(--text);
+}
+
+.checkIcon {
+  margin-left: 2px;
+  width: 12px;
+  height: 12px;
+}
+
+.emptyState {
+  align-items: center;
+  color: var(--text-dim);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  justify-content: center;
+  padding: 60px 20px;
+  text-align: center;
+}
+
+.emptyIcon {
+  color: var(--text-dim);
+  opacity: 0.5;
+}
+
+.emptyTitle {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.emptyText {
+  font-size: 14px;
+}
+
+.previewPanel {
+  width: 340px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+}
+
+.previewHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 16px;
+}
+
+.previewContent {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+}
+
+.loading {
+  align-items: center;
+  color: var(--text-dim);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  justify-content: center;
+  padding: 60px 20px;
+  width: 100%;
+}
+
+.spinner {
+  animation: spin 1s linear infinite;
+  border: 3px solid var(--border);
+  border-radius: 50%;
+  border-top-color: var(--primary);
+  height: 32px;
+  width: 32px;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 900px) {
+  .rolesContainer {
+    flex-direction: column;
+  }
+
+  .previewPanel {
+    width: 100%;
+    max-height: 50vh;
+    padding-top: 0;
+  }
+
+  .previewHeader {
+    margin-top: 20px;
+  }
+}

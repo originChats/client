@@ -8,6 +8,7 @@ import {
   currentChannel,
   servers,
   customEmojisByServer,
+  recentEmojis,
 } from "../../state";
 import { avatarUrl } from "../../utils";
 import { emojiImgUrl } from "../../lib/emoji";
@@ -196,7 +197,12 @@ interface EmojiEntry {
 function searchEmojis(query: string): AutocompleteItem[] {
   const shortcodes: EmojiEntry[] = (window as any).shortcodes || [];
   const q = query.toLowerCase();
+  const recent = recentEmojis.value;
+  const recentSet = new Set(recent);
+
   const exact: AutocompleteItem[] = [];
+  const prefix: AutocompleteItem[] = [];
+  const recentMatches: AutocompleteItem[] = [];
   const rest: AutocompleteItem[] = [];
 
   for (const entry of shortcodes) {
@@ -216,26 +222,48 @@ function searchEmojis(query: string): AutocompleteItem[] {
 
     if (label === q) {
       exact.push(item);
+    } else if (label.startsWith(q)) {
+      prefix.push(item);
+    } else if (recentSet.has(entry.hexcode)) {
+      recentMatches.push(item);
     } else {
       rest.push(item);
     }
 
-    if (exact.length + rest.length >= 20) break;
+    if (exact.length + prefix.length + recentMatches.length + rest.length >= 30)
+      break;
   }
 
-  return [...exact, ...rest].slice(0, 10);
+  const sortedPrefix = prefix.sort((a, b) => {
+    const aRecent = a.hexcode && recentSet.has(a.hexcode);
+    const bRecent = b.hexcode && recentSet.has(b.hexcode);
+    if (aRecent && !bRecent) return -1;
+    if (!aRecent && bRecent) return 1;
+    return 0;
+  });
+
+  const sortedRecent = recentMatches.sort((a, b) => {
+    const aIdx = a.hexcode ? recent.indexOf(a.hexcode) : -1;
+    const bIdx = b.hexcode ? recent.indexOf(b.hexcode) : -1;
+    return bIdx - aIdx;
+  });
+
+  return [...exact, ...sortedPrefix, ...sortedRecent, ...rest].slice(0, 10);
 }
 
 function searchCustomEmojis(query: string): AutocompleteItem[] {
   const q = query.toLowerCase();
-  const results: AutocompleteItem[] = [];
+
+  const prefix: AutocompleteItem[] = [];
+  const rest: AutocompleteItem[] = [];
 
   const currentServer = serverUrl.value;
   const currentServerEmojis = customEmojisByServer.value[currentServer] || {};
   for (const emoji of Object.values(currentServerEmojis)) {
-    if (emoji.name.toLowerCase().includes(q)) {
+    const name = emoji.name.toLowerCase();
+    if (name.includes(q)) {
       const server = servers.value.find((s) => s.url === currentServer);
-      results.push({
+      const item: AutocompleteItem = {
         type: "emoji",
         label: emoji.name,
         insertText: `:${emoji.name}:`,
@@ -243,17 +271,23 @@ function searchCustomEmojis(query: string): AutocompleteItem[] {
         serverName: server?.name || currentServer,
         fileName: emoji.fileName,
         isCustomEmoji: true,
-      });
+      };
+      if (name.startsWith(q)) {
+        prefix.push(item);
+      } else {
+        rest.push(item);
+      }
     }
-    if (results.length >= 5) break;
+    if (prefix.length + rest.length >= 5) break;
   }
 
   for (const [sUrl, emojis] of Object.entries(customEmojisByServer.value)) {
     if (sUrl === currentServer) continue;
     for (const emoji of Object.values(emojis)) {
-      if (emoji.name.toLowerCase().includes(q)) {
+      const name = emoji.name.toLowerCase();
+      if (name.includes(q)) {
         const server = servers.value.find((s) => s.url === sUrl);
-        results.push({
+        const item: AutocompleteItem = {
           type: "emoji",
           label: emoji.name,
           insertText: `:${emoji.name}:`,
@@ -261,14 +295,19 @@ function searchCustomEmojis(query: string): AutocompleteItem[] {
           serverName: server?.name || sUrl,
           fileName: emoji.fileName,
           isCustomEmoji: true,
-        });
+        };
+        if (name.startsWith(q)) {
+          prefix.push(item);
+        } else {
+          rest.push(item);
+        }
       }
-      if (results.length >= 10) break;
+      if (prefix.length + rest.length >= 10) break;
     }
-    if (results.length >= 10) break;
+    if (prefix.length + rest.length >= 10) break;
   }
 
-  return results;
+  return [...prefix, ...rest].slice(0, 10);
 }
 
 function searchSlashCommands(query: string): AutocompleteItem[] {
@@ -360,6 +399,15 @@ export function useInputAutocomplete(inputId: string) {
       const item = current.items[index];
       const input = document.getElementById(inputId) as HTMLTextAreaElement;
       if (!input) return;
+
+      if (item.type === "emoji" && item.hexcode) {
+        const currentRecent = recentEmojis.value;
+        const updated = [
+          item.hexcode,
+          ...currentRecent.filter((e) => e !== item.hexcode),
+        ].slice(0, 50);
+        recentEmojis.value = updated;
+      }
 
       const before = input.value.substring(0, current.triggerStart);
       const after = input.value.substring(input.selectionStart);

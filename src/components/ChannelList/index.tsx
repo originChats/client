@@ -28,12 +28,14 @@ import {
   users,
   myStatus,
   serverCapabilitiesByServer,
+  rolesByServer,
   type NotificationLevel,
 } from "../../state";
 import {
   selectChannel,
   selectHomeChannel,
   selectRelationshipsChannel,
+  selectRolesChannel,
   markChannelAsRead,
   selectThread,
   createThread,
@@ -96,7 +98,8 @@ export function ChannelList() {
 
   const voice = voiceState.value;
   const isInVoice = !!voice.currentChannel;
-  const myUsername = currentUserByServer.value[serverUrl.value]?.username;
+  const sUrl = serverUrl.value;
+  const myUsername = currentUserByServer.value[sUrl]?.username;
   const { showThreadMenu, closeThreadMenu, threadMenu } =
     useThreadContextMenu();
 
@@ -277,10 +280,8 @@ export function ChannelList() {
             className={styles.channelHeaderShare}
             title="Copy invite link"
             onClick={() => {
-              const url = new URL(window.location.href);
-              url.search = "";
-              url.searchParams.set("server", serverUrl.value);
-              navigator.clipboard.writeText(url.toString());
+              const url = `${window.location.protocol}//${window.location.host}?server=${encodeURIComponent(serverUrl.value)}`;
+              navigator.clipboard.writeText(url);
             }}
           >
             <Icon name="Share2" size={16} />
@@ -354,12 +355,31 @@ export function ChannelList() {
               <Icon name="PenSquare" size={16} />
               <span>New Message</span>
             </div>
-            <div
-              className={styles.channelSeparator}
-              style={{ height: "8px" }}
-            />
+            <div className={styles.channelSeparator} />
           </>
         )}
+        {!isDM &&
+          (() => {
+            const caps = serverCapabilitiesByServer.value[sUrl] ?? [];
+            if (!caps.includes("self_roles_list")) return null;
+            const allRoles = rolesByServer.value[sUrl] ?? {};
+            const selfAssignableRoles = Object.entries(allRoles).filter(
+              ([, role]) => (role as any).self_assignable === true,
+            );
+            if (selfAssignableRoles.length === 0) return null;
+            return (
+              <div className={styles.specialChannelsSection}>
+                <div
+                  className={`${styles.channelItem}${currentChannel.value?.name === "roles" ? ` ${styles.active}` : ""}`}
+                  onClick={selectRolesChannel}
+                >
+                  <Icon name="Shield" size={18} />
+                  <span>Roles</span>
+                </div>
+                <div className={styles.channelSeparator} />
+              </div>
+            );
+          })()}
         {chs.map((channel) => {
           if (isDM && channel.name === "cmds") return null;
           if (isDM && channel.type === "separator") return null;
@@ -370,7 +390,6 @@ export function ChannelList() {
               <div
                 key={`separator-${separatorIndex}`}
                 className={styles.channelSeparator}
-                style={{ height: ((channel as any).size || 20) + "px" }}
               />
             );
           }

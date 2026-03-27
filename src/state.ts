@@ -7,6 +7,7 @@ import type {
   ServerFolder,
   DMServer,
   Role,
+  SelfAssignableRole,
   RoturAccount,
   SlashCommand,
   RoturGroup,
@@ -29,6 +30,7 @@ export const SPECIAL_CHANNELS = new Set([
   "cmds",
   "new_message",
   "discovery",
+  "roles",
 ]);
 export const serverUrl = signal(DM_SERVER_URL);
 export const priorityServer = signal<string | null>(null);
@@ -62,6 +64,9 @@ export const usersByServer = signal<Record<string, Record<string, ServerUser>>>(
 );
 export const currentUserByServer = signal<Record<string, RoturAccount>>({});
 export const rolesByServer = signal<Record<string, Record<string, Role>>>({});
+export const selfAssignableRolesByServer = signal<
+  Record<string, SelfAssignableRole[]>
+>({});
 export const slashCommandsByServer = signal<Record<string, SlashCommand[]>>({});
 export const readTimesByServer = signal<Record<string, Record<string, number>>>(
   {},

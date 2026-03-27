@@ -193,6 +193,13 @@ export interface Role {
   permissions?: string[] | Record<string, any>;
 }
 
+export interface SelfAssignableRole {
+  name: string;
+  description: string;
+  color: string | null;
+  assigned: boolean;
+}
+
 export type SlashOptionType = "str" | "int" | "float" | "bool" | "enum";
 
 export interface SlashCommandOption {

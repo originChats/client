@@ -134,6 +134,17 @@ export function selectDiscoveryChannel(): void {
   updateUrlFromState();
 }
 
+export function selectRolesChannel(): void {
+  currentChannel.value = {
+    name: "roles",
+    type: "roles",
+    display_name: "Roles",
+  } as any;
+  renderChannelsSignal.value++;
+  updateUrlFromState();
+  wsSend({ cmd: "self_roles_list" }, serverUrl.value);
+}
+
 export async function switchServer(url: string): Promise<boolean> {
   console.log(`[switchServer] Switching to server: ${url}`);
 
