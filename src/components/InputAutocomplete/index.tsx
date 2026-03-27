@@ -9,6 +9,7 @@ import {
 } from "../../state";
 import { avatarUrl } from "../../utils";
 import { emojiImgUrl } from "../../lib/emoji";
+import joypixels from "../../../public/joypixels.json";
 
 type AutocompleteType = "user" | "channel" | "emoji" | "slash" | "role";
 
@@ -188,27 +189,29 @@ interface EmojiEntry {
 }
 
 function searchEmojis(query: string): AutocompleteItem[] {
-  const shortcodes: EmojiEntry[] = (window as any).shortcodes || [];
+  const emojis: EmojiEntry[] = (window as any).emojis || [];
   const q = query.toLowerCase();
   const exact: AutocompleteItem[] = [];
   const rest: AutocompleteItem[] = [];
 
-  for (const entry of shortcodes) {
+  for (const entry of emojis) {
     if (!entry.emoji || !entry.label) continue;
-    const label = entry.label.toLowerCase().replace(/ /g, "_");
-    const matchesLabel = label.includes(q);
+	let shortcode = joypixels[entry.hexcode];
+    if(!shortcode) continue;
+	const matchesLabel = shortcode.includes(q);
     const matchesTags = entry.tags?.some((t) => t.toLowerCase().includes(q));
     if (!matchesLabel && !matchesTags) continue;
-
+    if(Array.isArray(shortcode)) shortcode = shortcode[0];
+	
     const item: AutocompleteItem = {
       type: "emoji",
-      label: entry.label.replace(/ /g, "_"),
-      insertText: `:${entry.label.replace(/ /g, "_")}:`,
+      label: shortcode,
+      insertText: `:${shortcode}:`,
       icon: entry.emoji,
       hexcode: entry.hexcode,
     };
 
-    if (label === q) {
+    if (shortcode === q) {
       exact.push(item);
     } else {
       rest.push(item);

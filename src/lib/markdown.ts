@@ -63,12 +63,6 @@ const TRUSTED_DOMAINS = [
   "cdn.discordapp.com",
 ];
 
-let shortcodeMap: Record<string, string> = {};
-
-export function setShortcodeMap(map: Record<string, string>) {
-  shortcodeMap = map;
-}
-
 function escapeHtml(text: string): string {
   const div = document.createElement("div");
   div.textContent = text;
@@ -106,11 +100,12 @@ function proxyImageUrl(url: string): string {
 }
 
 export function replaceShortcodes(text: string): string {
+  const shortcodeMap = (window as any).shortcodeMap;
   if (shortcodeMap) {
     text = text.replace(/:[\w][^:\n]*?:/g, (match) => {
-      if (shortcodeMap[match]) return shortcodeMap[match];
-      const trimmed = `:${match.slice(1, -1).trim()}:`;
-      return shortcodeMap[trimmed] || match;
+	  const name = match.replaceAll(":", ""); 
+      if (shortcodeMap[name]) return shortcodeMap[name];
+	  return match;
     });
   }
   return text;
