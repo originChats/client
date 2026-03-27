@@ -68,15 +68,16 @@
 
 .channelItem {
   align-items: center;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-df);
   color: var(--text-dim);
   cursor: pointer;
   display: flex;
   font-size: 16px;
   gap: var(--space-2);
   margin: var(--space-1) 0;
-  padding: var(--space-2) var(--space-3);
+  padding: var(--space-3) var(--space-4);
   position: relative;
+  height: 40px;
   transition:
     background-color var(--anim-fast) var(--ease-standard),
     color var(--anim-fast) var(--ease-standard),
@@ -130,8 +131,8 @@
 .channelSeparator {
   border-top: 1px solid var(--border);
   height: var(--space-3);
-  margin-bottom: var(--space-0);
-  margin-top: var(--space-3);
+  margin-bottom: var(--space-2);
+  margin-top: var(--space-2);
 }
 
 .unreadIndicator {
@@ -169,12 +170,11 @@
 .channelUserPanel {
   align-items: center;
   background: var(--surface-light);
-  border-radius: 10px;
+  border-radius: var(--radius-df);
   display: flex;
   flex-shrink: 0;
   gap: 4px;
   margin: 0 8px 8px;
-  padding: 6px 6px 6px 8px;
 }
 
 .channelUserPanelIdentity {
@@ -185,11 +185,12 @@
   flex: 1;
   gap: 10px;
   min-width: 0;
-  padding: 5px 6px;
+  padding: 6px;
+  padding-left: 8px;
   transition: background 0.15s;
 }
 
-.channelUserPanelIdentity:hover {
+.channelUserPanel:hover {
   background: var(--surface-hover);
 }
 
@@ -263,10 +264,9 @@
 
 .statusSelectorPanel {
   background: var(--surface);
-  border-top: 1px solid var(--border);
   margin: 0 8px 8px;
   padding: 12px;
-  border-radius: 8px;
+  border-radius: var(--radius-df);
 }
 
 .channelUserPanelStatusEmoji {
@@ -295,7 +295,7 @@
   cursor: pointer;
   display: flex;
   justify-content: center;
-  padding: 6px;
+  padding-right: 17px;
   transition:
     background 0.15s,
     color 0.15s;
@@ -306,10 +306,6 @@
   color: var(--text);
 }
 
-.voiceChannelWrapper {
-  margin: 4px 0;
-}
-
 .voiceChannelUserList {
   margin-top: 4px;
   padding-left: 24px;
@@ -317,7 +313,7 @@
 
 .voiceChannelUser {
   align-items: center;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-df);
   cursor: pointer;
   display: flex;
   gap: 8px;
@@ -371,9 +367,10 @@
 
 .voicePanel {
   background: var(--surface-light);
-  border-top: 1px solid var(--border);
+  border-radius: var(--radius-df);
   display: none;
   padding: 8px 12px;
+  margin: 8px;
 }
 
 .voicePanel.active {
@@ -381,12 +378,21 @@
 }
 
 .voicePanelInfo {
-  margin-bottom: 8px;
+  margin: 5px 10px;
+  margin-bottom: 10px;
+  display: flex;
+  justify-content: space-between;
 }
 
 .voicePanelStatus {
   color: var(--success);
   font-size: 12px;
+  display: flex;
+  align-items: center;
+
+  &>svg {
+    margin-right: 4px;
+  }
 }
 
 .voicePanelChannel {
@@ -404,7 +410,7 @@
   align-items: center;
   background: var(--surface);
   border: none;
-  border-radius: 6px;
+  border-radius: var(--radius-df);
   color: var(--text);
   cursor: pointer;
   display: flex;
@@ -458,7 +464,6 @@
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  border-radius: var(--radius-sm);
   padding-left: 30px !important;
   cursor: pointer;
   position: relative;

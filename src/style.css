@@ -28,6 +28,7 @@
   --radius-sm: 6px;
   --radius-md: 10px;
   --radius-lg: 14px;
+  --radius-df: 25px;
   --radius-pill: 999px;
   --border-radius: var(--radius-md);
   --chat-radius: var(--radius-lg);
@@ -2825,7 +2826,7 @@ a {
   align-items: center;
   background: var(--surface-light);
   border: 1px solid transparent;
-  border-radius: 25px;
+  border-radius: var(--radius-df);
   display: flex;
   gap: var(--space-2);
   padding: var(--space-1) var(--space-2);
@@ -3896,7 +3897,7 @@ a {
 }
 
 .message-group::before {
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-df);
   content: "";
   height: 100%;
   left: -8px;
@@ -4171,7 +4172,7 @@ a {
 
 .message-single {
   align-items: flex-start;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-df);
   display: flex;
   padding-left: 60px;
   position: relative;
@@ -4179,7 +4180,7 @@ a {
 }
 
 .message-single::before {
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-df);
   content: "";
   height: 100%;
   left: -60px;
@@ -4222,44 +4223,6 @@ a {
 #messages-container {
   overflow-y: auto;
   padding: 16px;
-}
-
-.member {
-  align-items: center;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  display: flex;
-  gap: var(--space-2);
-  margin-bottom: 6px;
-  padding: var(--space-1) var(--space-2);
-  position: relative;
-  transition:
-    background-color var(--anim-fast) var(--ease-standard),
-    color var(--anim-fast) var(--ease-standard),
-    transform var(--anim-fast) var(--ease-standard);
-}
-
-.member:hover {
-  background: rgba(255, 255, 255, 0.05);
-}
-
-.member img {
-  border-radius: var(--avatar-radius, 50%);
-  height: 28px;
-  transition: border-radius 0.2s ease;
-  width: 28px;
-}
-
-.member .name {
-  color: var(--text);
-  font-size: 15px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.member.offline {
-  opacity: 0.45;
 }
 
 .channels {
@@ -9306,7 +9269,6 @@ body,
   }
 
   .member {
-    border-radius: 8px;
     gap: 12px;
     margin-bottom: 4px;
     padding: 10px 12px;
@@ -9957,7 +9919,6 @@ body,
 
   .member {
     padding: 12px;
-    border-radius: 10px;
     margin-bottom: 4px;
     position: relative;
   }

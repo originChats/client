@@ -1,5 +1,10 @@
 import type { Channel, Message, ServerUser, Thread } from "./types";
 
+interface UsersList {
+  cmd: "users_list";
+  users: ServerUser[];
+}
+
 interface UserConnect {
   cmd: "user_connect";
   user: ServerUser;

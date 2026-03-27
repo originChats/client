@@ -62,7 +62,7 @@
 
 .member {
   align-items: center;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-df);
   cursor: pointer;
   display: flex;
   gap: var(--space-2);

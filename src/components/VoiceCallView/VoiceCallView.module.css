@@ -179,8 +179,7 @@
 .voiceCallTile {
   align-items: center;
   background: rgba(255, 255, 255, 0.04);
-  border: 2px solid transparent;
-  border-radius: 16px;
+  border-radius: var(--radius-df);
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -306,11 +305,6 @@
 
 .voiceCallControlBtn:active {
   transform: scale(0.95);
-}
-
-.muted {
-  background: var(--danger, #ed4245);
-  color: white;
 }
 
 .active {
