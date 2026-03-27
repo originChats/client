@@ -69,8 +69,6 @@ function isEmojiOnlyMessage(text: string): boolean {
   const trimmed = text.trim();
   if (!trimmed) return false;
 
-  console.log(text, trimmed);
-
   if (SINGLE_EMOJI_RE.test(trimmed)) return true;
   if (CUSTOM_EMOJI_RE.test(trimmed)) return true;
 
@@ -83,8 +81,6 @@ function isEmojiOnlyMessage(text: string): boolean {
     /[\p{Emoji_Presentation}\p{Emoji}\uFE0F\u200D\u{1F3FB}-\u{1F3FF}\s]/gu,
     "",
   );
-
-  console.log(trimmed, remaining)
 
   return remaining.length === 0;
 }
