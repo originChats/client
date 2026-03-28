@@ -1,4 +1,3 @@
-import { useState } from "preact/hooks";
 import {
   friends,
   friendRequests,
@@ -18,6 +17,7 @@ import {
 import { showAccountModal } from "../../lib/ui-signals";
 import { ContextMenu, type ContextMenuItem } from "../ContextMenu";
 import { Icon } from "../Icon";
+import { useContextMenu } from "../../hooks/useContextMenu";
 import { avatarUrl, reloadAvatar } from "../../utils";
 import { useDisplayName } from "../../lib/useDisplayName";
 import { saveFriendNicknames } from "../../lib/persistence";
@@ -169,26 +169,13 @@ export function UserContextMenu({
   );
 }
 
-export interface UseUserContextMenuResult {
-  showUserMenu: (event: MouseEvent, username: string) => void;
-  closeUserMenu: () => void;
-  userMenu: { username: string; x: number; y: number } | null;
-}
+export type UseUserContextMenuResult = ReturnType<typeof useUserContextMenu>;
 
-export function useUserContextMenu(): UseUserContextMenuResult {
-  const [userMenu, setUserMenu] = useState<{
-    username: string;
-    x: number;
-    y: number;
-  } | null>(null);
-
-  const showUserMenu = (event: MouseEvent, username: string) => {
-    event.preventDefault();
-    event.stopPropagation();
-    setUserMenu({ username, x: event.clientX, y: event.clientY });
+export function useUserContextMenu() {
+  const { show, close, state } = useContextMenu<string>();
+  return {
+    showUserMenu: show,
+    closeUserMenu: close,
+    userMenu: state ? { username: state.data, x: state.x, y: state.y } : null,
   };
-
-  const closeUserMenu = () => setUserMenu(null);
-
-  return { showUserMenu, closeUserMenu, userMenu };
 }

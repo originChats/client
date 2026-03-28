@@ -1,4 +1,3 @@
-import { useState } from "preact/hooks";
 import {
   serverUrl,
   currentUserByServer,
@@ -15,6 +14,7 @@ import {
 import { wsSend } from "../../lib/websocket";
 import { ContextMenu, type ContextMenuItem } from "../ContextMenu";
 import { Icon } from "../Icon";
+import { useContextMenu } from "../../hooks/useContextMenu";
 import type { Thread } from "../../types";
 
 export interface ThreadContextMenuProps {
@@ -166,26 +166,15 @@ export function ThreadContextMenu({
   );
 }
 
-export interface UseThreadContextMenuResult {
-  showThreadMenu: (event: MouseEvent, thread: Thread) => void;
-  closeThreadMenu: () => void;
-  threadMenu: { thread: Thread; x: number; y: number } | null;
-}
+export type UseThreadContextMenuResult = ReturnType<
+  typeof useThreadContextMenu
+>;
 
-export function useThreadContextMenu(): UseThreadContextMenuResult {
-  const [threadMenu, setThreadMenu] = useState<{
-    thread: Thread;
-    x: number;
-    y: number;
-  } | null>(null);
-
-  const showThreadMenu = (event: MouseEvent, thread: Thread) => {
-    event.preventDefault();
-    event.stopPropagation();
-    setThreadMenu({ thread, x: event.clientX, y: event.clientY });
+export function useThreadContextMenu() {
+  const { show, close, state } = useContextMenu<Thread>();
+  return {
+    showThreadMenu: show,
+    closeThreadMenu: close,
+    threadMenu: state ? { thread: state.data, x: state.x, y: state.y } : null,
   };
-
-  const closeThreadMenu = () => setThreadMenu(null);
-
-  return { showThreadMenu, closeThreadMenu, threadMenu };
 }
