@@ -92,3 +92,22 @@
   margin-left: calc(-1 * var(--space-2));
   padding-left: var(--space-2);
 }
+
+.replyContent {
+  font-size: var(--font-sm);
+  line-height: 1.35;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.replyContent :global(img.emoji),
+.replyContent :global(img.custom-emoji) {
+  height: 16px;
+  width: 16px;
+  vertical-align: middle;
+}
+
+.messageEmbeds {
+  margin-top: 8px;
+}

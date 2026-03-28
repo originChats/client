@@ -58,6 +58,7 @@ interface MessageContentProps {
     replies: string[];
   };
   messageEmbeds?: MessageEmbedType[];
+  isReply?: boolean;
 }
 
 const SINGLE_EMOJI_RE =
@@ -91,6 +92,7 @@ function MessageContentInner({
   authorUsername,
   pings,
   messageEmbeds,
+  isReply,
 }: MessageContentProps) {
   const [embeds, setEmbeds] = useState<EmbedInfo[]>([]);
   const [inlineImages, setInlineImages] = useState<string[]>([]);
@@ -296,18 +298,18 @@ function MessageContentInner({
     <>
       <div
         ref={messageTextRef}
-        className={`${styles.messageText}${isMentioned ? ` ${styles.mentioned}` : ""}${isEmojiOnly ? ` ${styles.emojiOnly}` : ""}`}
+        className={`${styles.messageText}${isMentioned ? ` ${styles.mentioned}` : ""}${isEmojiOnly && !isReply ? ` ${styles.emojiOnly}` : ""}${isReply ? ` ${styles.replyContent}` : ""}`}
         style={isTenorOnly ? { display: "none" } : undefined}
         dangerouslySetInnerHTML={{ __html: html }}
       />
-      {embeds.length > 0 && (
+      {!isReply && embeds.length > 0 && (
         <div className={styles.messageEmbeds}>
           {embeds.map((info, i) => (
             <Embed key={`${info.url}-${i}`} info={info} />
           ))}
         </div>
       )}
-      {messageEmbeds && messageEmbeds.length > 0 && (
+      {!isReply && messageEmbeds && messageEmbeds.length > 0 && (
         <div className={styles.messageEmbeds}>
           {messageEmbeds.map((embed, i) => (
             <MessageEmbed key={i} embed={embed} />

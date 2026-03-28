@@ -28,6 +28,7 @@ import {
   getStatus,
 } from "../../lib/rotur-api";
 import { Icon } from "../Icon";
+import { MessageContent } from "../MessageContent";
 import { avatarUrl } from "../../utils";
 import { useDisplayName } from "../../lib/useDisplayName";
 import type { RoturGroup } from "../../types";
@@ -226,7 +227,9 @@ function FriendItem({
           {displayName}
         </span>
         {status?.content && (
-          <span className="dm-friend-status">{status.content}</span>
+          <span className="dm-friend-status">
+            <MessageContent content={status.content} isReply />
+          </span>
         )}
       </div>
       <div className="dm-actions">

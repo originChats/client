@@ -16,6 +16,7 @@ import { UserContextMenu, useUserContextMenu } from "../UserContextMenu";
 import { openUserPopout } from "../UserPopout";
 import { avatarUrl } from "../../utils";
 import { useDisplayName } from "../../lib/useDisplayName";
+import { MessageContent } from "../MessageContent";
 import styles from "./MembersList.module.css";
 
 function MembersListInner() {
@@ -234,7 +235,9 @@ function MemberItemInner({
           {displayName}
         </span>
         {showStatus && statusText && !offline && (
-          <span className={styles.statusText}>{statusText}</span>
+          <span className={styles.statusText}>
+            <MessageContent content={statusText} isReply />
+          </span>
         )}
       </div>
     </div>

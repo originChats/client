@@ -286,8 +286,11 @@ export function NotesTab() {
               <div className="reply-bar-body">
                 <div className="reply-bar-label">Editing note</div>
                 <div className="reply-bar-preview">
-                  {editingNote.content.substring(0, 80)}
-                  {editingNote.content.length > 80 ? "…" : ""}
+                  <MessageContent
+                    content={editingNote.content}
+                    currentUsername={currentUser.value?.username}
+                    isReply
+                  />
                 </div>
               </div>
               <button

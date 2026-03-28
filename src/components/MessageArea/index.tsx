@@ -774,10 +774,16 @@ function RightPanel() {
                                   (m) => m.id === msg.reply_to!.id,
                                 );
                                 if (found) {
-                                  const c = found.content;
-                                  return c.length > 50
-                                    ? c.substring(0, 50) + "…"
-                                    : c;
+                                  return (
+                                    <MessageContent
+                                      content={found.content}
+                                      currentUsername={
+                                        currentUser.value?.username
+                                      }
+                                      authorUsername={msg.reply_to!.user}
+                                      isReply
+                                    />
+                                  );
                                 }
                               }
                               return null;
@@ -1869,8 +1875,7 @@ export function MessageArea() {
 
   const getReplyPreview = (msg: Message): string => {
     const replyMsg = getReplyMessage(msg);
-    const content = replyMsg?.content || "";
-    return content.length > 50 ? content.substring(0, 50) + "..." : content;
+    return replyMsg?.content || "";
   };
 
   const getReplyName = (msg: Message): string => {
@@ -1964,7 +1969,14 @@ export function MessageArea() {
                   >
                     {getReplyName(msg)}
                   </span>
-                  <span className="reply-content">{getReplyPreview(msg)}</span>
+                  <span className="reply-content">
+                    <MessageContent
+                      content={getReplyPreview(msg)}
+                      currentUsername={currentUser.value?.username}
+                      authorUsername={getReplyName(msg)}
+                      isReply
+                    />
+                  </span>
                 </div>
               </div>
             )}
@@ -2812,8 +2824,12 @@ export function ReplyBar({
           {isEdit ? "Editing message" : `Replying to ${msg.user}`}
         </div>
         <div className="reply-bar-preview">
-          {msg.content.substring(0, 80)}
-          {msg.content.length > 80 ? "…" : ""}
+          <MessageContent
+            content={msg.content}
+            currentUsername={currentUser.value?.username}
+            authorUsername={msg.user}
+            isReply
+          />
         </div>
       </div>
       {!isEdit && (

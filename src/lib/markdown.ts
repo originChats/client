@@ -380,7 +380,7 @@ export function parseMarkdown(
     const safeDisplayText = escapeHtml(rawUrl);
 
     const originChatsMatch = rawUrl.match(
-      /^(?:https:\/\/originchats\.mistium\.com\/app\/|origin[cC]hats:\/\/)([^/\s?#]+)(?:\/([^/\s?#]+)(?:\/([a-f0-9-]+))?)?$/i,
+      /^originChats:\/\/([A-Za-z\d]+\.[A-Za-z\d]+)(?:\/([^/\s?#<>]+)(?:\/([a-f0-9-<>]+))?)?$/gm,
     );
     if (originChatsMatch) {
       const linkServerUrl = originChatsMatch[1];
@@ -533,4 +533,15 @@ export function highlightCodeInContainer(container: HTMLElement): void {
     if (lang && !hljs.getLanguage(lang)) return;
     hljs.highlightElement(el);
   });
+}
+
+export function stripMarkdown(text: string): string {
+  return text
+    .replace(/```[\s\S]*?```/g, "")
+    .replace(/`[^`]+`/g, "")
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+    .replace(/[#*_~>`]/g, "")
+    .replace(/\|\|.*?\|\|/g, "[spoiler]")
+    .replace(/\s+/g, " ")
+    .trim();
 }

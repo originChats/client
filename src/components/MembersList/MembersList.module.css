@@ -1,8 +1,7 @@
 .membersList {
   color: var(--text, #ededed);
   font-size: 15px;
-  max-width: 340px;
-  min-width: 260px;
+  width: 300px;
   overflow-y: auto;
   padding: 10px;
 }
