@@ -80,10 +80,6 @@ export function ThreadPanel() {
           serverUrl.value,
         );
         selectThread(newThread);
-        wsSend(
-          { cmd: "thread_messages", thread_id: newThread.id },
-          serverUrl.value,
-        );
         setPendingThreadMessage(null);
       }
     }
@@ -109,7 +105,6 @@ export function ThreadPanel() {
 
   const handleThreadClick = (thread: Thread) => {
     selectThread(thread);
-    wsSend({ cmd: "thread_messages", thread_id: thread.id }, serverUrl.value);
   };
 
   const handleDeleteThread = (e: Event, threadId: string) => {

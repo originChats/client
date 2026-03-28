@@ -132,3 +132,11 @@ export function insertMessage(
   };
   renderMessagesSignal.value++;
 }
+
+export function mergeAndSortMessages(existing: any[], incoming: any[]): any[] {
+  const all = [...existing, ...incoming];
+  const uniqueMap = new Map(all.map((m) => [m.id, m]));
+  return Array.from(uniqueMap.values()).sort(
+    (a, b) => a.timestamp - b.timestamp,
+  );
+}

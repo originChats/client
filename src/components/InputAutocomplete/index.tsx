@@ -202,7 +202,6 @@ function searchEmojis(query: string): AutocompleteItem[] {
 
   const exact: AutocompleteItem[] = [];
   const prefix: AutocompleteItem[] = [];
-  const recentMatches: AutocompleteItem[] = [];
   const rest: AutocompleteItem[] = [];
 
   for (const entry of shortcodes) {
@@ -224,35 +223,32 @@ function searchEmojis(query: string): AutocompleteItem[] {
       exact.push(item);
     } else if (label.startsWith(q)) {
       prefix.push(item);
-    } else if (recentSet.has(entry.hexcode)) {
-      recentMatches.push(item);
     } else {
       rest.push(item);
     }
-
-    if (exact.length + prefix.length + recentMatches.length + rest.length >= 30)
-      break;
   }
 
-  const sortedPrefix = prefix.sort((a, b) => {
+  const sortByRecent = (a: AutocompleteItem, b: AutocompleteItem) => {
     const aRecent = a.hexcode && recentSet.has(a.hexcode);
     const bRecent = b.hexcode && recentSet.has(b.hexcode);
     if (aRecent && !bRecent) return -1;
     if (!aRecent && bRecent) return 1;
-    return 0;
-  });
-
-  const sortedRecent = recentMatches.sort((a, b) => {
     const aIdx = a.hexcode ? recent.indexOf(a.hexcode) : -1;
     const bIdx = b.hexcode ? recent.indexOf(b.hexcode) : -1;
-    return bIdx - aIdx;
-  });
+    return aIdx - bIdx;
+  };
 
-  return [...exact, ...sortedPrefix, ...sortedRecent, ...rest].slice(0, 10);
+  return [
+    ...exact,
+    ...prefix.sort(sortByRecent),
+    ...rest.sort(sortByRecent),
+  ].slice(0, 15);
 }
 
 function searchCustomEmojis(query: string): AutocompleteItem[] {
   const q = query.toLowerCase();
+  const recent = recentEmojis.value;
+  const recentSet = new Set(recent);
 
   const prefix: AutocompleteItem[] = [];
   const rest: AutocompleteItem[] = [];
@@ -278,7 +274,6 @@ function searchCustomEmojis(query: string): AutocompleteItem[] {
         rest.push(item);
       }
     }
-    if (prefix.length + rest.length >= 5) break;
   }
 
   for (const [sUrl, emojis] of Object.entries(customEmojisByServer.value)) {
@@ -302,12 +297,25 @@ function searchCustomEmojis(query: string): AutocompleteItem[] {
           rest.push(item);
         }
       }
-      if (prefix.length + rest.length >= 10) break;
     }
-    if (prefix.length + rest.length >= 10) break;
   }
 
-  return [...prefix, ...rest].slice(0, 10);
+  const sortByRecent = (a: AutocompleteItem, b: AutocompleteItem) => {
+    const aKey = `${a.serverUrl}:${a.label}`;
+    const bKey = `${b.serverUrl}:${b.label}`;
+    const aRecent = recentSet.has(aKey);
+    const bRecent = recentSet.has(bKey);
+    if (aRecent && !bRecent) return -1;
+    if (!aRecent && bRecent) return 1;
+    const aIdx = recent.indexOf(aKey);
+    const bIdx = recent.indexOf(bKey);
+    return aIdx - bIdx;
+  };
+
+  return [...prefix.sort(sortByRecent), ...rest.sort(sortByRecent)].slice(
+    0,
+    15,
+  );
 }
 
 function searchSlashCommands(query: string): AutocompleteItem[] {
@@ -365,12 +373,42 @@ export function useInputAutocomplete(inputId: string) {
       case "role":
         items = searchRoles(trigger.query);
         break;
-      case "emoji":
-        items = [
-          ...searchCustomEmojis(trigger.query),
-          ...searchEmojis(trigger.query),
-        ];
+      case "emoji": {
+        const customResults = searchCustomEmojis(trigger.query);
+        const systemResults = searchEmojis(trigger.query);
+        const recent = recentEmojis.value;
+        const recentSet = new Set(recent);
+        const q = trigger.query.toLowerCase();
+
+        const allItems = [...systemResults, ...customResults];
+
+        const getPriority = (item: AutocompleteItem): number => {
+          const label = item.label.toLowerCase();
+          if (label === q) return 0;
+          if (label.startsWith(q)) return 1;
+          return 2;
+        };
+
+        const sortByPriorityAndRecent = (
+          a: AutocompleteItem,
+          b: AutocompleteItem,
+        ) => {
+          const aPriority = getPriority(a);
+          const bPriority = getPriority(b);
+          if (aPriority !== bPriority) return aPriority - bPriority;
+
+          const aKey = a.hexcode || `${a.serverUrl}:${a.label}`;
+          const bKey = b.hexcode || `${b.serverUrl}:${b.label}`;
+          const aRecent = recentSet.has(aKey);
+          const bRecent = recentSet.has(bKey);
+          if (aRecent && !bRecent) return -1;
+          if (!aRecent && bRecent) return 1;
+          return recent.indexOf(aKey) - recent.indexOf(bKey);
+        };
+
+        items = allItems.sort(sortByPriorityAndRecent).slice(0, 10);
         break;
+      }
       case "slash":
         items = searchSlashCommands(trigger.query);
         break;
@@ -400,13 +438,16 @@ export function useInputAutocomplete(inputId: string) {
       const input = document.getElementById(inputId) as HTMLTextAreaElement;
       if (!input) return;
 
-      if (item.type === "emoji" && item.hexcode) {
-        const currentRecent = recentEmojis.value;
-        const updated = [
-          item.hexcode,
-          ...currentRecent.filter((e) => e !== item.hexcode),
-        ].slice(0, 50);
-        recentEmojis.value = updated;
+      if (item.type === "emoji") {
+        const key = item.hexcode || `${item.serverUrl}:${item.label}`;
+        if (key) {
+          const currentRecent = recentEmojis.value;
+          const updated = [
+            key,
+            ...currentRecent.filter((e) => e !== key),
+          ].slice(0, 50);
+          recentEmojis.value = updated;
+        }
       }
 
       const before = input.value.substring(0, current.triggerStart);

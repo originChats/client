@@ -62,11 +62,12 @@ import {
   handleThreadGet,
   handleThreadJoin,
   handleThreadLeave,
-  handleThreadMessages,
   handleUsersList,
   handleUsersOnline,
   handleStatusGet,
   handleMessagesGet,
+  handleMessagesAround,
+  setPendingJump,
   handleMessageGet,
   handleMessageEdit,
   handleMessageDelete,
@@ -347,6 +348,48 @@ export function fetchMissingReplyMessage(
   if (pendingReplyFetchesByServer[sUrl].has(replyToId)) return;
   pendingReplyFetchesByServer[sUrl].add(replyToId);
   wsSend({ cmd: "message_get", channel: channelName, id: replyToId }, sUrl);
+}
+
+export function jumpToMessageAround(
+  sUrl: string,
+  channelName: string,
+  messageId: string,
+  threadId?: string,
+): boolean {
+  const caps = serverCapabilitiesByServer.value[sUrl] || [];
+  const hasAround = caps.includes("messages_around");
+  if (!hasAround) return false;
+
+  const messageKey = threadId || channelName;
+  if (messagesByServer.value[sUrl]?.[messageKey]) {
+    messagesByServer.value = {
+      ...messagesByServer.value,
+      [sUrl]: {
+        ...messagesByServer.value[sUrl],
+        [messageKey]: [],
+      },
+    };
+  }
+
+  if (reachedOldestByServer[sUrl]?.has(messageKey)) {
+    reachedOldestByServer[sUrl].delete(messageKey);
+  }
+
+  setPendingJump(sUrl, messageId, messageKey);
+
+  const payload: any = {
+    cmd: "messages_around",
+    around: messageId,
+    bounds: { above: 50, below: 50 },
+  };
+
+  if (threadId) {
+    payload.thread_id = threadId;
+  } else {
+    payload.channel = channelName;
+  }
+
+  return wsSend(payload, sUrl);
 }
 
 export function wsSend(data: any, sUrl?: string): boolean {
@@ -757,9 +800,6 @@ function handleMessage(msg: any, sUrl: string): void {
     case "thread_leave":
       handleThreadLeave(msg, sUrl);
       break;
-    case "thread_messages":
-      handleThreadMessages(msg, sUrl);
-      break;
     case "users_list":
       handleUsersList(msg, sUrl);
       break;
@@ -774,6 +814,9 @@ function handleMessage(msg: any, sUrl: string): void {
       break;
     case "messages_get":
       handleMessagesGet(msg, sUrl);
+      break;
+    case "messages_around":
+      handleMessagesAround(msg, sUrl);
       break;
     case "message_get":
       handleMessageGet(msg, sUrl);

@@ -14,8 +14,6 @@ import { reloadServerIcon } from "../../utils";
 import { saveServers } from "../persistence";
 import { authenticateServer, enablePushForServer } from "../websocket";
 
-const DM_SERVER_URL = "dms.mistium.com";
-
 export function handleHandshake(msg: Handshake, sUrl: string): void {
   if (!channelsByServer.value[sUrl])
     channelsByServer.value = { ...channelsByServer.value, [sUrl]: [] };
@@ -25,6 +23,7 @@ export function handleHandshake(msg: Handshake, sUrl: string): void {
     usersByServer.value = { ...usersByServer.value, [sUrl]: {} };
   serverValidatorKeys[sUrl] = msg.val.validator_key;
 
+  // these are the capabilities all servers can be expected to support
   const DEFAULT_CAPABILITIES = [
     "auth",
     "channels_get",
@@ -32,17 +31,12 @@ export function handleHandshake(msg: Handshake, sUrl: string): void {
     "message_edit",
     "message_get",
     "message_new",
-    "message_react_add",
-    "message_react_remove",
     "messages_get",
     "typing",
-    "user_leave",
+    "user_connect",
+    "user_disconnect",
     "users_list",
     "users_online",
-    "voice_join",
-    "voice_leave",
-    "voice_mute",
-    "voice_state",
   ];
 
   serverCapabilitiesByServer.value = {
@@ -67,15 +61,21 @@ export function handleHandshake(msg: Handshake, sUrl: string): void {
   }
 
   if (msg.val.server) {
-    const { icon, name } = msg.val.server;
+    const { icon, name, banner } = msg.val.server;
     const existing = servers.value.find((s) => s.url === sUrl);
     if (existing) {
       const iconChanged = icon && existing.icon !== icon;
       const nameChanged = name && existing.name !== name;
-      if (iconChanged || nameChanged) {
+      const bannerChanged = banner !== undefined && existing.banner !== banner;
+      if (iconChanged || nameChanged || bannerChanged) {
         servers.value = servers.value.map((s) =>
           s.url === sUrl
-            ? { ...s, ...(icon ? { icon } : {}), ...(name ? { name } : {}) }
+            ? {
+                ...s,
+                ...(icon ? { icon } : {}),
+                ...(name ? { name } : {}),
+                ...(banner !== undefined ? { banner } : {}),
+              }
             : s,
         );
         saveServers().catch(() => {});

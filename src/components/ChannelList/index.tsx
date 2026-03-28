@@ -312,6 +312,15 @@ export function ChannelList() {
         className={styles.channelListResizeHandle}
         onMouseDown={handleMouseDown}
       />
+      {!isDM && currentServer.value?.banner && (
+        <div className={styles.serverBanner}>
+          <img
+            src={currentServer.value.banner}
+            alt={`${currentServer.value.name} banner`}
+            className={styles.serverBannerImage}
+          />
+        </div>
+      )}
       <div className={styles.channelHeader}>
         <div className={styles.channelHeaderInfo}>
           <div className={styles.channelHeaderName}>
@@ -579,10 +588,6 @@ export function ChannelList() {
                         onClick={(e: any) => {
                           e.stopPropagation();
                           selectThread(thread);
-                          wsSend(
-                            { cmd: "thread_messages", thread_id: thread.id },
-                            serverUrl.value,
-                          );
                         }}
                         onContextMenu={(e: any) => showThreadMenu(e, thread)}
                       >

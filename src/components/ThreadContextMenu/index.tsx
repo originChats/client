@@ -48,10 +48,6 @@ export function ThreadContextMenu({
       fn: () => {
         selectThread(thread);
         getThread(thread.id);
-        wsSend(
-          { cmd: "thread_messages", thread_id: thread.id },
-          serverUrl.value,
-        );
       },
     },
     {

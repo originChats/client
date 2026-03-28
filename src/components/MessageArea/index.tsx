@@ -2,6 +2,8 @@ import { useCallback, useEffect, useRef, useState } from "preact/hooks";
 import { Fragment, type h } from "preact";
 import { useSignalEffect } from "@preact/signals";
 import { parseEmojisInContainer, emojiImgUrl } from "../../lib/emoji";
+import { VirtualMessageContainer } from "../VirtualMessageList";
+import { useMessageWindowing } from "../../hooks/useMessageWindowing";
 import { SkeletonMessageList } from "../Skeleton";
 import styles from "./MessageArea.module.css";
 import {
@@ -53,7 +55,11 @@ import {
   showError,
 } from "../../lib/ui-signals";
 import { voiceState } from "../../voice";
-import { wsSend, fetchMissingReplyMessage } from "../../lib/websocket";
+import {
+  wsSend,
+  fetchMissingReplyMessage,
+  jumpToMessageAround,
+} from "../../lib/websocket";
 import {
   highlightCodeInContainer,
   setShortcodeMap,
@@ -322,14 +328,29 @@ function groupMessages(messages: Message[]): MessageGroup[] {
 
 function scrollToMessage(id: string): void {
   mobilePanelOpen.value = false;
-  setTimeout(() => {
+  const messageKey = currentThread.value?.id || currentChannel.value?.name;
+  const msgs = messageKey ? messages.value[messageKey] || [] : [];
+  const exists = msgs.some((m) => m.id === id);
+
+  if (exists) {
     const el = document.querySelector(`[data-msg-id="${id}"]`);
     if (el) {
       el.scrollIntoView({ behavior: "smooth", block: "center" });
       el.classList.add("highlight-flash");
       setTimeout(() => el.classList.remove("highlight-flash"), 2000);
     }
-  }, 100);
+  } else {
+    const caps = serverCapabilities.value;
+    const hasAround = caps.includes("messages_around");
+    if (hasAround && currentChannel.value?.name) {
+      const sUrl = serverUrl.value;
+      const threadId =
+        currentChannel.value?.type === "thread"
+          ? currentThread.value?.id
+          : undefined;
+      jumpToMessageAround(sUrl, currentChannel.value.name, id, threadId);
+    }
+  }
 }
 
 function RightPanelMessageCard({
@@ -672,18 +693,29 @@ function RightPanel() {
       const targetChannel = channels.value.find(
         (c: any) => c.name === msg.channel,
       );
+
+      const caps = serverCapabilities.value;
+      const hasAround = caps.includes("messages_around");
+      const sUrl = serverUrl.value;
+
       if (targetChannel && currentChannel.value?.name !== msg.channel) {
         selectChannel(targetChannel);
       }
+
       mobilePanelOpen.value = false;
-      setTimeout(() => {
-        const el = document.querySelector(`[data-msg-id="${msg.id}"]`);
-        if (el) {
-          el.scrollIntoView({ behavior: "smooth", block: "center" });
-          el.classList.add("highlight-flash");
-          setTimeout(() => el.classList.remove("highlight-flash"), 2000);
-        }
-      }, 100);
+
+      if (hasAround && targetChannel) {
+        jumpToMessageAround(sUrl, msg.channel, msg.id);
+      } else {
+        setTimeout(() => {
+          const el = document.querySelector(`[data-msg-id="${msg.id}"]`);
+          if (el) {
+            el.scrollIntoView({ behavior: "smooth", block: "center" });
+            el.classList.add("highlight-flash");
+            setTimeout(() => el.classList.remove("highlight-flash"), 2000);
+          }
+        }, 100);
+      }
     };
 
     return (
@@ -883,6 +915,7 @@ export function MessageArea() {
     containerRef: messagesContainerRef,
     showScrollBtn,
     scrollToBottom,
+    scrollToMessage: scrollToMessageFromHook,
     resetForChannel,
     beginLoadOlder,
   } = useScrollLock({
@@ -899,23 +932,56 @@ export function MessageArea() {
       const sUrl = serverUrl.value;
       if (!ch || !sUrl) return;
       if (!isThread && SPECIAL_CHANNELS.has(ch)) return;
-      // Stop if we already know we've reached the beginning of history
       if (reachedOldestByServer[sUrl]?.has(messageKey)) return;
       const msgs = messages.value[messageKey] || [];
       if (msgs.length === 0) return;
+
+      const caps = serverCapabilities.value;
+      const hasAround = caps.includes("messages_around");
+
       beginLoadOlder();
       setLoadingOlder(true);
-      wsSend(
-        threadId
-          ? {
-              cmd: "messages_get",
-              thread_id: threadId,
-              start: msgs.length,
-              limit: 20,
-            }
-          : { cmd: "messages_get", channel: ch, start: msgs.length, limit: 20 },
-        sUrl,
-      );
+
+      if (hasAround) {
+        const oldestMsg = msgs[0];
+        if (oldestMsg?.id) {
+          wsSend(
+            threadId
+              ? {
+                  cmd: "messages_around",
+                  thread_id: threadId,
+                  around: oldestMsg.id,
+                  bounds: { above: 0, below: 20 },
+                }
+              : {
+                  cmd: "messages_around",
+                  channel: ch,
+                  around: oldestMsg.id,
+                  bounds: { above: 0, below: 20 },
+                },
+            sUrl,
+          );
+        } else {
+          setLoadingOlder(false);
+        }
+      } else {
+        wsSend(
+          threadId
+            ? {
+                cmd: "messages_get",
+                thread_id: threadId,
+                start: msgs.length,
+                limit: 20,
+              }
+            : {
+                cmd: "messages_get",
+                channel: ch,
+                start: msgs.length,
+                limit: 20,
+              },
+          sUrl,
+        );
+      }
     },
   });
   const [editingMessage, setEditingMessage] = useState<Message | null>(null);

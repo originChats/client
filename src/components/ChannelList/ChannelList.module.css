@@ -6,6 +6,20 @@
   padding: 12px 16px;
 }
 
+.serverBanner {
+  flex-shrink: 0;
+  width: 100%;
+  overflow: hidden;
+}
+
+.serverBannerImage {
+  width: 100%;
+  height: auto;
+  max-height: 150px;
+  object-fit: cover;
+  display: block;
+}
+
 .specialChannelsSection {
   flex-shrink: 0;
 }

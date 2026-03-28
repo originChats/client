@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState, useCallback } from "preact/hooks";
 
 const NEAR_BOTTOM_THRESHOLD = 80;
+const MAX_MESSAGES = 500;
+const UNLOAD_BUFFER = 50;
 
 interface UseScrollLockOptions {
   /** Called when the user scrolls to near the top and older messages should load. */
@@ -9,9 +11,10 @@ interface UseScrollLockOptions {
   isLoadingOlder: boolean;
   /** Called after older messages have been prepended and scroll position compensated. */
   onOlderLoaded: () => void;
+  /** Optional: called when messages should be unloaded from one end */
+  onUnloadMessages?: (count: number, fromStart: boolean) => void;
 }
 
-/** Wraps a callback in a stable ref so effects don't need to re-run when the callback changes. */
 function useStableCallback<T extends (...args: any[]) => any>(fn: T): T {
   const ref = useRef<T>(fn);
   ref.current = fn;
@@ -22,82 +25,108 @@ interface UseScrollLockResult {
   containerRef: { current: HTMLDivElement | null };
   showScrollBtn: boolean;
   scrollToBottom: () => void;
+  scrollToMessage: (messageId: string) => void;
   /** Call when the channel changes so the lock resets and view snaps to bottom. */
   resetForChannel: () => void;
   /** Call before prepending older messages so height compensation is applied. */
   beginLoadOlder: () => void;
 }
 
-/**
- * Manages auto-scroll-lock for a messages container.
- *
- * Behaviour:
- * - While the user is within NEAR_BOTTOM_THRESHOLD px of the bottom, new
- *   content (detected by a MutationObserver) automatically snaps to bottom.
- * - When the user scrolls up, auto-scroll is disabled and a "scroll to bottom"
- *   button is shown.
- * - When older messages are prepended the viewport position is preserved by
- *   compensating for the added height.
- * - Channel switches reset the lock to enabled; the next DOM mutation
- *   (the incoming messages render) snaps to bottom automatically.
- */
 export function useScrollLock({
   onLoadOlder,
   isLoadingOlder,
   onOlderLoaded,
+  onUnloadMessages,
 }: UseScrollLockOptions): UseScrollLockResult {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const autoScroll = useRef(true);
   const pendingOlderLoad = useRef(false);
   const loadOlderDebounce = useRef<number | null>(null);
   const [showScrollBtn, setShowScrollBtn] = useState(false);
+  const isScrollingProgrammatically = useRef(false);
+  const scrollRAF = useRef<number | null>(null);
+  const prevScrollTop = useRef(0);
+  const lastScrollDirection = useRef<"up" | "down" | null>(null);
 
-  // Stable wrappers — effects can depend on these without re-running when the
-  // caller re-renders and passes a new inline function.
   const stableOnLoadOlder = useStableCallback(onLoadOlder);
   const stableOnOlderLoaded = useStableCallback(onOlderLoaded);
-  // Stable ref for isLoadingOlder so the scroll handler always reads the latest value.
   const isLoadingOlderRef = useRef(isLoadingOlder);
   isLoadingOlderRef.current = isLoadingOlder;
 
   const scrollToBottom = useCallback(() => {
     const el = containerRef.current;
     if (!el) return;
-    el.scrollTop = el.scrollHeight;
-    autoScroll.current = true;
-    setShowScrollBtn(false);
+
+    cancelAnimationFrame(scrollRAF.current!);
+    isScrollingProgrammatically.current = true;
+    scrollRAF.current = requestAnimationFrame(() => {
+      el.scrollTo({
+        top: el.scrollHeight,
+        behavior: "smooth",
+      });
+      autoScroll.current = true;
+      setShowScrollBtn(false);
+      setTimeout(() => {
+        isScrollingProgrammatically.current = false;
+      }, 500);
+    });
+  }, []);
+
+  const scrollToMessage = useCallback((messageId: string) => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    requestAnimationFrame(() => {
+      const targetEl = el.querySelector(`[data-msg-id="${messageId}"]`);
+      if (targetEl) {
+        isScrollingProgrammatically.current = true;
+        targetEl.scrollIntoView({ behavior: "smooth", block: "center" });
+        targetEl.classList.add("highlight-flash");
+        setTimeout(() => {
+          targetEl.classList.remove("highlight-flash");
+          isScrollingProgrammatically.current = false;
+        }, 2000);
+      }
+    });
   }, []);
 
   const resetForChannel = useCallback(() => {
     autoScroll.current = true;
     pendingOlderLoad.current = false;
     setShowScrollBtn(false);
+    lastScrollDirection.current = null;
     if (loadOlderDebounce.current !== null) {
       clearTimeout(loadOlderDebounce.current);
       loadOlderDebounce.current = null;
     }
-    // No manual scroll needed — the MutationObserver will snap when the
-    // channel's messages are rendered into the DOM.
   }, []);
 
   const beginLoadOlder = useCallback(() => {
     pendingOlderLoad.current = true;
   }, []);
 
-  // Scroll handler: update lock state + trigger infinite scroll near top
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
 
     const onScroll = () => {
+      if (isScrollingProgrammatically.current) return;
+
       const distanceFromBottom =
         el.scrollHeight - el.scrollTop - el.clientHeight;
       const nearBottom = distanceFromBottom < NEAR_BOTTOM_THRESHOLD;
 
+      const currentScrollTop = el.scrollTop;
+      const scrollDirection =
+        currentScrollTop < prevScrollTop.current ? "up" : "down";
+      if (scrollDirection !== lastScrollDirection.current) {
+        lastScrollDirection.current = scrollDirection;
+      }
+      prevScrollTop.current = currentScrollTop;
+
       autoScroll.current = nearBottom;
       setShowScrollBtn(!nearBottom);
 
-      // Load older messages when scrolled to the top
       if (
         el.scrollTop <= 10 &&
         !isLoadingOlderRef.current &&
@@ -126,19 +155,14 @@ export function useScrollLock({
         loadOlderDebounce.current = null;
       }
     };
-    // Only re-attach the listener if the container element itself changes.
-    // isLoadingOlderRef and stableOnLoadOlder are always up-to-date via refs.
   }, [stableOnLoadOlder]);
 
-  // MutationObserver: snap to bottom on new content, or compensate scroll
-  // position when older messages are prepended.
-  // Only childList changes matter here — attribute mutations (twemoji, syntax
-  // highlight class changes, etc.) do not affect layout and are ignored.
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
 
     let prevScrollHeight = el.scrollHeight;
+    let rafId: number | null = null;
 
     const observer = new MutationObserver(() => {
       const newScrollHeight = el.scrollHeight;
@@ -146,12 +170,11 @@ export function useScrollLock({
       prevScrollHeight = newScrollHeight;
 
       if (pendingOlderLoad.current && heightAdded > 0) {
-        // Older messages were prepended — hold the user's visual position
-        el.scrollTop += heightAdded;
+        cancelAnimationFrame(rafId!);
+        rafId = requestAnimationFrame(() => {
+          el.scrollTop += heightAdded;
+        });
         pendingOlderLoad.current = false;
-        // If the compensated scroll position is still near the top, arm the
-        // debounce so the scroll event fired by the scrollTop adjustment above
-        // doesn't immediately re-trigger another load.
         if (el.scrollTop <= 10 && loadOlderDebounce.current === null) {
           loadOlderDebounce.current = window.setTimeout(() => {
             loadOlderDebounce.current = null;
@@ -162,19 +185,31 @@ export function useScrollLock({
       }
 
       if (autoScroll.current) {
-        el.scrollTop = newScrollHeight;
+        cancelAnimationFrame(rafId!);
+        rafId = requestAnimationFrame(() => {
+          el.scrollTop = newScrollHeight;
+        });
       }
     });
 
     observer.observe(el, { childList: true, subtree: true });
-    return () => observer.disconnect();
-    // stableOnOlderLoaded is a stable ref-backed callback — no need to re-run.
+    return () => {
+      observer.disconnect();
+      if (rafId !== null) cancelAnimationFrame(rafId);
+    };
   }, [stableOnOlderLoaded]);
+
+  useEffect(() => {
+    return () => {
+      if (scrollRAF.current) cancelAnimationFrame(scrollRAF.current);
+    };
+  }, []);
 
   return {
     containerRef,
     showScrollBtn,
     scrollToBottom,
+    scrollToMessage,
     resetForChannel,
     beginLoadOlder,
   };

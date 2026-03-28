@@ -42,10 +42,15 @@ interface MessagesGet {
   cmd: "messages_get";
   channel: string;
   messages: Message[];
-  range: {
-    start: number;
-    end: number;
-  };
+  range: { start: number; end: number };
+  thread_id?: string;
+}
+
+interface MessagesAround {
+  cmd: "messages_around";
+  channel: string;
+  messages: Message[];
+  range: { start: number; end: number };
   thread_id?: string;
 }
 
@@ -135,12 +140,6 @@ interface ThreadLeave {
   cmd: "thread_leave";
   thread: Thread;
   thread_id: string;
-}
-
-interface ThreadMessages {
-  cmd: "thread_messages";
-  thread_id: string;
-  messages: Message[];
 }
 
 interface StatusSet {
@@ -497,6 +496,7 @@ export type {
   Ping,
   ChannelsGet,
   MessagesGet,
+  MessagesAround,
   MessageGet,
   MessageNew,
   MessageEdit,
@@ -510,7 +510,6 @@ export type {
   ThreadGet,
   ThreadJoin,
   ThreadLeave,
-  ThreadMessages,
   StatusSet,
   StatusGet,
   Handshake,

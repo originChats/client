@@ -451,7 +451,7 @@ function selectChannelFromUrl(
       const thread = forumThreads.find((t) => t.id === threadId);
       if (thread) {
         selectThread(thread);
-        wsSend({ cmd: "thread_messages", thread_id: thread.id }, sUrl);
+        wsSend({ cmd: "messages_get", thread_id: thread.id, limit: 30 }, sUrl);
       }
     }
   } else {
@@ -478,7 +478,7 @@ export function selectThread(thread: Thread | null): void {
     const hasLoaded = loadedChannelsByServer[sUrl]?.has(thread.id) ?? false;
     if (!hasLoaded) {
       startMessageFetch(sUrl, thread.id);
-      wsSend({ cmd: "thread_messages", thread_id: thread.id }, sUrl);
+      wsSend({ cmd: "messages_get", thread_id: thread.id, limit: 30 }, sUrl);
     }
 
     renderMessagesSignal.value++;

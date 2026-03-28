@@ -152,6 +152,7 @@ export interface Server {
   name: string;
   url: string;
   icon?: string | null;
+  banner?: string | null;
 }
 
 export interface ServerFolder {

@@ -8,9 +8,12 @@ import {
   channelsByServer,
 } from "../../../state";
 import { finishMessageFetch } from "../../websocket";
-import { renderMessagesSignal } from "../../ui-signals";
 import { selectChannel } from "../../actions";
-import { getMessageKey, setMessages } from "../../message-utils";
+import {
+  getMessageKey,
+  setMessages,
+  mergeAndSortMessages,
+} from "../../message-utils";
 
 const DM_SERVER_URL = "dms.mistium.com";
 
@@ -32,9 +35,7 @@ export function handleMessagesGet(msg: MessagesGet, sUrl: string): void {
     return { ...m, reactions: normalised };
   });
 
-  const existingIds = new Set(existingMsgs.map((m) => m.id));
-  const deduplicatedNew = newMessages.filter((m) => !existingIds.has(m.id));
-  const mergedMsgs = [...deduplicatedNew, ...existingMsgs];
+  const sortedMsgs = mergeAndSortMessages(existingMsgs, newMessages);
 
   const SCROLL_UP_LIMIT = 20;
   if (existingMsgs.length > 0 && newMessages.length < SCROLL_UP_LIMIT) {
@@ -42,12 +43,12 @@ export function handleMessagesGet(msg: MessagesGet, sUrl: string): void {
     reachedOldestByServer[sUrl].add(messageKey);
   }
 
-  setMessages(sUrl, messageKey, mergedMsgs);
+  setMessages(sUrl, messageKey, sortedMsgs);
 
   if (
     serverUrl.value === sUrl &&
     !currentChannel.value &&
-    mergedMsgs.length > 0 &&
+    sortedMsgs.length > 0 &&
     sUrl !== DM_SERVER_URL
   ) {
     const channels = channelsByServer.value[sUrl] || [];
