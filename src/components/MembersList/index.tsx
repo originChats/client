@@ -76,7 +76,12 @@ function MembersListInner() {
   const rolesMap = rolesByServer.value[serverUrl.value] || {};
   const hoistedRoles = Object.entries(rolesMap)
     .filter(([, role]) => role.hoisted === true)
-    .map(([name, role]) => ({ name, color: role.color || null }));
+    .map(([name, role]) => ({
+      name,
+      color: role.color || null,
+      position: role.position ?? 0,
+    }))
+    .sort((a, b) => b.position - a.position);
 
   const showStatus = hasCapability("status_get");
 

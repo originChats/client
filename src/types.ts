@@ -191,7 +191,9 @@ export interface Role {
   color?: string | null;
   description?: string;
   hoisted?: boolean;
+  category?: string | null;
   permissions?: string[] | Record<string, any>;
+  position?: number;
 }
 
 export interface SelfAssignableRole {
