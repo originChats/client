@@ -305,6 +305,13 @@ interface NicknameRemove {
   username: string;
 }
 
+interface UserUpdate {
+  cmd: "user_update";
+  user: string;
+  nickname?: string | null;
+  username?: string;
+}
+
 interface VoiceJoin {
   cmd: "voice_join";
   channel: string;
@@ -531,6 +538,7 @@ export type {
   UserStatus,
   NicknameUpdate,
   NicknameRemove,
+  UserUpdate,
   VoiceJoin,
   VoiceUserJoined,
   VoiceUserLeft,
@@ -554,4 +562,100 @@ export type {
   WebhookDelete,
   AttachmentDeleted,
   ServerError,
+  PollCreate,
+  PollVote,
+  PollVoteUpdate,
+  PollEnd,
+  PollResults,
+  PollGet,
 };
+
+interface PollOption {
+  id: string;
+  text: string;
+  emoji?: string;
+}
+
+interface PollResult {
+  id: string;
+  text: string;
+  emoji?: string;
+  votes: number;
+  voted?: boolean;
+  voters?: string[];
+}
+
+interface PollResults {
+  poll_id: string;
+  question: string;
+  allow_multiselect?: boolean;
+  ended?: boolean;
+  ended_at?: number;
+  total_votes: number;
+  results: PollResult[];
+}
+
+interface PollCreate {
+  cmd: "poll_create";
+  poll_id: string;
+  message_id: string;
+  channel?: string;
+  thread_id?: string;
+  question: string;
+  options: PollOption[];
+  allow_multiselect?: boolean;
+  expires_at?: number;
+}
+
+interface PollVote {
+  cmd: "poll_vote";
+  poll_id: string;
+  option_ids: string[];
+  results: PollResults;
+}
+
+interface PollVoteUpdate {
+  cmd: "poll_vote_update";
+  poll_id: string;
+  message_id: string;
+  channel?: string;
+  thread_id?: string;
+  user: string;
+  option_ids: string[];
+  results: PollResults;
+}
+
+interface PollEnd {
+  cmd: "poll_end";
+  poll_id: string;
+  message_id?: string;
+  channel?: string;
+  thread_id?: string;
+  results: PollResults;
+}
+
+interface PollResultsMsg {
+  cmd: "poll_results";
+  poll_id: string;
+  message_id?: string;
+  results: PollResults;
+}
+
+interface PollGet {
+  cmd: "poll_get";
+  poll: {
+    id: string;
+    message_id: string;
+    channel?: string;
+    thread_id?: string;
+    question: string;
+    options: PollOption[];
+    allow_multiselect?: boolean;
+    expires_at?: number;
+    created_by: string;
+    created_at: number;
+    ended?: boolean;
+    ended_at?: number;
+    user_votes: string[];
+  };
+}

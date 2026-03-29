@@ -89,6 +89,7 @@ import {
   handleUserStatus,
   handleNicknameUpdate,
   handleNicknameRemove,
+  handleUserUpdate,
   handleVoiceJoin,
   handleVoiceUserJoined,
   handleVoiceUserLeft,
@@ -112,6 +113,12 @@ import {
   handleWebhookDelete,
   handleError,
   handleMessageNew,
+  handlePollCreate,
+  handlePollVote,
+  handlePollVoteUpdate,
+  handlePollEnd,
+  handlePollResults,
+  handlePollGet,
 } from "./commands";
 
 let audioCtx: AudioContext | null = null;
@@ -876,6 +883,9 @@ function handleMessage(msg: any, sUrl: string): void {
     case "user_status":
       handleUserStatus(msg, sUrl);
       break;
+    case "user_update":
+      handleUserUpdate(msg, sUrl);
+      break;
     case "nickname_update":
       handleNicknameUpdate(msg, sUrl);
       break;
@@ -948,6 +958,24 @@ function handleMessage(msg: any, sUrl: string): void {
     case "error":
     case "err":
       handleError(msg, sUrl);
+      break;
+    case "poll_create":
+      handlePollCreate(msg, sUrl);
+      break;
+    case "poll_vote":
+      handlePollVote(msg, sUrl);
+      break;
+    case "poll_vote_update":
+      handlePollVoteUpdate(msg, sUrl);
+      break;
+    case "poll_end":
+      handlePollEnd(msg, sUrl);
+      break;
+    case "poll_results":
+      handlePollResults(msg, sUrl);
+      break;
+    case "poll_get":
+      handlePollGet(msg, sUrl);
       break;
     case "ping":
       break;

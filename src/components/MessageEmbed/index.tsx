@@ -3,6 +3,7 @@ import { memo } from "preact/compat";
 import DOMPurify from "dompurify";
 import { parseMarkdown } from "../../lib/markdown";
 import type { MessageEmbed as MessageEmbedType } from "../../types";
+import { PollEmbed } from "../PollEmbed";
 
 function formatTimestamp(ts: string): string {
   try {
@@ -25,9 +26,14 @@ function parseEmbedMarkdown(text: string): string {
 
 interface MessageEmbedProps {
   embed: MessageEmbedType;
+  messageId?: string;
 }
 
-function MessageEmbedInner({ embed }: MessageEmbedProps) {
+function MessageEmbedInner({ embed, messageId }: MessageEmbedProps) {
+  if (embed.type === "poll" && embed.poll) {
+    return <PollEmbed poll={embed.poll} messageId={messageId || ""} />;
+  }
+
   const borderColor = hexColor(embed.color);
 
   const parsedTitle = useMemo(

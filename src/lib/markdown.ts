@@ -238,7 +238,7 @@ export function parseMarkdown(
   // Extract URLs before HTML escaping so & doesn't become &amp; in URLs
   const urlPlaceholders: Array<{ placeholder: string; url: string }> = [];
   text = text.replace(
-    /((?:https?|origin[cC]hats):\/\/[^\s"'\\]+[^\s"']+)/g,
+    /(https?:\/\/[^\s"'\\]+[^\s"']+|originChats:\/\/[^\s"'<>]+)/g,
     (match, url) => {
       const placeholder = `§URL_${urlPlaceholders.length}§${Math.random().toString(36).substring(2, 11)}§`;
       urlPlaceholders.push({ placeholder, url });
@@ -305,6 +305,8 @@ export function parseMarkdown(
   }
 
   text = text.replace(/~~(.+?)~~/g, (_, content) => `<s>${content}</s>`);
+
+  text = text.replace(/^-# (.*)$/gm, (_, content) => `<sub>${content}</sub>`);
 
   text = text.replace(
     /\*\*\*(.+?)\*\*\*/g,
@@ -380,7 +382,7 @@ export function parseMarkdown(
     const safeDisplayText = escapeHtml(rawUrl);
 
     const originChatsMatch = rawUrl.match(
-      /^originChats:\/\/([A-Za-z\d]+\.[A-Za-z\d]+)(?:\/([^/\s?#<>]+)(?:\/([a-f0-9-<>]+))?)?$/gm,
+      /^originChats:\/\/([A-Za-z\d.]+\.[A-Za-z\d]+)(?:\/([^/\s?#<>]+)(?:\/([a-f0-9-<>]+))?)?$/,
     );
     if (originChatsMatch) {
       const linkServerUrl = originChatsMatch[1];

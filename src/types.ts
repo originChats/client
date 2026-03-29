@@ -100,7 +100,30 @@ export interface MessageEmbedFooter {
   icon_url?: string;
 }
 
+export interface PollOption {
+  id: string;
+  text: string;
+  emoji?: string;
+  votes?: number;
+  voted?: boolean;
+  voters?: string[];
+}
+
+export interface PollData {
+  id?: string;
+  question: string;
+  options: PollOption[];
+  allow_multiselect?: boolean;
+  expires_at?: number;
+  ended?: boolean;
+  ended_at?: number;
+  total_votes?: number;
+  results?: PollOption[];
+  user_votes?: string[];
+}
+
 export interface MessageEmbed {
+  type?: "rich" | "poll" | "link" | "image" | "video" | "article";
   title?: string;
   description?: string;
   url?: string;
@@ -111,6 +134,7 @@ export interface MessageEmbed {
   fields?: MessageEmbedField[];
   image?: { url: string };
   thumbnail?: { url: string };
+  poll?: PollData;
 }
 
 export interface WebhookInfo {

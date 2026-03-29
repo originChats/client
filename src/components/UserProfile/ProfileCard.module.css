@@ -123,6 +123,10 @@
   --status-color: #faa61a;
 }
 
+.profileCardStatus.dnd {
+  --status-color: #ed4245;
+}
+
 .profileCardBody {
   padding: 8px 16px 16px;
 }
@@ -136,6 +140,38 @@
 .profileCardUsername.clickable:hover {
   text-decoration: underline;
   cursor: pointer;
+}
+
+.profileCardStatusText {
+  align-items: center;
+  color: var(--text-dim);
+  display: flex;
+  font-size: 12px;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.statusDot {
+  border-radius: 50%;
+  height: 8px;
+  width: 8px;
+  flex-shrink: 0;
+}
+
+.statusDot.online {
+  background: #43b581;
+}
+
+.statusDot.offline {
+  background: #555;
+}
+
+.statusDot.idle {
+  background: #faa61a;
+}
+
+.statusDot.dnd {
+  background: #ed4245;
 }
 
 .profileCardPronouns {

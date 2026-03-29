@@ -31,6 +31,12 @@
   margin: 4px 0;
 }
 
+.messageText sub {
+  font-size: 0.75em;
+  color: var(--text-dim, #888);
+  vertical-align: baseline;
+}
+
 .messageText blockquote {
   background: rgba(155, 135, 245, 0.1);
   border-left: 4px solid var(--primary);

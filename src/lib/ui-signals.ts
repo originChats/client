@@ -186,3 +186,5 @@ export const channelEditFromSettings = signal(false);
 export const bannedUsersByServer = signal<Record<string, string[]>>({});
 export const webhooksByServer = signal<Record<string, Webhook[]>>({});
 export const webhooksLoading = signal<Record<string, boolean>>({});
+export const translatedMessages = signal<Record<string, string>>({});
+export const translatingMessageId = signal<string | null>(null);

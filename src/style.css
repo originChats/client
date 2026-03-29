@@ -759,6 +759,43 @@ p {
   padding: 8px;
 }
 
+.right-panel-content .messageGroup {
+  background: var(--surface-light);
+  border-radius: 8px;
+  cursor: pointer;
+  margin-bottom: 8px;
+  padding: 12px;
+  transition: background 0.15s ease;
+}
+
+.right-panel-content .messageGroup:hover {
+  background: var(--surface-hover);
+}
+
+.right-panel-content .messageGroup .avatar {
+  height: 24px;
+  margin-right: 8px;
+  margin-top: 0;
+  width: 24px;
+}
+
+.right-panel-content .messageGroup .messageGroupContent {
+  min-width: 0;
+}
+
+.right-panel-content .messageGroup .messageHeader {
+  margin-bottom: 4px;
+  margin-top: 0;
+}
+
+.right-panel-content .messageGroup .username {
+  font-size: 13px;
+}
+
+.right-panel-content .messageGroup .timestamp {
+  font-size: 11px;
+}
+
 .right-panel-empty {
   align-items: center;
   color: var(--text-dim);

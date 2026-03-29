@@ -59,9 +59,9 @@ function UserRolesEditor({
     setJsonValue(JSON.stringify(initialRoles, null, 2));
   }, [initialRoles.join(",")]);
 
-  const getRoleColor = (roleName: string): string => {
+  const getRoleColor = (roleName: string): string | null => {
     const role = serverRoles.find((r) => r.name === roleName);
-    return role?.color || "#5865F2";
+    return role?.color ?? null;
   };
 
   const addRole = (roleName: string) => {
@@ -228,13 +228,15 @@ function UserRolesEditor({
                   <button
                     key={role.name}
                     className="available-role-btn"
-                    style={{ borderColor: role.color || "#5865F2" }}
+                    style={{ borderColor: role.color || "transparent" }}
                     onClick={() => addRole(role.name)}
                   >
-                    <span
-                      className="role-color-dot"
-                      style={{ background: role.color || "#5865F2" }}
-                    ></span>
+                    {role.color && (
+                      <span
+                        className="role-color-dot"
+                        style={{ background: role.color }}
+                      ></span>
+                    )}
                     <span>{role.name}</span>
                     <Icon name="Plus" size={12} />
                   </button>
@@ -261,7 +263,9 @@ export function ServerSettingsModal() {
   const [editingRole, setEditingRole] = useState<Role | null>(null);
   const [roleName, setRoleName] = useState("");
   const [roleDesc, setRoleDesc] = useState("");
-  const [roleColor, setRoleColor] = useState("#5865F2");
+  const [roleColor, setRoleColor] = useState<string | null>("#5865F2");
+  const [roleHoisted, setRoleHoisted] = useState(false);
+  const [roleCategory, setRoleCategory] = useState<string | null>(null);
   const [memberFilter, setMemberFilter] = useState("");
   const [channelModalOpen, setChannelModalOpen] = useState(false);
   const [channelName, setChannelName] = useState("");
@@ -272,11 +276,16 @@ export function ServerSettingsModal() {
   const [bannedUsers, setBannedUsers] = useState<string[]>([]);
   const [userDetailModal, setUserDetailModal] =
     useState<UserDetailModal | null>(null);
+  const [editingUser, setEditingUser] = useState<string | null>(null);
+  const [editUsername, setEditUsername] = useState("");
+  const [editNickname, setEditNickname] = useState<string | null>(null);
   const [timeoutModal, setTimeoutModal] = useState<string | null>(null);
   const [timeoutSeconds, setTimeoutSeconds] = useState(300);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [draggedRole, setDraggedRole] = useState<string | null>(null);
   const [dragOverRole, setDragOverRole] = useState<string | null>(null);
+  const [draggedChannel, setDraggedChannel] = useState<string | null>(null);
+  const [dragOverChannel, setDragOverChannel] = useState<string | null>(null);
   const [serverEmojis, setServerEmojis] = useState<CustomEmoji[]>([]);
   const [emojiModalOpen, setEmojiModalOpen] = useState(false);
   const [emojiName, setEmojiName] = useState("");
@@ -323,9 +332,9 @@ export function ServerSettingsModal() {
     showServerSettingsModal.value = false;
   };
 
-  const getRoleColor = (roleName: string): string => {
+  const getRoleColor = (roleName: string): string | null => {
     const role = serverRoles.find((r) => r.name === roleName);
-    return role?.color || "#5865F2";
+    return role?.color ?? null;
   };
 
   const myServerUser =
@@ -357,6 +366,8 @@ export function ServerSettingsModal() {
     setRoleName("");
     setRoleDesc("");
     setRoleColor("#5865F2");
+    setRoleHoisted(false);
+    setRoleCategory(null);
     setRoleModalOpen(true);
   };
 
@@ -387,7 +398,9 @@ export function ServerSettingsModal() {
     setEditingRole(role);
     setRoleName(role.name);
     setRoleDesc(role.description || "");
-    setRoleColor(role.color || "#5865F2");
+    setRoleColor(role.color ?? null);
+    setRoleHoisted(role.hoisted ?? false);
+    setRoleCategory(role.category ?? null);
     setRoleModalOpen(true);
   };
 
@@ -400,6 +413,8 @@ export function ServerSettingsModal() {
           name: roleName,
           description: roleDesc,
           color: roleColor,
+          hoisted: roleHoisted,
+          category: roleCategory,
         },
         serverUrl.value,
       );
@@ -410,6 +425,8 @@ export function ServerSettingsModal() {
           name: roleName,
           description: roleDesc,
           color: roleColor,
+          hoisted: roleHoisted,
+          category: roleCategory,
         },
         serverUrl.value,
       );
@@ -462,6 +479,45 @@ export function ServerSettingsModal() {
     setUserDetailModal(null);
   };
 
+  const openEditUser = (username: string) => {
+    const user = users.value[username.toLowerCase()];
+    setEditingUser(username);
+    setEditUsername(user?.username || username);
+    setEditNickname(user?.nickname ?? null);
+  };
+
+  const handleUserUpdate = () => {
+    if (!editingUser) return;
+    const originalUser = users.value[editingUser.toLowerCase()];
+    const updates: { username?: string; nickname?: string | null } = {};
+
+    if (editUsername !== originalUser?.username) {
+      updates.username = editUsername;
+    }
+    if (editNickname !== (originalUser?.nickname ?? null)) {
+      updates.nickname = editNickname;
+    }
+
+    if (Object.keys(updates).length > 0) {
+      wsSend(
+        {
+          cmd: "user_update",
+          user: editingUser,
+          updates,
+        },
+        serverUrl.value,
+      );
+      showInfo(`User "${editingUser}" updated`);
+    }
+    setEditingUser(null);
+  };
+
+  const cancelEditUser = () => {
+    setEditingUser(null);
+    setEditUsername("");
+    setEditNickname(null);
+  };
+
   const handleRoleDragStart = (roleName: string) => {
     setDraggedRole(roleName);
   };
@@ -504,6 +560,53 @@ export function ServerSettingsModal() {
   const handleRoleDragEnd = () => {
     setDraggedRole(null);
     setDragOverRole(null);
+  };
+
+  const handleChannelDragStart = (channelName: string) => {
+    setDraggedChannel(channelName);
+  };
+
+  const handleChannelDragOver = (e: DragEvent, channelName: string) => {
+    e.preventDefault();
+    setDragOverChannel(channelName);
+  };
+
+  const handleChannelDrop = (targetChannelName: string) => {
+    if (!draggedChannel || draggedChannel === targetChannelName) {
+      setDraggedChannel(null);
+      setDragOverChannel(null);
+      return;
+    }
+
+    const draggedIndex = channelsList.findIndex(
+      (c) => c.name === draggedChannel,
+    );
+    const targetIndex = channelsList.findIndex(
+      (c) => c.name === targetChannelName,
+    );
+
+    if (draggedIndex === -1 || targetIndex === -1) {
+      setDraggedChannel(null);
+      setDragOverChannel(null);
+      return;
+    }
+
+    wsSend(
+      {
+        cmd: "channel_move",
+        name: draggedChannel,
+        position: targetIndex,
+      },
+      serverUrl.value,
+    );
+
+    setDraggedChannel(null);
+    setDragOverChannel(null);
+  };
+
+  const handleChannelDragEnd = () => {
+    setDraggedChannel(null);
+    setDragOverChannel(null);
   };
 
   const openAddEmoji = () => {
@@ -722,13 +825,25 @@ export function ServerSettingsModal() {
                     return (
                       <div
                         key={channel.name}
-                        className="settings-list-item clickable"
+                        className={`settings-list-item clickable ${draggedChannel === channel.name ? "dragging" : ""} ${dragOverChannel === channel.name ? "drag-over" : ""}`}
+                        draggable={isOwner}
+                        onDragStart={() => handleChannelDragStart(channel.name)}
+                        onDragOver={(e) =>
+                          handleChannelDragOver(e as any, channel.name)
+                        }
+                        onDrop={() => handleChannelDrop(channel.name)}
+                        onDragEnd={handleChannelDragEnd}
                         onClick={() => {
                           channelEditFromSettings.value = true;
                           showChannelEditModal.value = channel.name;
                           close();
                         }}
                       >
+                        {isOwner && (
+                          <div className="channel-drag-handle">
+                            <Icon name="GripVertical" size={14} />
+                          </div>
+                        )}
                         <div className="settings-item-icon">
                           <Icon name={iconName} size={16} />
                         </div>
@@ -782,14 +897,12 @@ export function ServerSettingsModal() {
               ) : (
                 <div className="settings-list">
                   {serverRoles.map((role) => {
-                    const isSystem = ["owner", "admin", "user"].includes(
-                      role.name,
-                    );
+                    const isSystem = ["owner", "user"].includes(role.name);
                     return (
                       <div
                         key={role.name}
                         className={`settings-list-item ${draggedRole === role.name ? "dragging" : ""} ${dragOverRole === role.name ? "drag-over" : ""}`}
-                        draggable={isOwner && !isSystem}
+                        draggable={isOwner}
                         onDragStart={() => handleRoleDragStart(role.name)}
                         onDragOver={(e) =>
                           handleRoleDragOver(e as any, role.name)
@@ -797,46 +910,60 @@ export function ServerSettingsModal() {
                         onDrop={() => handleRoleDrop(role.name)}
                         onDragEnd={handleRoleDragEnd}
                       >
-                        <div
-                          className="role-color-dot"
-                          style={{ background: role.color || "#5865F2" }}
-                        ></div>
+                        {role.color && (
+                          <div
+                            className="role-color-dot"
+                            style={{ background: role.color }}
+                          ></div>
+                        )}
                         <div className="settings-item-info">
                           <div
                             className="settings-item-name"
-                            style={{ color: role.color || "#5865F2" }}
+                            style={{ color: role.color || "inherit" }}
                           >
                             {role.name}
                           </div>
                           <div className="settings-item-meta">
                             {role.description || "No description"}
+                            {role.category && ` · ${role.category}`}
                           </div>
                         </div>
-                        {isSystem ? (
-                          <span className="settings-system-badge">System</span>
-                        ) : (
-                          isOwner && (
-                            <div className="settings-item-actions">
-                              <div className="role-drag-handle">
-                                <Icon name="GripVertical" size={14} />
+                        {isSystem
+                          ? isOwner && (
+                              <div className="settings-item-actions">
+                                <div className="role-drag-handle">
+                                  <Icon name="GripVertical" size={14} />
+                                </div>
+                                <button
+                                  className="settings-icon-btn"
+                                  onClick={() => openEditRole(role)}
+                                  title="Edit"
+                                >
+                                  <Icon name="Edit3" size={14} />
+                                </button>
                               </div>
-                              <button
-                                className="settings-icon-btn"
-                                onClick={() => openEditRole(role)}
-                                title="Edit"
-                              >
-                                <Icon name="Edit3" size={14} />
-                              </button>
-                              <button
-                                className="settings-icon-btn danger"
-                                onClick={() => deleteRole(role.name)}
-                                title="Delete"
-                              >
-                                <Icon name="Trash2" size={14} />
-                              </button>
-                            </div>
-                          )
-                        )}
+                            )
+                          : isOwner && (
+                              <div className="settings-item-actions">
+                                <div className="role-drag-handle">
+                                  <Icon name="GripVertical" size={14} />
+                                </div>
+                                <button
+                                  className="settings-icon-btn"
+                                  onClick={() => openEditRole(role)}
+                                  title="Edit"
+                                >
+                                  <Icon name="Edit3" size={14} />
+                                </button>
+                                <button
+                                  className="settings-icon-btn danger"
+                                  onClick={() => deleteRole(role.name)}
+                                  title="Delete"
+                                >
+                                  <Icon name="Trash2" size={14} />
+                                </button>
+                              </div>
+                            )}
                       </div>
                     );
                   })}
@@ -878,20 +1005,27 @@ export function ServerSettingsModal() {
                     <div className="settings-item-info">
                       <div
                         className="settings-item-name"
-                        style={{ color: member.color || "#fff" }}
+                        style={{ color: member.color || "inherit" }}
                       >
                         {member.username}
                       </div>
                       <div className="settings-item-roles">
-                        {(member.roles || []).slice(0, 3).map((role) => (
-                          <span
-                            key={role}
-                            className="member-role-badge"
-                            style={{ background: getRoleColor(role) }}
-                          >
-                            {role}
-                          </span>
-                        ))}
+                        {(member.roles || []).slice(0, 3).map((role) => {
+                          const roleColor = getRoleColor(role);
+                          return (
+                            <span
+                              key={role}
+                              className="member-role-badge"
+                              style={
+                                roleColor
+                                  ? { background: roleColor }
+                                  : undefined
+                              }
+                            >
+                              {role}
+                            </span>
+                          );
+                        })}
                         {(member.roles || []).length > 3 && (
                           <span className="member-role-badge">
                             +{(member.roles || []).length - 3}
@@ -1016,13 +1150,15 @@ export function ServerSettingsModal() {
                 <div className="settings-field">
                   <label>Role Name</label>
                   <div className="settings-value-static">
-                    <span
-                      className="role-color-dot"
-                      style={{
-                        background: editingRole.color || "#5865F2",
-                        marginRight: "8px",
-                      }}
-                    ></span>
+                    {editingRole.color && (
+                      <span
+                        className="role-color-dot"
+                        style={{
+                          background: editingRole.color,
+                          marginRight: "8px",
+                        }}
+                      ></span>
+                    )}
                     {editingRole.name}
                   </div>
                 </div>
@@ -1055,19 +1191,64 @@ export function ServerSettingsModal() {
                 <div className="settings-color-field">
                   <input
                     type="color"
-                    value={roleColor}
+                    value={roleColor ?? "#5865F2"}
                     onInput={(e) =>
                       setRoleColor((e.target as HTMLInputElement).value)
                     }
+                    disabled={roleColor === null}
                   />
                   <input
                     type="text"
-                    value={roleColor}
-                    onInput={(e) =>
-                      setRoleColor((e.target as HTMLInputElement).value)
-                    }
+                    value={roleColor ?? ""}
+                    onInput={(e) => {
+                      const val = (e.target as HTMLInputElement).value;
+                      setRoleColor(val || null);
+                    }}
+                    placeholder="No color"
                     className="settings-color-text"
                   />
+                  <button
+                    type="button"
+                    className="settings-btn-secondary"
+                    onClick={() => setRoleColor(null)}
+                    title="Clear color"
+                  >
+                    Clear
+                  </button>
+                </div>
+              </div>
+              <div className="settings-field">
+                <label className="settings-checkbox-label">
+                  <input
+                    type="checkbox"
+                    checked={roleHoisted}
+                    onChange={(e) =>
+                      setRoleHoisted((e.target as HTMLInputElement).checked)
+                    }
+                  />
+                  Hoisted (show separately in member list)
+                </label>
+              </div>
+              <div className="settings-field">
+                <label>Category</label>
+                <div className="settings-category-field">
+                  <input
+                    type="text"
+                    value={roleCategory ?? ""}
+                    onInput={(e) => {
+                      const val = (e.target as HTMLInputElement).value;
+                      setRoleCategory(val || null);
+                    }}
+                    placeholder="No category"
+                  />
+                  <button
+                    type="button"
+                    className="settings-btn-secondary"
+                    onClick={() => setRoleCategory(null)}
+                    title="Clear category"
+                  >
+                    Clear
+                  </button>
                 </div>
               </div>
               <div className="settings-dialog-actions">
@@ -1244,27 +1425,94 @@ export function ServerSettingsModal() {
               <div className="user-detail-content">
                 {userDetailModal.tab === "overview" && (
                   <div className="settings-field-group">
-                    <div className="settings-field">
-                      <label>Username</label>
-                      <div className="settings-value">
-                        {users.value[userDetailModal.username.toLowerCase()]
-                          ?.username || userDetailModal.username}
-                      </div>
-                    </div>
-                    <div className="settings-field">
-                      <label>Nickname</label>
-                      <div className="settings-value">
-                        {users.value[userDetailModal.username.toLowerCase()]
-                          ?.nickname || "None"}
-                      </div>
-                    </div>
-                    <div className="settings-field">
-                      <label>Status</label>
-                      <div className="settings-value">
-                        {users.value[userDetailModal.username.toLowerCase()]
-                          ?.status?.status || "offline"}
-                      </div>
-                    </div>
+                    {editingUser === userDetailModal.username ? (
+                      <>
+                        <div className="settings-field">
+                          <label>Username</label>
+                          <input
+                            type="text"
+                            value={editUsername}
+                            onInput={(e) =>
+                              setEditUsername(
+                                (e.target as HTMLInputElement).value,
+                              )
+                            }
+                            placeholder="Username"
+                          />
+                        </div>
+                        <div className="settings-field">
+                          <label>Nickname</label>
+                          <div className="settings-nickname-field">
+                            <input
+                              type="text"
+                              value={editNickname ?? ""}
+                              onInput={(e) => {
+                                const val = (e.target as HTMLInputElement)
+                                  .value;
+                                setEditNickname(val || null);
+                              }}
+                              placeholder="No nickname"
+                            />
+                            <button
+                              type="button"
+                              className="settings-btn-secondary"
+                              onClick={() => setEditNickname(null)}
+                              title="Clear nickname"
+                            >
+                              Clear
+                            </button>
+                          </div>
+                        </div>
+                        <div className="settings-dialog-actions">
+                          <button
+                            className="settings-btn-cancel"
+                            onClick={cancelEditUser}
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            className="settings-btn-confirm"
+                            onClick={handleUserUpdate}
+                          >
+                            Save
+                          </button>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="settings-field">
+                          <label>Username</label>
+                          <div className="settings-value">
+                            {users.value[userDetailModal.username.toLowerCase()]
+                              ?.username || userDetailModal.username}
+                          </div>
+                        </div>
+                        <div className="settings-field">
+                          <label>Nickname</label>
+                          <div className="settings-value">
+                            {users.value[userDetailModal.username.toLowerCase()]
+                              ?.nickname || "None"}
+                          </div>
+                        </div>
+                        <div className="settings-field">
+                          <label>Status</label>
+                          <div className="settings-value">
+                            {users.value[userDetailModal.username.toLowerCase()]
+                              ?.status?.status || "offline"}
+                          </div>
+                        </div>
+                        {isOwner && (
+                          <button
+                            className="settings-btn-secondary"
+                            onClick={() =>
+                              openEditUser(userDetailModal.username)
+                            }
+                          >
+                            Edit User
+                          </button>
+                        )}
+                      </>
+                    )}
                   </div>
                 )}
                 {userDetailModal.tab === "roles" && (

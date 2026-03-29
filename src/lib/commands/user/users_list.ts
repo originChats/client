@@ -17,17 +17,7 @@ export function handleUsersList(msg: UsersList, sUrl: string): void {
       ...user,
     };
     if (!hasUsersOnline || statusObj !== undefined) {
-      normalizedUser.status =
-        typeof statusObj === "object"
-          ? statusObj
-          : {
-              status: (statusObj || "offline") as
-                | "online"
-                | "idle"
-                | "dnd"
-                | "offline",
-              text: "",
-            };
+      normalizedUser.status = statusObj;
     }
     next[key] = normalizedUser;
   }

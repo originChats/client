@@ -122,6 +122,31 @@
   cursor: pointer;
 }
 
+.messageContentWrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+}
+
+.translationLoading {
+  color: var(--text-dim);
+  font-size: var(--font-sm);
+  font-style: italic;
+  padding: 4px 0;
+}
+
+.translationResult {
+  color: var(--text-dim);
+  font-size: var(--font-sm);
+  padding: 6px 10px;
+  background: var(--surface-light);
+  border-left: 2px solid var(--primary);
+  border-radius: 4px;
+  margin-top: 4px;
+}
+
 .messageGroup:hover,
 .messageSingle:hover {
   cursor: default;

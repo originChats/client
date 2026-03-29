@@ -390,6 +390,18 @@ export function UserProfileCard({
           >
             {displayName}
           </div>
+          <div className={styles.profileCardStatusText}>
+            <span className={`${styles.statusDot} ${styles[statusClass]}`} />
+            <span>
+              {statusClass === "online"
+                ? "Online"
+                : statusClass === "idle"
+                  ? "Idle"
+                  : statusClass === "dnd"
+                    ? "Do Not Disturb"
+                    : "Offline"}
+            </span>
+          </div>
           {profile.pronouns && (
             <div className={styles.profileCardPronouns}>{profile.pronouns}</div>
           )}

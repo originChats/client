@@ -30,34 +30,64 @@ interface MessageGroupRowProps {
   group: MessageGroup;
   onClick?: () => void;
   onContextMenu?: (e: any) => void;
+  translatedMessages?: Record<string, string>;
+  translatingMessageId?: string | null;
 }
 
 function MessageGroupRowInner({
   group,
   onClick,
   onContextMenu,
+  translatedMessages = {},
+  translatingMessageId,
 }: MessageGroupRowProps) {
   const headUser = group.head.user;
   const displayName = useDisplayName(headUser);
   const color = useUserColor(headUser);
   const currentUsername = currentUser.value?.username;
 
+  const headTranslation = group.head.id
+    ? translatedMessages[group.head.id]
+    : null;
+  const headIsTranslating =
+    translatingMessageId && group.head.id === translatingMessageId;
+
   const followingMessages = useMemo(
     () =>
-      group.following.map((msg) => (
-        <div key={msg.id} className={styles.messageSingle}>
-          <span className={styles.timestamp}>
-            {formatRelativeTime(msg.timestamp)}
-          </span>
-          <MessageContent
-            content={msg.content}
-            currentUsername={currentUsername}
-            authorUsername={msg.user}
-            pings={msg.pings}
-          />
-        </div>
-      )),
-    [group.following, currentUsername],
+      group.following.map((msg) => {
+        const translation = msg.id ? translatedMessages[msg.id] : null;
+        const isTranslating =
+          translatingMessageId && msg.id === translatingMessageId;
+        return (
+          <div key={msg.id} className={styles.messageSingle}>
+            <span className={styles.timestamp}>
+              {formatRelativeTime(msg.timestamp)}
+            </span>
+            <div className={styles.messageContentWrapper}>
+              <MessageContent
+                content={msg.content}
+                currentUsername={currentUsername}
+                authorUsername={msg.user}
+                messageId={msg.id}
+                pings={msg.pings}
+                messageEmbeds={msg.embeds}
+              />
+              {isTranslating && (
+                <div className={styles.translationLoading}>Translating...</div>
+              )}
+              {translation && (
+                <div className={styles.translationResult}>{translation}</div>
+              )}
+            </div>
+          </div>
+        );
+      }),
+    [
+      group.following,
+      currentUsername,
+      translatedMessages,
+      translatingMessageId,
+    ],
   );
 
   return (
@@ -90,8 +120,16 @@ function MessageGroupRowInner({
             content={group.head.content}
             currentUsername={currentUsername}
             authorUsername={headUser}
+            messageId={group.head.id}
             pings={group.head.pings}
+            messageEmbeds={group.head.embeds}
           />
+          {headIsTranslating && (
+            <div className={styles.translationLoading}>Translating...</div>
+          )}
+          {headTranslation && (
+            <div className={styles.translationResult}>{headTranslation}</div>
+          )}
         </div>
         {group.following.length > 0 && (
           <div className={styles.messageGroupFollowing}>

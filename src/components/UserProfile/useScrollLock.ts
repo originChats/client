@@ -13,6 +13,12 @@ interface UseScrollLockOptions {
   onOlderLoaded: () => void;
   /** Optional: called when messages should be unloaded from one end */
   onUnloadMessages?: (count: number, fromStart: boolean) => void;
+  /** Optional: called when user scrolls near bottom but not at bottom to load newer messages */
+  onLoadNewer?: () => void;
+  /** Optional: whether a newer-messages load is already in flight */
+  isLoadingNewer?: boolean;
+  /** Optional: called after newer messages have been appended */
+  onNewerLoaded?: () => void;
 }
 
 function useStableCallback<T extends (...args: any[]) => any>(fn: T): T {
@@ -30,6 +36,8 @@ interface UseScrollLockResult {
   resetForChannel: () => void;
   /** Call before prepending older messages so height compensation is applied. */
   beginLoadOlder: () => void;
+  /** Call before appending newer messages. */
+  beginLoadNewer: () => void;
 }
 
 export function useScrollLock({
@@ -37,11 +45,16 @@ export function useScrollLock({
   isLoadingOlder,
   onOlderLoaded,
   onUnloadMessages,
+  onLoadNewer,
+  isLoadingNewer,
+  onNewerLoaded,
 }: UseScrollLockOptions): UseScrollLockResult {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const autoScroll = useRef(true);
   const pendingOlderLoad = useRef(false);
+  const pendingNewerLoad = useRef(false);
   const loadOlderDebounce = useRef<number | null>(null);
+  const loadNewerDebounce = useRef<number | null>(null);
   const [showScrollBtn, setShowScrollBtn] = useState(false);
   const isScrollingProgrammatically = useRef(false);
   const scrollRAF = useRef<number | null>(null);
@@ -50,8 +63,14 @@ export function useScrollLock({
 
   const stableOnLoadOlder = useStableCallback(onLoadOlder);
   const stableOnOlderLoaded = useStableCallback(onOlderLoaded);
+  const stableOnLoadNewer = onLoadNewer ? useStableCallback(onLoadNewer) : null;
+  const stableOnNewerLoaded = onNewerLoaded
+    ? useStableCallback(onNewerLoaded)
+    : null;
   const isLoadingOlderRef = useRef(isLoadingOlder);
   isLoadingOlderRef.current = isLoadingOlder;
+  const isLoadingNewerRef = useRef(isLoadingNewer || false);
+  isLoadingNewerRef.current = isLoadingNewer || false;
 
   const scrollToBottom = useCallback(() => {
     const el = containerRef.current;
@@ -105,6 +124,10 @@ export function useScrollLock({
     pendingOlderLoad.current = true;
   }, []);
 
+  const beginLoadNewer = useCallback(() => {
+    pendingNewerLoad.current = true;
+  }, []);
+
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
@@ -127,6 +150,7 @@ export function useScrollLock({
       autoScroll.current = nearBottom;
       setShowScrollBtn(!nearBottom);
 
+      // Load older messages when near top
       if (
         el.scrollTop <= 10 &&
         !isLoadingOlderRef.current &&
@@ -145,6 +169,23 @@ export function useScrollLock({
           stableOnLoadOlder();
         }, 300);
       }
+
+      // Load newer messages when near bottom but not at bottom
+      if (
+        stableOnLoadNewer &&
+        nearBottom &&
+        !autoScroll.current &&
+        distanceFromBottom > 5 &&
+        !pendingNewerLoad.current &&
+        !isLoadingNewerRef.current
+      ) {
+        if (loadNewerDebounce.current !== null) return;
+        loadNewerDebounce.current = window.setTimeout(() => {
+          loadNewerDebounce.current = null;
+          if (pendingNewerLoad.current || isLoadingNewerRef.current) return;
+          stableOnLoadNewer();
+        }, 300);
+      }
     };
 
     el.addEventListener("scroll", onScroll, { passive: true });
@@ -154,8 +195,12 @@ export function useScrollLock({
         clearTimeout(loadOlderDebounce.current);
         loadOlderDebounce.current = null;
       }
+      if (loadNewerDebounce.current !== null) {
+        clearTimeout(loadNewerDebounce.current);
+        loadNewerDebounce.current = null;
+      }
     };
-  }, [stableOnLoadOlder]);
+  }, [stableOnLoadOlder, stableOnLoadNewer]);
 
   useEffect(() => {
     const el = containerRef.current;
@@ -184,6 +229,14 @@ export function useScrollLock({
         return;
       }
 
+      if (pendingNewerLoad.current && heightAdded > 0) {
+        pendingNewerLoad.current = false;
+        if (stableOnNewerLoaded) {
+          stableOnNewerLoaded();
+        }
+        return;
+      }
+
       if (autoScroll.current) {
         cancelAnimationFrame(rafId!);
         rafId = requestAnimationFrame(() => {
@@ -197,7 +250,7 @@ export function useScrollLock({
       observer.disconnect();
       if (rafId !== null) cancelAnimationFrame(rafId);
     };
-  }, [stableOnOlderLoaded]);
+  }, [stableOnOlderLoaded, stableOnNewerLoaded]);
 
   useEffect(() => {
     return () => {
@@ -212,5 +265,6 @@ export function useScrollLock({
     scrollToMessage,
     resetForChannel,
     beginLoadOlder,
+    beginLoadNewer,
   };
 }

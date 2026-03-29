@@ -53,6 +53,8 @@ import {
   showContextMenu,
   showVoiceCallView,
   showError,
+  translatedMessages,
+  translatingMessageId,
 } from "../../lib/ui-signals";
 import { voiceState } from "../../voice";
 import {
@@ -114,6 +116,7 @@ import { InputAutocomplete, useInputAutocomplete } from "../InputAutocomplete";
 import { SlashCommandInput } from "../SlashCommandInput";
 import type { SlashCommandArgs } from "../SlashCommandInput";
 import { useScrollLock } from "../UserProfile/useScrollLock";
+import { PollCreateModal } from "../PollCreateModal";
 import type { Message, SlashCommand } from "../../types";
 import { avatarUrl } from "../../utils";
 import { useDisplayName, getDisplayName } from "../../lib/useDisplayName";
@@ -551,6 +554,8 @@ function RightPanel() {
                 onContextMenu={(e: any) =>
                   handlePinnedMessageContextMenu(e, group.head)
                 }
+                translatedMessages={translatedMessages.value}
+                translatingMessageId={translatingMessageId.value}
               />
             ))
           )}
@@ -808,7 +813,7 @@ function RightPanel() {
                                 if (found) {
                                   return (
                                     <MessageContent
-                                      content={found.content}
+                                      content={found.content.split("\n")[0]}
                                       currentUsername={
                                         currentUser.value?.username
                                       }
@@ -910,6 +915,7 @@ function BlockedMessageBanner({
 export function MessageArea() {
   const lastChannelRef = useRef<string | null>(null);
   const [loadingOlder, setLoadingOlder] = useState(false);
+  const [loadingNewer, setLoadingNewer] = useState(false);
   const [channelLoading, setChannelLoading] = useState(false);
   const {
     containerRef: messagesContainerRef,
@@ -918,6 +924,7 @@ export function MessageArea() {
     scrollToMessage: scrollToMessageFromHook,
     resetForChannel,
     beginLoadOlder,
+    beginLoadNewer,
   } = useScrollLock({
     isLoadingOlder: loadingOlder,
     onOlderLoaded: () => setLoadingOlder(false),
@@ -983,6 +990,54 @@ export function MessageArea() {
         );
       }
     },
+    onLoadNewer: () => {
+      const isThread =
+        currentChannel.value?.type === "thread" && currentThread.value;
+      const threadId = isThread ? currentThread.value!.id : null;
+      const ch = isThread
+        ? (currentChannel.value as any).parent_channel
+        : currentChannel.value?.name;
+      const messageKey = threadId || ch;
+      const sUrl = serverUrl.value;
+      if (!ch || !sUrl) return;
+      if (!isThread && SPECIAL_CHANNELS.has(ch)) return;
+      const msgs = messages.value[messageKey] || [];
+      if (msgs.length === 0) return;
+
+      const caps = serverCapabilities.value;
+      const hasAround = caps.includes("messages_around");
+
+      beginLoadNewer();
+      setLoadingNewer(true);
+
+      if (hasAround) {
+        const newestMsg = msgs[msgs.length - 1];
+        if (newestMsg?.id) {
+          wsSend(
+            threadId
+              ? {
+                  cmd: "messages_around",
+                  thread_id: threadId,
+                  around: newestMsg.id,
+                  bounds: { above: 20, below: 0 },
+                }
+              : {
+                  cmd: "messages_around",
+                  channel: ch,
+                  around: newestMsg.id,
+                  bounds: { above: 20, below: 0 },
+                },
+            sUrl,
+          );
+        } else {
+          setLoadingNewer(false);
+        }
+      } else {
+        setLoadingNewer(false);
+      }
+    },
+    isLoadingNewer: loadingNewer,
+    onNewerLoaded: () => setLoadingNewer(false),
   });
   const [editingMessage, setEditingMessage] = useState<Message | null>(null);
   const [confirmDialog, setConfirmDialog] = useState<{
@@ -1014,6 +1069,7 @@ export function MessageArea() {
   const [isDragging, setIsDragging] = useState(false);
   const [showPlusMenu, setShowPlusMenu] = useState(false);
   const [showGiftModal, setShowGiftModal] = useState(false);
+  const [showPollModal, setShowPollModal] = useState(false);
   const plusMenuRef = useRef<HTMLDivElement>(null);
   const { showUserMenu, closeUserMenu, userMenu } = useUserContextMenu();
   const autocomplete = useInputAutocomplete("message-input");
@@ -1721,6 +1777,44 @@ export function MessageArea() {
     }
   };
 
+  const translateMessage = async (msg: Message) => {
+    if (!msg.id || !msg.content) return;
+
+    const targetLang = navigator.language.split("-")[0] || "en";
+    const existingTranslation = msg.id
+      ? translatedMessages.value[msg.id]
+      : null;
+    if (existingTranslation) {
+      translatedMessages.value = {
+        ...translatedMessages.value,
+      };
+      delete translatedMessages.value[msg.id];
+      return;
+    }
+
+    if (!msg.id) return;
+    translatingMessageId.value = msg.id;
+
+    try {
+      const response = await fetch(
+        `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${targetLang}&dt=t&q=${encodeURIComponent(msg.content)}`,
+      );
+      const data = await response.json();
+      const translatedText = data[0]
+        .map((item: any[]) => item[0])
+        .filter(Boolean)
+        .join("");
+      translatedMessages.value = {
+        ...translatedMessages.value,
+        [msg.id]: translatedText,
+      };
+    } catch (error) {
+      console.error("Translation failed:", error);
+    } finally {
+      translatingMessageId.value = null;
+    }
+  };
+
   const handleMessageContextMenu = (
     e: h.JSX.TargetedMouseEvent<HTMLDivElement>,
     msg: Message,
@@ -1750,6 +1844,11 @@ export function MessageArea() {
       fn: () => {
         navigator.clipboard.writeText(msg.content);
       },
+    });
+    menuItems.push({
+      label: "Translate",
+      icon: "Languages",
+      fn: () => translateMessage(msg),
     });
     menuItems.push({
       label: "Copy ID",
@@ -1941,7 +2040,8 @@ export function MessageArea() {
 
   const getReplyPreview = (msg: Message): string => {
     const replyMsg = getReplyMessage(msg);
-    return replyMsg?.content || "";
+    const content = replyMsg?.content || "";
+    return content.split("\n")[0];
   };
 
   const getReplyName = (msg: Message): string => {
@@ -1953,6 +2053,20 @@ export function MessageArea() {
   const getUserColor = (username: string): string | undefined => {
     const u = users.value[username?.toLowerCase()];
     return u?.color || undefined;
+  };
+
+  const renderTranslation = (msg: Message) => {
+    if (!msg.id) return null;
+    const translation = translatedMessages.value[msg.id];
+    const isTranslating = translatingMessageId.value === msg.id;
+
+    if (isTranslating) {
+      return <div className="translation-loading">Translating...</div>;
+    }
+    if (translation) {
+      return <div className="translation-result">{translation}</div>;
+    }
+    return null;
   };
 
   function renderGroupedMessages(group: MessageGroup) {
@@ -2111,8 +2225,10 @@ export function MessageArea() {
                         content={msg.content}
                         currentUsername={currentUser.value?.username}
                         authorUsername={msg.user}
+                        messageId={msg.id}
                         messageEmbeds={msg.embeds}
                       />
+                      {renderTranslation(msg)}
                       {msg.attachments && msg.attachments.length > 0 && (
                         <AttachmentPreview
                           attachments={msg.attachments}
@@ -2165,9 +2281,11 @@ export function MessageArea() {
                         content={msg.content}
                         currentUsername={currentUser.value?.username}
                         authorUsername={msg.user}
+                        messageId={msg.id}
                         pings={msg.pings}
                         messageEmbeds={msg.embeds}
                       />
+                      {renderTranslation(msg)}
                       {msg.attachments && msg.attachments.length > 0 && (
                         <AttachmentPreview
                           attachments={msg.attachments}
@@ -2191,6 +2309,7 @@ export function MessageArea() {
                   authorUsername={msg.user}
                   pings={msg.pings}
                 />
+                {renderTranslation(msg)}
                 {msg.attachments && msg.attachments.length > 0 && (
                   <AttachmentPreview
                     attachments={msg.attachments}
@@ -2619,6 +2738,28 @@ export function MessageArea() {
                         className="plus-dropdown-item"
                         onClick={() => {
                           setShowPlusMenu(false);
+                          setShowPollModal(true);
+                        }}
+                      >
+                        <svg
+                          viewBox="0 0 24 24"
+                          width="16"
+                          height="16"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <path d="M9 11l3 3L22 4" />
+                          <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+                        </svg>
+                        <span>Create Poll</span>
+                      </div>
+                      <div
+                        className="plus-dropdown-item"
+                        onClick={() => {
+                          setShowPlusMenu(false);
                           setShowGiftModal(true);
                         }}
                       >
@@ -2848,6 +2989,9 @@ export function MessageArea() {
           }
         }}
       />
+      {showPollModal && (
+        <PollCreateModal onClose={() => setShowPollModal(false)} />
+      )}
       {reactionModal && (
         <ReactionModal
           emoji={reactionModal.emoji}

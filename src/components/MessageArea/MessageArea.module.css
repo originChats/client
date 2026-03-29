@@ -23,6 +23,25 @@
   min-height: 0;
 }
 
+.translation-loading {
+  color: var(--text-dim);
+  font-size: 12px;
+  font-style: italic;
+  padding: 4px 0;
+}
+
+.translation-result {
+  color: var(--text-dim);
+  font-size: 13px;
+  padding: 6px 10px;
+  background: var(--surface-light);
+  border-left: 2px solid var(--primary);
+  border-radius: 4px;
+  margin-top: 4px;
+  max-width: 100%;
+  word-wrap: break-word;
+}
+
 .scrollToBottomBtn {
   align-items: center;
   background: var(--surface-light);

@@ -178,7 +178,7 @@ function searchRoles(query: string): AutocompleteItem[] {
         type: "role",
         label: name,
         insertText: `@&${name} `,
-        icon: role.color || "#5865F2",
+        icon: role.color || undefined,
       });
     }
     if (results.length >= 10) break;

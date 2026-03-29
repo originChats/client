@@ -52,6 +52,7 @@ interface MessageContentProps {
   content: string;
   currentUsername?: string;
   authorUsername?: string;
+  messageId?: string;
   pings?: {
     users: string[];
     roles: string[];
@@ -90,6 +91,7 @@ function MessageContentInner({
   content,
   currentUsername,
   authorUsername,
+  messageId,
   pings,
   messageEmbeds,
   isReply,
@@ -312,7 +314,7 @@ function MessageContentInner({
       {!isReply && messageEmbeds && messageEmbeds.length > 0 && (
         <div className={styles.messageEmbeds}>
           {messageEmbeds.map((embed, i) => (
-            <MessageEmbed key={i} embed={embed} />
+            <MessageEmbed key={i} embed={embed} messageId={messageId} />
           ))}
         </div>
       )}

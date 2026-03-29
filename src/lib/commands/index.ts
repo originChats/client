@@ -27,7 +27,11 @@ export { handleUserStatus } from "./user/user_status";
 export { handleUserRolesSet } from "./user/user_roles_set";
 export { handleUserRolesGet } from "./user/user_roles_get";
 export { handleUsersBannedList } from "./user/users_banned_list";
-export { handleNicknameUpdate, handleNicknameRemove } from "./user/nickname";
+export {
+  handleNicknameUpdate,
+  handleNicknameRemove,
+  handleUserUpdate,
+} from "./user/nickname";
 export { handleStatusGet } from "./status/get";
 
 export { handleMessageNew } from "./message/new";
@@ -77,3 +81,12 @@ export {
 } from "./slash/slash";
 
 export { handlePingsGet } from "./pings/s_get";
+
+export {
+  handlePollCreate,
+  handlePollVote,
+  handlePollVoteUpdate,
+  handlePollEnd,
+  handlePollResults,
+  handlePollGet,
+} from "./poll/poll";

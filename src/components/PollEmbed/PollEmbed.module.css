@@ -1,0 +1,159 @@
+.pollContainer {
+  background: var(--surface-light);
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin: 8px 0;
+}
+
+.pollQuestion {
+  font-weight: 600;
+  font-size: 15px;
+  color: var(--text);
+  margin-bottom: 12px;
+}
+
+.pollOptions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pollOption {
+  background: var(--surface);
+  border-radius: 4px;
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  text-align: left;
+  width: 100%;
+  position: relative;
+  overflow: hidden;
+}
+
+.pollOption:hover:not(:disabled) {
+  background: var(--surface-hover);
+}
+
+.pollOption.selected {
+  background: var(--surface-hover);
+}
+
+.pollOption.ended {
+  cursor: default;
+}
+
+.pollOption:disabled {
+  opacity: 0.8;
+}
+
+.optionContent {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  position: relative;
+  z-index: 1;
+}
+
+.optionHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.optionEmoji {
+  font-size: 16px;
+}
+
+.optionText {
+  flex: 1;
+  color: var(--text);
+  font-size: 14px;
+}
+
+.checkmark {
+  color: var(--primary);
+  font-weight: bold;
+}
+
+.voteBarContainer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.voteBar {
+  height: 100%;
+  background: var(--surface-light);
+  transition: width 0.3s ease;
+}
+
+.voteInfo {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+.voteCount {
+  font-weight: 500;
+}
+
+.votePercentage {
+  font-weight: 600;
+}
+
+.pollFooter {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+.totalVotes {
+  font-weight: 500;
+}
+
+.timeRemaining {
+  color: var(--text-dim);
+}
+
+.submitVoteBtn {
+  margin-left: auto;
+  background: var(--primary);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    opacity 0.15s,
+    filter 0.15s;
+}
+
+.submitVoteBtn:hover:not(:disabled) {
+  filter: brightness(1.1);
+}
+
+.submitVoteBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.endPollBtn {
+  background: var(--surface);
+  color: var(--text-dim);
+  border: none;
+  border-radius: 4px;
+  padding: 6px 12px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.endPollBtn:hover {
+  background: var(--surface-hover);
+}
