@@ -35,6 +35,189 @@ interface UserDetailModal {
   tab: "overview" | "roles" | "moderation";
 }
 
+const ALL_PERMISSIONS = [
+  {
+    id: "administrator",
+    name: "Administrator",
+    description: "Full permissions (bypasses all checks except owner)",
+    category: "Server",
+  },
+  {
+    id: "manage_server",
+    name: "Manage Server",
+    description: "Update server settings, emojis, and webhooks",
+    category: "Server",
+  },
+  {
+    id: "view_audit_log",
+    name: "View Audit Log",
+    description: "View server audit logs",
+    category: "Server",
+  },
+  {
+    id: "manage_roles",
+    name: "Manage Roles",
+    description: "Create, delete, and assign roles below own position",
+    category: "Roles",
+  },
+  {
+    id: "manage_channels",
+    name: "Manage Channels",
+    description: "Create, delete, and configure channels",
+    category: "Channels",
+  },
+  {
+    id: "manage_threads",
+    name: "Manage Threads",
+    description: "Lock, archive, and delete threads",
+    category: "Channels",
+  },
+  {
+    id: "manage_users",
+    name: "Manage Users",
+    description: "Ban, unban, timeout, and manage user nicknames",
+    category: "Moderation",
+  },
+  {
+    id: "kick_members",
+    name: "Kick Members",
+    description: "Kick users from the server",
+    category: "Moderation",
+  },
+  {
+    id: "manage_nicknames",
+    name: "Manage Nicknames",
+    description: "Change other users' nicknames",
+    category: "Moderation",
+  },
+  {
+    id: "change_nickname",
+    name: "Change Nickname",
+    description: "Change own nickname",
+    category: "Moderation",
+  },
+  {
+    id: "manage_messages",
+    name: "Manage Messages",
+    description: "Delete and pin any message across all channels",
+    category: "Messages",
+  },
+  {
+    id: "read_message_history",
+    name: "Read History",
+    description: "View previous messages in channel",
+    category: "Messages",
+  },
+  {
+    id: "send_messages",
+    name: "Send Messages",
+    description: "Send messages in text channels",
+    category: "Messages",
+  },
+  {
+    id: "send_tts",
+    name: "Send TTS",
+    description: "Send text-to-speech messages",
+    category: "Messages",
+  },
+  {
+    id: "embed_links",
+    name: "Embed Links",
+    description: "Embed links in messages",
+    category: "Messages",
+  },
+  {
+    id: "attach_files",
+    name: "Attach Files",
+    description: "Attach files to messages",
+    category: "Messages",
+  },
+  {
+    id: "add_reactions",
+    name: "Add Reactions",
+    description: "Add reactions to messages",
+    category: "Messages",
+  },
+  {
+    id: "external_emojis",
+    name: "External Emojis",
+    description: "Use external/custom emojis",
+    category: "Messages",
+  },
+  {
+    id: "mention_everyone",
+    name: "Mention Everyone",
+    description: "Mention the @everyone role",
+    category: "Special",
+  },
+  {
+    id: "use_slash_commands",
+    name: "Use Slash Commands",
+    description: "Use slash commands in chat",
+    category: "Special",
+  },
+  {
+    id: "create_invite",
+    name: "Create Invite",
+    description: "Create channel invites",
+    category: "Invites",
+  },
+  {
+    id: "manage_invites",
+    name: "Manage Invites",
+    description: "Manage and revoke invites",
+    category: "Invites",
+  },
+  {
+    id: "connect",
+    name: "Connect",
+    description: "Connect to voice channels",
+    category: "Voice",
+  },
+  {
+    id: "speak",
+    name: "Speak",
+    description: "Speak in voice channels",
+    category: "Voice",
+  },
+  {
+    id: "stream",
+    name: "Stream",
+    description: "Stream video in voice channels",
+    category: "Voice",
+  },
+  {
+    id: "mute_members",
+    name: "Mute Members",
+    description: "Mute users in voice channels",
+    category: "Voice",
+  },
+  {
+    id: "deafen_members",
+    name: "Deafen Members",
+    description: "Deafen users in voice channels",
+    category: "Voice",
+  },
+  {
+    id: "move_members",
+    name: "Move Members",
+    description: "Move users between voice channels",
+    category: "Voice",
+  },
+  {
+    id: "use_voice_activity",
+    name: "Voice Activity",
+    description: "Use voice activity detection",
+    category: "Voice",
+  },
+  {
+    id: "priority_speaker",
+    name: "Priority Speaker",
+    description: "Be heard over other speakers",
+    category: "Voice",
+  },
+];
+
 function UserRolesEditor({
   username,
   serverRoles,
@@ -259,13 +442,28 @@ function UserRolesEditor({
 export function ServerSettingsModal() {
   const [section, setSection] = useState<Section>("overview");
   const [serverRoles, setServerRoles] = useState<Role[]>([]);
-  const [roleModalOpen, setRoleModalOpen] = useState(false);
-  const [editingRole, setEditingRole] = useState<Role | null>(null);
-  const [roleName, setRoleName] = useState("");
-  const [roleDesc, setRoleDesc] = useState("");
-  const [roleColor, setRoleColor] = useState<string | null>("#5865F2");
-  const [roleHoisted, setRoleHoisted] = useState(false);
-  const [roleCategory, setRoleCategory] = useState<string | null>(null);
+  const [expandedRole, setExpandedRole] = useState<string | null>(null);
+  const [newRoleName, setNewRoleName] = useState("");
+  const [newRoleDesc, setNewRoleDesc] = useState("");
+  const [newRoleColor, setNewRoleColor] = useState<string | null>("#5865F2");
+  const [newRoleHoisted, setNewRoleHoisted] = useState(false);
+  const [newRoleCategory, setNewRoleCategory] = useState<string | null>(null);
+  const [newRoleSelfAssignable, setNewRoleSelfAssignable] = useState(false);
+  const [newRolePermissions, setNewRolePermissions] = useState<string[]>([]);
+  const [creatingRole, setCreatingRole] = useState(false);
+  const [roleEdits, setRoleEdits] = useState<
+    Record<
+      string,
+      {
+        permissions?: string[];
+        color?: string | null;
+        description?: string;
+        category?: string | null;
+        hoisted?: boolean;
+        self_assignable?: boolean;
+      }
+    >
+  >({});
   const [memberFilter, setMemberFilter] = useState("");
   const [channelModalOpen, setChannelModalOpen] = useState(false);
   const [channelName, setChannelName] = useState("");
@@ -361,14 +559,134 @@ export function ServerSettingsModal() {
       return a.username.localeCompare(b.username);
     });
 
-  const openCreateRole = () => {
-    setEditingRole(null);
-    setRoleName("");
-    setRoleDesc("");
-    setRoleColor("#5865F2");
-    setRoleHoisted(false);
-    setRoleCategory(null);
-    setRoleModalOpen(true);
+  const startCreatingRole = () => {
+    setNewRoleName("");
+    setNewRoleDesc("");
+    setNewRoleColor("#5865F2");
+    setNewRoleHoisted(false);
+    setNewRoleCategory(null);
+    setNewRoleSelfAssignable(false);
+    setNewRolePermissions([]);
+    setCreatingRole(true);
+  };
+
+  const cancelCreatingRole = () => {
+    setCreatingRole(false);
+  };
+
+  const saveNewRole = () => {
+    if (!newRoleName.trim()) return;
+    wsSend(
+      {
+        cmd: "role_create",
+        name: newRoleName,
+        description: newRoleDesc,
+        color: newRoleColor,
+        hoisted: newRoleHoisted,
+        category: newRoleCategory,
+        self_assignable: newRoleSelfAssignable,
+        permissions:
+          newRolePermissions.length > 0 ? newRolePermissions : undefined,
+      },
+      serverUrl.value,
+    );
+    setCreatingRole(false);
+    showInfo(`Role "${newRoleName}" created`);
+  };
+
+  const expandRole = (roleName: string) => {
+    if (expandedRole === roleName) {
+      setExpandedRole(null);
+    } else {
+      setExpandedRole(roleName);
+    }
+  };
+
+  const getRolePermissions = (role: Role): string[] => {
+    if (!role.permissions) return [];
+    if (Array.isArray(role.permissions)) return role.permissions;
+    if (typeof role.permissions === "object")
+      return Object.keys(role.permissions);
+    return [];
+  };
+
+  const togglePermission = (roleName: string, permissionId: string) => {
+    const role = serverRoles.find((r) => r.name === roleName);
+    if (!role) return;
+
+    const currentPerms =
+      roleEdits[roleName]?.permissions ?? getRolePermissions(role);
+    const hasPermission = currentPerms.includes(permissionId);
+
+    const newPerms = hasPermission
+      ? currentPerms.filter((p: string) => p !== permissionId)
+      : [...currentPerms, permissionId];
+
+    setRoleEdits((prev) => ({
+      ...prev,
+      [roleName]: {
+        ...prev[roleName],
+        permissions: newPerms,
+      },
+    }));
+
+    wsSend(
+      {
+        cmd: "role_update",
+        name: roleName,
+        permissions: newPerms,
+      },
+      serverUrl.value,
+    );
+  };
+
+  const updateRoleField = (
+    roleName: string,
+    field: "color" | "description" | "category" | "hoisted" | "self_assignable",
+    value: string | boolean | null | string[],
+  ) => {
+    setRoleEdits((prev) => ({
+      ...prev,
+      [roleName]: {
+        ...prev[roleName],
+        [field]: value,
+      },
+    }));
+  };
+
+  const saveRoleField = (
+    roleName: string,
+    field: "color" | "description" | "category" | "hoisted" | "self_assignable",
+  ) => {
+    const role = serverRoles.find((r) => r.name === roleName);
+    if (!role) return;
+
+    const edit = roleEdits[roleName];
+    if (!edit || edit[field] === undefined) return;
+
+    wsSend(
+      {
+        cmd: "role_update",
+        name: roleName,
+        [field]: edit[field],
+      },
+      serverUrl.value,
+    );
+
+    showInfo(`Role "${roleName}" updated`);
+  };
+
+  const getRoleEditValue = (
+    role: Role,
+    field: "color" | "description" | "category" | "hoisted" | "self_assignable",
+  ): string | boolean | null | string[] | undefined => {
+    if (roleEdits[role.name]?.[field] !== undefined) {
+      return roleEdits[role.name][field];
+    }
+    if (field === "self_assignable") {
+      return (role as any).self_assignable ?? false;
+    }
+    return role[field] as string | boolean | null | string[] | undefined;
   };
 
   const openCreateChannel = () => {
@@ -394,52 +712,12 @@ export function ServerSettingsModal() {
     showInfo(`Channel "${channelName}" created`);
   };
 
-  const openEditRole = (role: Role) => {
-    setEditingRole(role);
-    setRoleName(role.name);
-    setRoleDesc(role.description || "");
-    setRoleColor(role.color ?? null);
-    setRoleHoisted(role.hoisted ?? false);
-    setRoleCategory(role.category ?? null);
-    setRoleModalOpen(true);
-  };
-
-  const handleRoleSubmit = () => {
-    if (!roleName.trim()) return;
-    if (editingRole) {
-      wsSend(
-        {
-          cmd: "role_update",
-          name: roleName,
-          description: roleDesc,
-          color: roleColor,
-          hoisted: roleHoisted,
-          category: roleCategory,
-        },
-        serverUrl.value,
-      );
-    } else {
-      wsSend(
-        {
-          cmd: "role_create",
-          name: roleName,
-          description: roleDesc,
-          color: roleColor,
-          hoisted: roleHoisted,
-          category: roleCategory,
-        },
-        serverUrl.value,
-      );
-    }
-    setRoleModalOpen(false);
-    showInfo(`Role ${editingRole ? "updated" : "created"}`);
-  };
-
   const deleteRole = (name: string) => {
     if (["owner", "admin", "user"].includes(name)) return;
     if (confirm(`Delete role "${name}"?`)) {
       wsSend({ cmd: "role_delete", name }, serverUrl.value);
       showInfo(`Role "${name}" deleted`);
+      setExpandedRole(null);
     }
   };
 
@@ -881,28 +1159,177 @@ export function ServerSettingsModal() {
           )}
 
           {section === "roles" && (
-            <div className="server-section-body">
-              {isOwner && (
-                <div className="settings-section-actions">
-                  <button
-                    className="settings-action-btn"
-                    onClick={openCreateRole}
-                  >
-                    <Icon name="Plus" size={16} /> Create Role
-                  </button>
+            <div className="server-section-body roles-section-body">
+              {isOwner && !creatingRole && (
+                <button
+                  className="settings-action-btn"
+                  onClick={startCreatingRole}
+                >
+                  <Icon name="Plus" size={16} /> Create Role
+                </button>
+              )}
+
+              {creatingRole && (
+                <div className="role-editor-card creating">
+                  <div className="role-editor-header">
+                    <input
+                      type="text"
+                      className="role-name-input"
+                      value={newRoleName}
+                      onInput={(e) =>
+                        setNewRoleName((e.target as HTMLInputElement).value)
+                      }
+                      placeholder="New role name"
+                      autoFocus
+                    />
+                  </div>
+                  <div className="role-editor-body">
+                    <div className="role-editor-field">
+                      <label>Description</label>
+                      <input
+                        type="text"
+                        value={newRoleDesc}
+                        onInput={(e) =>
+                          setNewRoleDesc((e.target as HTMLInputElement).value)
+                        }
+                        placeholder="Role description"
+                      />
+                    </div>
+                    <div className="role-editor-field">
+                      <label>Color</label>
+                      <div className="color-picker-row">
+                        <input
+                          type="color"
+                          value={newRoleColor ?? "#5865F2"}
+                          onInput={(e) =>
+                            setNewRoleColor(
+                              (e.target as HTMLInputElement).value,
+                            )
+                          }
+                        />
+                        <input
+                          type="text"
+                          value={newRoleColor ?? ""}
+                          onInput={(e) =>
+                            setNewRoleColor(
+                              (e.target as HTMLInputElement).value || null,
+                            )
+                          }
+                          placeholder="#5865F2"
+                          className="color-hex-input"
+                        />
+                        <button
+                          className="settings-btn-secondary small"
+                          onClick={() => setNewRoleColor(null)}
+                        >
+                          Clear
+                        </button>
+                      </div>
+                    </div>
+                    <div className="role-editor-row">
+                      <label className="checkbox-label">
+                        <input
+                          type="checkbox"
+                          checked={newRoleHoisted}
+                          onChange={(e) =>
+                            setNewRoleHoisted(
+                              (e.target as HTMLInputElement).checked,
+                            )
+                          }
+                        />
+                        <span>Hoisted (show separately in member list)</span>
+                      </label>
+                    </div>
+                    <div className="role-editor-row">
+                      <label className="checkbox-label">
+                        <input
+                          type="checkbox"
+                          checked={newRoleSelfAssignable}
+                          onChange={(e) =>
+                            setNewRoleSelfAssignable(
+                              (e.target as HTMLInputElement).checked,
+                            )
+                          }
+                        />
+                        <span>
+                          Self-assignable (users can assign to themselves)
+                        </span>
+                      </label>
+                    </div>
+                    <div className="role-editor-field">
+                      <label>Category</label>
+                      <input
+                        type="text"
+                        value={newRoleCategory ?? ""}
+                        onInput={(e) =>
+                          setNewRoleCategory(
+                            (e.target as HTMLInputElement).value || null,
+                          )
+                        }
+                        placeholder="No category"
+                      />
+                    </div>
+                    <div className="role-permissions-section">
+                      <label>Permissions</label>
+                      <div className="permissions-grid">
+                        {ALL_PERMISSIONS.map((perm) => (
+                          <button
+                            key={perm.id}
+                            className={`permission-chip ${newRolePermissions.includes(perm.id) ? "active" : ""}`}
+                            onClick={() => {
+                              if (newRolePermissions.includes(perm.id)) {
+                                setNewRolePermissions(
+                                  newRolePermissions.filter(
+                                    (p) => p !== perm.id,
+                                  ),
+                                );
+                              } else {
+                                setNewRolePermissions([
+                                  ...newRolePermissions,
+                                  perm.id,
+                                ]);
+                              }
+                            }}
+                            title={perm.description}
+                          >
+                            {perm.name}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="role-editor-actions">
+                    <button
+                      className="settings-btn-cancel"
+                      onClick={cancelCreatingRole}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      className="settings-btn-confirm"
+                      onClick={saveNewRole}
+                      disabled={!newRoleName.trim()}
+                    >
+                      Create Role
+                    </button>
+                  </div>
                 </div>
               )}
-              {serverRoles.length === 0 ? (
+
+              {serverRoles.length === 0 && !creatingRole ? (
                 <div className="settings-empty">No roles found</div>
               ) : (
-                <div className="settings-list">
+                <div className="roles-list-new">
                   {serverRoles.map((role) => {
                     const isSystem = ["owner", "user"].includes(role.name);
+                    const isExpanded = expandedRole === role.name;
+                    const rolePerms = getRolePermissions(role);
+
                     return (
                       <div
                         key={role.name}
-                        className={`settings-list-item ${draggedRole === role.name ? "dragging" : ""} ${dragOverRole === role.name ? "drag-over" : ""}`}
-                        draggable={isOwner}
+                        className={`role-card ${isExpanded ? "expanded" : ""} ${draggedRole === role.name ? "dragging" : ""} ${dragOverRole === role.name ? "drag-over" : ""}`}
+                        draggable={isOwner && !isExpanded}
                         onDragStart={() => handleRoleDragStart(role.name)}
                         onDragOver={(e) =>
                           handleRoleDragOver(e as any, role.name)
@@ -910,60 +1337,328 @@ export function ServerSettingsModal() {
                         onDrop={() => handleRoleDrop(role.name)}
                         onDragEnd={handleRoleDragEnd}
                       >
-                        {role.color && (
+                        <div
+                          className="role-card-header"
+                          onClick={() => isOwner && expandRole(role.name)}
+                        >
+                          <div className="role-drag-area">
+                            {isOwner && <Icon name="GripVertical" size={14} />}
+                          </div>
                           <div
                             className="role-color-dot"
-                            style={{ background: role.color }}
-                          ></div>
-                        )}
-                        <div className="settings-item-info">
-                          <div
-                            className="settings-item-name"
-                            style={{ color: role.color || "inherit" }}
-                          >
-                            {role.name}
+                            style={{
+                              background: role.color || "var(--text-dim)",
+                            }}
+                          />
+                          <div className="role-card-info">
+                            <span
+                              className="role-card-name"
+                              style={{ color: role.color || "inherit" }}
+                            >
+                              {role.name}
+                            </span>
+                            <span className="role-card-meta">
+                              {role.description || "No description"}
+                              {role.category && ` · ${role.category}`}
+                              {!isSystem &&
+                                ` · ${rolePerms.length} permissions`}
+                            </span>
                           </div>
-                          <div className="settings-item-meta">
-                            {role.description || "No description"}
-                            {role.category && ` · ${role.category}`}
-                          </div>
-                        </div>
-                        {isSystem
-                          ? isOwner && (
-                              <div className="settings-item-actions">
-                                <div className="role-drag-handle">
-                                  <Icon name="GripVertical" size={14} />
-                                </div>
-                                <button
-                                  className="settings-icon-btn"
-                                  onClick={() => openEditRole(role)}
-                                  title="Edit"
-                                >
-                                  <Icon name="Edit3" size={14} />
-                                </button>
-                              </div>
-                            )
-                          : isOwner && (
-                              <div className="settings-item-actions">
-                                <div className="role-drag-handle">
-                                  <Icon name="GripVertical" size={14} />
-                                </div>
-                                <button
-                                  className="settings-icon-btn"
-                                  onClick={() => openEditRole(role)}
-                                  title="Edit"
-                                >
-                                  <Icon name="Edit3" size={14} />
-                                </button>
+                          {isOwner && (
+                            <div className="role-card-actions">
+                              <button
+                                className="settings-icon-btn"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  expandRole(role.name);
+                                }}
+                                title="Edit"
+                              >
+                                <Icon
+                                  name={
+                                    isExpanded ? "ChevronUp" : "ChevronDown"
+                                  }
+                                  size={14}
+                                />
+                              </button>
+                              {!isSystem && (
                                 <button
                                   className="settings-icon-btn danger"
-                                  onClick={() => deleteRole(role.name)}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    deleteRole(role.name);
+                                  }}
                                   title="Delete"
                                 >
                                   <Icon name="Trash2" size={14} />
                                 </button>
+                              )}
+                            </div>
+                          )}
+                        </div>
+
+                        {isExpanded && isOwner && (
+                          <div className="role-editor-body">
+                            <div className="role-editor-grid">
+                              <div className="role-editor-field">
+                                <label>Color</label>
+                                <div className="color-picker-row">
+                                  <input
+                                    type="color"
+                                    value={
+                                      (getRoleEditValue(
+                                        role,
+                                        "color",
+                                      ) as string) ?? "#5865F2"
+                                    }
+                                    onInput={(e) => {
+                                      updateRoleField(
+                                        role.name,
+                                        "color",
+                                        (e.target as HTMLInputElement).value,
+                                      );
+                                    }}
+                                    onBlur={() =>
+                                      saveRoleField(role.name, "color")
+                                    }
+                                  />
+                                  <input
+                                    type="text"
+                                    value={
+                                      (getRoleEditValue(
+                                        role,
+                                        "color",
+                                      ) as string) ?? ""
+                                    }
+                                    onInput={(e) => {
+                                      updateRoleField(
+                                        role.name,
+                                        "color",
+                                        (e.target as HTMLInputElement).value ||
+                                          null,
+                                      );
+                                    }}
+                                    onBlur={() =>
+                                      saveRoleField(role.name, "color")
+                                    }
+                                    placeholder="No color"
+                                    className="color-hex-input"
+                                  />
+                                  <button
+                                    className="settings-btn-secondary small"
+                                    onClick={() => {
+                                      wsSend(
+                                        {
+                                          cmd: "role_update",
+                                          name: role.name,
+                                          color: null,
+                                        },
+                                        serverUrl.value,
+                                      );
+                                      showInfo(
+                                        `Role "${role.name}" color cleared`,
+                                      );
+                                    }}
+                                  >
+                                    Clear
+                                  </button>
+                                </div>
                               </div>
-                            )}
+
+                              <div className="role-editor-field">
+                                <label>Description</label>
+                                <input
+                                  type="text"
+                                  value={
+                                    (getRoleEditValue(
+                                      role,
+                                      "description",
+                                    ) as string) ?? ""
+                                  }
+                                  onInput={(e) =>
+                                    updateRoleField(
+                                      role.name,
+                                      "description",
+                                      (e.target as HTMLInputElement).value,
+                                    )
+                                  }
+                                  onBlur={() =>
+                                    saveRoleField(role.name, "description")
+                                  }
+                                  placeholder="No description"
+                                />
+                              </div>
+
+                              <div className="role-editor-field">
+                                <label>Category</label>
+                                <input
+                                  type="text"
+                                  value={
+                                    (getRoleEditValue(
+                                      role,
+                                      "category",
+                                    ) as string) ?? ""
+                                  }
+                                  onInput={(e) =>
+                                    updateRoleField(
+                                      role.name,
+                                      "category",
+                                      (e.target as HTMLInputElement).value ||
+                                        null,
+                                    )
+                                  }
+                                  onBlur={() =>
+                                    saveRoleField(role.name, "category")
+                                  }
+                                  placeholder="No category"
+                                />
+                              </div>
+                            </div>
+
+                            <div className="role-editor-toggles">
+                              <label className="checkbox-label">
+                                <input
+                                  type="checkbox"
+                                  checked={
+                                    (getRoleEditValue(
+                                      role,
+                                      "hoisted",
+                                    ) as boolean) ?? false
+                                  }
+                                  onChange={(e) => {
+                                    const checked = (
+                                      e.target as HTMLInputElement
+                                    ).checked;
+                                    updateRoleField(
+                                      role.name,
+                                      "hoisted",
+                                      checked,
+                                    );
+                                    wsSend(
+                                      {
+                                        cmd: "role_update",
+                                        name: role.name,
+                                        hoisted: checked,
+                                      },
+                                      serverUrl.value,
+                                    );
+                                    showInfo(
+                                      `Role "${role.name}" ${checked ? "hoisted" : "unhoisted"}`,
+                                    );
+                                  }}
+                                />
+                                <span>
+                                  Hoisted (show separately in member list)
+                                </span>
+                              </label>
+
+                              {!["owner", "admin", "moderator"].includes(
+                                role.name,
+                              ) && (
+                                <label className="checkbox-label">
+                                  <input
+                                    type="checkbox"
+                                    checked={
+                                      (getRoleEditValue(
+                                        role,
+                                        "self_assignable",
+                                      ) as boolean) ?? false
+                                    }
+                                    onChange={(e) => {
+                                      const checked = (
+                                        e.target as HTMLInputElement
+                                      ).checked;
+                                      updateRoleField(
+                                        role.name,
+                                        "self_assignable",
+                                        checked,
+                                      );
+                                      wsSend(
+                                        {
+                                          cmd: "role_update",
+                                          name: role.name,
+                                          self_assignable: checked,
+                                        },
+                                        serverUrl.value,
+                                      );
+                                      showInfo(
+                                        `Role "${role.name}" ${checked ? "is now self-assignable" : "is no longer self-assignable"}`,
+                                      );
+                                    }}
+                                  />
+                                  <span>
+                                    Self-assignable (users can assign to
+                                    themselves)
+                                  </span>
+                                </label>
+                              )}
+                            </div>
+
+                            <div className="role-permissions-section">
+                              <div className="permissions-header">
+                                <label>Permissions</label>
+                                <div className="permissions-actions">
+                                  <button
+                                    className="settings-btn-secondary small"
+                                    onClick={() => {
+                                      const allPerms = ALL_PERMISSIONS.map(
+                                        (p) => p.id,
+                                      );
+                                      wsSend(
+                                        {
+                                          cmd: "role_update",
+                                          name: role.name,
+                                          permissions: allPerms,
+                                        },
+                                        serverUrl.value,
+                                      );
+                                      showInfo(
+                                        `All permissions added to "${role.name}"`,
+                                      );
+                                    }}
+                                  >
+                                    Select All
+                                  </button>
+                                  <button
+                                    className="settings-btn-secondary small"
+                                    onClick={() => {
+                                      wsSend(
+                                        {
+                                          cmd: "role_update",
+                                          name: role.name,
+                                          permissions: [],
+                                        },
+                                        serverUrl.value,
+                                      );
+                                      showInfo(
+                                        `All permissions removed from "${role.name}"`,
+                                      );
+                                    }}
+                                  >
+                                    Clear All
+                                  </button>
+                                </div>
+                              </div>
+                              <div className="permissions-grid">
+                                {ALL_PERMISSIONS.map((perm) => {
+                                  const hasPerm = rolePerms.includes(perm.id);
+                                  return (
+                                    <button
+                                      key={perm.id}
+                                      className={`permission-chip ${hasPerm ? "active" : ""}`}
+                                      onClick={() =>
+                                        togglePermission(role.name, perm.id)
+                                      }
+                                      title={perm.description}
+                                    >
+                                      {perm.name}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     );
                   })}
@@ -1136,138 +1831,6 @@ export function ServerSettingsModal() {
             </div>
           )}
         </div>
-
-        {roleModalOpen && (
-          <div
-            className="settings-inner-modal"
-            onClick={(e) => {
-              if (e.target === e.currentTarget) setRoleModalOpen(false);
-            }}
-          >
-            <div className="settings-inner-dialog">
-              <h3>{editingRole ? "Edit Role" : "Create Role"}</h3>
-              {editingRole ? (
-                <div className="settings-field">
-                  <label>Role Name</label>
-                  <div className="settings-value-static">
-                    {editingRole.color && (
-                      <span
-                        className="role-color-dot"
-                        style={{
-                          background: editingRole.color,
-                          marginRight: "8px",
-                        }}
-                      ></span>
-                    )}
-                    {editingRole.name}
-                  </div>
-                </div>
-              ) : (
-                <div className="settings-field">
-                  <label>Name</label>
-                  <input
-                    type="text"
-                    value={roleName}
-                    onInput={(e) =>
-                      setRoleName((e.target as HTMLInputElement).value)
-                    }
-                    placeholder="Role name"
-                  />
-                </div>
-              )}
-              <div className="settings-field">
-                <label>Description</label>
-                <input
-                  type="text"
-                  value={roleDesc}
-                  onInput={(e) =>
-                    setRoleDesc((e.target as HTMLInputElement).value)
-                  }
-                  placeholder="Role description"
-                />
-              </div>
-              <div className="settings-field">
-                <label>Color</label>
-                <div className="settings-color-field">
-                  <input
-                    type="color"
-                    value={roleColor ?? "#5865F2"}
-                    onInput={(e) =>
-                      setRoleColor((e.target as HTMLInputElement).value)
-                    }
-                    disabled={roleColor === null}
-                  />
-                  <input
-                    type="text"
-                    value={roleColor ?? ""}
-                    onInput={(e) => {
-                      const val = (e.target as HTMLInputElement).value;
-                      setRoleColor(val || null);
-                    }}
-                    placeholder="No color"
-                    className="settings-color-text"
-                  />
-                  <button
-                    type="button"
-                    className="settings-btn-secondary"
-                    onClick={() => setRoleColor(null)}
-                    title="Clear color"
-                  >
-                    Clear
-                  </button>
-                </div>
-              </div>
-              <div className="settings-field">
-                <label className="settings-checkbox-label">
-                  <input
-                    type="checkbox"
-                    checked={roleHoisted}
-                    onChange={(e) =>
-                      setRoleHoisted((e.target as HTMLInputElement).checked)
-                    }
-                  />
-                  Hoisted (show separately in member list)
-                </label>
-              </div>
-              <div className="settings-field">
-                <label>Category</label>
-                <div className="settings-category-field">
-                  <input
-                    type="text"
-                    value={roleCategory ?? ""}
-                    onInput={(e) => {
-                      const val = (e.target as HTMLInputElement).value;
-                      setRoleCategory(val || null);
-                    }}
-                    placeholder="No category"
-                  />
-                  <button
-                    type="button"
-                    className="settings-btn-secondary"
-                    onClick={() => setRoleCategory(null)}
-                    title="Clear category"
-                  >
-                    Clear
-                  </button>
-                </div>
-              </div>
-              <div className="settings-dialog-actions">
-                <button
-                  className="settings-btn-cancel"
-                  onClick={() => setRoleModalOpen(false)}
-                >
-                  Cancel
-                </button>
-                <button
-                  className="settings-btn-confirm"
-                  onClick={handleRoleSubmit}
-                >
-                  {editingRole ? "Save" : "Create"}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
 
         {channelModalOpen && (
           <div

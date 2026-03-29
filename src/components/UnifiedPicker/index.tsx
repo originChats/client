@@ -1,19 +1,26 @@
-import { useState, useEffect, useRef, useMemo } from "preact/hooks";
+import {
+  useState,
+  useEffect,
+  useRef,
+  useMemo,
+  useCallback,
+} from "preact/hooks";
+import { memo } from "preact/compat";
 import type { TargetedInputEvent } from "preact";
-import { recentEmojis } from "../../state";
+import {
+  recentEmojis,
+  customEmojisByServer,
+  servers,
+  serverUrl,
+} from "../../state";
 import { Icon } from "../Icon";
-import { VirtualGrid } from "../VirtualGrid";
 import { favGifs as dbFavGifs } from "../../lib/db";
 import { emojiImgUrl } from "../../lib/emoji";
-
-interface EmojiEntry {
-  label: string;
-  hexcode: string;
-  emoji: string;
-  tags?: string[];
-  order?: number;
-  group?: number;
-}
+import {
+  emojiCache,
+  type EmojiEntry,
+  type CustomEmojiItem,
+} from "../../lib/emoji-data-cache";
 
 interface GifResult {
   id: string;
@@ -73,6 +80,8 @@ function TwemojiImg({
   );
 }
 
+const MemoTwemojiImg = memo(TwemojiImg);
+
 const EMOJI_GROUP_NAMES: Record<number, string> = {
   0: "Smileys & Emotion",
   1: "People & Body",
@@ -112,38 +121,6 @@ const QUICK_REACTIONS = [
 
 const DISPLAY_GROUPS = [0, 1, 3, 4, 5, 6, 7, 8, 9];
 
-let emojiDataCache: EmojiEntry[] | null = null;
-let emojiDataPromise: Promise<EmojiEntry[]> | null = null;
-
-function fetchEmojiData(): Promise<EmojiEntry[]> {
-  if (emojiDataCache) return Promise.resolve(emojiDataCache);
-  if (emojiDataPromise) return emojiDataPromise;
-  emojiDataPromise = fetch("/shortcodes.json")
-    .then((res) => res.json())
-    .then((data: EmojiEntry[]) => {
-      emojiDataCache = data.filter(
-        (e) => e.group !== undefined && e.group !== -1 && e.group !== 2,
-      );
-      emojiDataCache.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
-      return emojiDataCache;
-    });
-  return emojiDataPromise;
-}
-
-function useEmojiData() {
-  const [emojis, setEmojis] = useState<EmojiEntry[]>(emojiDataCache ?? []);
-
-  useEffect(() => {
-    if (emojiDataCache) {
-      setEmojis(emojiDataCache);
-      return;
-    }
-    fetchEmojiData().then(setEmojis);
-  }, []);
-
-  return emojis;
-}
-
 export function UnifiedPicker({
   isOpen,
   onClose,
@@ -155,6 +132,14 @@ export function UnifiedPicker({
   const [activeTab, setActiveTab] = useState<"emoji" | "gif">(initialTab);
   const [searchTerm, setSearchTerm] = useState("");
   const pickerRef = useRef<HTMLDivElement>(null);
+  const initRef = useRef(false);
+
+  useEffect(() => {
+    if (isOpen && !initRef.current) {
+      initRef.current = true;
+      emojiCache.initialize();
+    }
+  }, [isOpen]);
 
   useEffect(() => {
     if (isOpen) {
@@ -275,6 +260,71 @@ export function UnifiedPicker({
   );
 }
 
+interface EmojiButtonProps {
+  hexcode: string;
+  emoji: string;
+  label: string;
+  onClick: () => void;
+}
+
+const EmojiButtonImpl = ({
+  hexcode,
+  emoji,
+  label,
+  onClick,
+}: EmojiButtonProps) => (
+  <button
+    className="emoji-button"
+    onClick={onClick}
+    title={label}
+    type="button"
+  >
+    <MemoTwemojiImg hexcode={hexcode} alt={emoji} />
+  </button>
+);
+
+const MemoEmojiButton = memo(EmojiButtonImpl);
+
+interface CustomEmojiButtonProps {
+  id: string;
+  name: string;
+  fileName: string;
+  serverUrl: string;
+  serverName: string;
+  onClick: () => void;
+}
+
+const CustomEmojiButtonImpl = ({
+  name,
+  fileName,
+  serverUrl,
+  onClick,
+}: CustomEmojiButtonProps) => {
+  const baseUrl = serverUrl.startsWith("http")
+    ? serverUrl
+    : `https://${serverUrl}`;
+  const url = `${baseUrl}/emojis/${fileName}`;
+
+  return (
+    <button
+      className="emoji-button"
+      onClick={onClick}
+      title={`:${name}:`}
+      type="button"
+    >
+      <img
+        src={url}
+        alt={name}
+        className="emoji-custom-img"
+        loading="lazy"
+        draggable={false}
+      />
+    </button>
+  );
+};
+
+const MemoCustomEmojiButton = memo(CustomEmojiButtonImpl);
+
 function EmojiPanel({
   searchTerm,
   onSelect,
@@ -284,50 +334,123 @@ function EmojiPanel({
   onSelect: (e: string) => void;
   onClose: () => void;
 }) {
-  const [activeCategory, setActiveCategory] = useState<number | null>(null);
-  const gridContainerRef = useRef<HTMLDivElement>(null);
-  const allEmojis = useEmojiData();
+  const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const [emojis, setEmojis] = useState<EmojiEntry[]>([]);
+  const contentRef = useRef<HTMLDivElement>(null);
 
-  const { groupedEmojis, allEmojisFlat, GROUP_OFFSETS } = useMemo(() => {
+  useEffect(() => {
+    emojiCache.initialize().then(() => {
+      setEmojis(emojiCache.getAllEmojis());
+    });
+  }, []);
+
+  useEffect(() => {
+    if (activeCategory && contentRef.current) {
+      const sectionEl = contentRef.current.querySelector(
+        `[data-section="${activeCategory}"]`,
+      );
+      if (sectionEl) {
+        sectionEl.scrollIntoView({ behavior: "instant", block: "start" });
+      }
+    }
+  }, [activeCategory]);
+
+  const groupedEmojis = useMemo(() => {
     const groups: Record<number, EmojiEntry[]> = {};
-    const flat: EmojiEntry[] = [];
-    const offsets: Record<number, number> = {};
-    let flatIndex = 0;
-
     for (const groupId of DISPLAY_GROUPS) {
-      offsets[groupId] = flatIndex;
-      groups[groupId] = [];
-      const groupEmojis = allEmojis.filter((e) => (e.group ?? -1) === groupId);
-      for (const entry of groupEmojis) {
-        groups[groupId].push(entry);
-        flat.push(entry);
-        flatIndex++;
+      groups[groupId] = emojis.filter((e) => (e.group ?? -1) === groupId);
+    }
+    return groups;
+  }, [emojis]);
+
+  const addRecent = useCallback(
+    (emoji: string) => {
+      const current = recentEmojis.value;
+      const updated = [emoji, ...current.filter((e) => e !== emoji)].slice(
+        0,
+        50,
+      );
+      recentEmojis.value = updated;
+      onSelect(emoji);
+      onClose();
+    },
+    [onSelect, onClose],
+  );
+
+  const addCustomEmoji = useCallback(
+    (emoji: CustomEmojiItem) => {
+      onSelect(`:${emoji.name}:`);
+      onClose();
+    },
+    [onSelect, onClose],
+  );
+
+  const customEmojiData = useMemo(() => {
+    const result = new Map<string, CustomEmojiItem[]>();
+    const emojiData = customEmojisByServer.value;
+
+    for (const [sUrl, emojis] of Object.entries(emojiData)) {
+      const server = servers.value.find((s) => s.url === sUrl);
+      const serverName = server?.name || sUrl;
+      const items: CustomEmojiItem[] = [];
+
+      for (const [id, emoji] of Object.entries(emojis)) {
+        items.push({
+          id,
+          name: emoji.name,
+          fileName: emoji.fileName,
+          serverUrl: sUrl,
+          serverName,
+        });
+      }
+
+      if (items.length > 0) {
+        result.set(sUrl, items);
       }
     }
 
-    return {
-      groupedEmojis: groups,
-      allEmojisFlat: flat,
-      GROUP_OFFSETS: offsets,
-    };
-  }, [allEmojis]);
+    return result;
+  }, []);
 
-  const addRecent = (emoji: string) => {
-    const current = recentEmojis.value;
-    const updated = [emoji, ...current.filter((e) => e !== emoji)].slice(0, 50);
-    recentEmojis.value = updated;
-    onSelect(emoji);
-    onClose();
+  const currentSUrl = serverUrl.value;
+  const sortedServerUrls = useMemo(() => {
+    return Array.from(customEmojiData.keys()).sort((a, b) => {
+      if (a === currentSUrl) return -1;
+      if (b === currentSUrl) return 1;
+      const serverA = servers.value.find((s) => s.url === a);
+      const serverB = servers.value.find((s) => s.url === b);
+      return (serverA?.name || a).localeCompare(serverB?.name || b);
+    });
+  }, [customEmojiData, currentSUrl]);
+
+  const allCustomEmojis = useMemo(() => {
+    return sortedServerUrls.flatMap((sUrl) => customEmojiData.get(sUrl) || []);
+  }, [sortedServerUrls, customEmojiData]);
+
+  const getServerForUrl = useCallback(
+    (sUrl: string) => servers.value.find((s) => s.url === sUrl),
+    [],
+  );
+
+  const isServerCategory = (cat: string | null): boolean => {
+    return cat?.startsWith("server:") ?? false;
   };
 
-  const findHexcode = (emoji: string): string | null => {
-    const entry = allEmojis.find((e) => e.emoji === emoji);
-    return entry?.hexcode ?? null;
+  const getServerUrlFromCategory = (cat: string): string => {
+    return cat.replace("server:", "");
   };
+
+  const findHexcode = useCallback(
+    (emoji: string): string | null => {
+      const entry = emojis.find((e) => e.emoji === emoji);
+      return entry?.hexcode ?? null;
+    },
+    [emojis],
+  );
 
   if (searchTerm.trim()) {
     const query = searchTerm.toLowerCase();
-    const filtered = allEmojis
+    const filtered = emojis
       .filter(
         (e) =>
           e.label.toLowerCase().includes(query) ||
@@ -335,25 +458,54 @@ function EmojiPanel({
           (e.tags && e.tags.some((t) => t.toLowerCase().includes(query))),
       )
       .slice(0, 200);
+    const filteredCustom = allCustomEmojis.filter((e) =>
+      e.name.toLowerCase().includes(query),
+    );
+    const hasResults = filtered.length > 0 || filteredCustom.length > 0;
+
     return (
       <div className="unified-picker-body">
-        {filtered.length === 0 ? (
+        {!hasResults ? (
           <div className="picker-empty">
             <Icon name="Search" size={32} />
             <p>No emoji found</p>
           </div>
         ) : (
-          <div className="emoji-grid">
-            {filtered.map((entry, i) => (
-              <button
-                key={`${entry.hexcode}-${i}`}
-                className="emoji-button"
-                onClick={() => addRecent(entry.emoji)}
-                title={entry.label}
-              >
-                <TwemojiImg hexcode={entry.hexcode} alt={entry.emoji} />
-              </button>
-            ))}
+          <div className="emoji-list-scroll">
+            {filteredCustom.length > 0 && (
+              <div className="emoji-section">
+                <div className="emoji-section-label">Server Emojis</div>
+                <div className="emoji-grid">
+                  {filteredCustom.map((emoji) => (
+                    <MemoCustomEmojiButton
+                      key={emoji.id}
+                      id={emoji.id}
+                      name={emoji.name}
+                      fileName={emoji.fileName}
+                      serverUrl={emoji.serverUrl}
+                      serverName={emoji.serverName}
+                      onClick={() => addCustomEmoji(emoji)}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+            {filtered.length > 0 && (
+              <div className="emoji-section">
+                <div className="emoji-section-label">Standard Emojis</div>
+                <div className="emoji-grid">
+                  {filtered.map((entry, i) => (
+                    <MemoEmojiButton
+                      key={`${entry.hexcode}-${i}`}
+                      hexcode={entry.hexcode}
+                      emoji={entry.emoji}
+                      label={entry.label}
+                      onClick={() => addRecent(entry.emoji)}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -362,105 +514,181 @@ function EmojiPanel({
 
   return (
     <div className="unified-picker-body">
-      <div className="emoji-category-nav">
+      <div className="emoji-sidebar">
         <button
-          className={`emoji-cat-btn ${activeCategory === null ? "active" : ""}`}
-          onClick={() => {
-            setActiveCategory(null);
-          }}
+          className={`emoji-sidebar-btn ${activeCategory === null ? "active" : ""}`}
+          onClick={() => setActiveCategory(null)}
           title="All"
+          type="button"
         >
-          <TwemojiImg hexcode="1f552" alt="Recent" />
+          <MemoTwemojiImg hexcode="1f552" alt="All" />
         </button>
+        {sortedServerUrls.map((sUrl) => {
+          const server = getServerForUrl(sUrl);
+          const isActive = activeCategory === `server:${sUrl}`;
+          return (
+            <button
+              key={sUrl}
+              className={`emoji-sidebar-btn ${isActive ? "active" : ""}`}
+              onClick={() => setActiveCategory(`server:${sUrl}`)}
+              title={server?.name || sUrl}
+              type="button"
+            >
+              {server?.icon ? (
+                <img
+                  src={server.icon}
+                  alt={server.name || sUrl}
+                  className="emoji-sidebar-server-icon"
+                />
+              ) : (
+                <span className="emoji-sidebar-server-letter">
+                  {(server?.name || sUrl).charAt(0).toUpperCase()}
+                </span>
+              )}
+            </button>
+          );
+        })}
+        <div className="emoji-sidebar-divider" />
         {DISPLAY_GROUPS.map((groupId) => (
           <button
             key={groupId}
-            className={`emoji-cat-btn ${activeCategory === groupId ? "active" : ""}`}
-            onClick={() => setActiveCategory(groupId)}
+            className={`emoji-sidebar-btn ${activeCategory === String(groupId) ? "active" : ""}`}
+            onClick={() => setActiveCategory(String(groupId))}
             title={EMOJI_GROUP_NAMES[groupId]}
+            type="button"
           >
-            <TwemojiImg
+            <MemoTwemojiImg
               hexcode={EMOJI_GROUP_ICONS[groupId]}
               alt={EMOJI_GROUP_NAMES[groupId]}
             />
           </button>
         ))}
       </div>
-      <div className="emoji-grid-container" ref={gridContainerRef}>
-        {!activeCategory ? (
-          <>
-            <div className="emoji-section-label">Recent</div>
+      <div ref={contentRef} className="emoji-content">
+        {isServerCategory(activeCategory) && (
+          <div className="emoji-section" data-section={activeCategory!}>
+            <div className="emoji-section-header">
+              {getServerForUrl(getServerUrlFromCategory(activeCategory!))
+                ?.name || activeCategory}
+            </div>
             <div className="emoji-grid">
-              {(recentEmojis.value.length > 0
-                ? recentEmojis.value
-                : QUICK_REACTIONS
-              ).map((emoji, i) => {
-                const hex = findHexcode(emoji);
-                if (!hex) return null;
-                return (
-                  <button
-                    key={`recent-${hex}-${i}`}
-                    className="emoji-button"
-                    onClick={() => addRecent(emoji)}
-                    title={emoji}
-                  >
-                    <TwemojiImg hexcode={hex} alt={emoji} />
-                  </button>
-                );
-              })}
+              {(
+                customEmojiData.get(
+                  getServerUrlFromCategory(activeCategory!),
+                ) || []
+              ).map((emoji) => (
+                <MemoCustomEmojiButton
+                  key={emoji.id}
+                  id={emoji.id}
+                  name={emoji.name}
+                  fileName={emoji.fileName}
+                  serverUrl={emoji.serverUrl}
+                  serverName={emoji.serverName}
+                  onClick={() => addCustomEmoji(emoji)}
+                />
+              ))}
             </div>
-            <div className="emoji-section-label">All Emojis</div>
-            <div
-              className="emoji-grid-virtual-wrapper"
-              style={{ height: "400px" }}
-            >
-              <VirtualGrid<EmojiEntry>
-                items={allEmojisFlat}
-                renderItem={(entry, i) => (
-                  <button
-                    key={`${entry.hexcode}-${i}`}
-                    className="emoji-button"
-                    onClick={() => addRecent(entry.emoji)}
-                    title={entry.label}
-                  >
-                    <TwemojiImg hexcode={entry.hexcode} alt={entry.emoji} />
-                  </button>
-                )}
-                itemHeight={38}
-                columns={8}
-                overscan={4}
-                className="emoji-grid-virtual"
-              />
-            </div>
-          </>
-        ) : (
+          </div>
+        )}
+        {activeCategory === null && (
           <>
-            <div className="emoji-section-label">
-              {EMOJI_GROUP_NAMES[activeCategory]}
+            {sortedServerUrls.map((sUrl) => {
+              const server = getServerForUrl(sUrl);
+              const emojis = customEmojiData.get(sUrl) || [];
+              if (emojis.length === 0) return null;
+              return (
+                <div
+                  key={sUrl}
+                  className="emoji-section"
+                  data-section={`server:${sUrl}`}
+                >
+                  <div className="emoji-section-header">
+                    <span>{server?.name || sUrl}</span>
+                  </div>
+                  <div className="emoji-grid">
+                    {emojis.map((emoji) => (
+                      <MemoCustomEmojiButton
+                        key={emoji.id}
+                        id={emoji.id}
+                        name={emoji.name}
+                        fileName={emoji.fileName}
+                        serverUrl={emoji.serverUrl}
+                        serverName={emoji.serverName}
+                        onClick={() => addCustomEmoji(emoji)}
+                      />
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+            <div className="emoji-section" data-section="recent">
+              <div className="emoji-section-header">Recent</div>
+              <div className="emoji-grid">
+                {(recentEmojis.value.length > 0
+                  ? recentEmojis.value
+                  : QUICK_REACTIONS
+                ).map((emoji, i) => {
+                  const hex = findHexcode(emoji);
+                  if (!hex) return null;
+                  return (
+                    <MemoEmojiButton
+                      key={`recent-${hex}-${i}`}
+                      hexcode={hex}
+                      emoji={emoji}
+                      label={emoji}
+                      onClick={() => addRecent(emoji)}
+                    />
+                  );
+                })}
+              </div>
             </div>
-            <div
-              className="emoji-grid-virtual-wrapper"
-              style={{ height: "400px" }}
-            >
-              <VirtualGrid<EmojiEntry>
-                items={groupedEmojis[activeCategory] || []}
-                renderItem={(entry, i) => (
-                  <button
-                    key={`${entry.hexcode}-${i}`}
-                    className="emoji-button"
-                    onClick={() => addRecent(entry.emoji)}
-                    title={entry.label}
-                  >
-                    <TwemojiImg hexcode={entry.hexcode} alt={entry.emoji} />
-                  </button>
-                )}
-                itemHeight={38}
-                columns={8}
-                overscan={4}
-                className="emoji-grid-virtual"
-              />
-            </div>
+            {DISPLAY_GROUPS.map((groupId) => {
+              const groupEmojis = groupedEmojis[groupId] || [];
+              if (groupEmojis.length === 0) return null;
+              return (
+                <div
+                  key={groupId}
+                  className="emoji-section"
+                  data-section={String(groupId)}
+                >
+                  <div className="emoji-section-header">
+                    {EMOJI_GROUP_NAMES[groupId]}
+                  </div>
+                  <div className="emoji-grid">
+                    {groupEmojis.map((entry) => (
+                      <MemoEmojiButton
+                        key={entry.hexcode}
+                        hexcode={entry.hexcode}
+                        emoji={entry.emoji}
+                        label={entry.label}
+                        onClick={() => addRecent(entry.emoji)}
+                      />
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
           </>
+        )}
+        {!isServerCategory(activeCategory) && activeCategory !== null && (
+          <div className="emoji-section" data-section={activeCategory}>
+            <div className="emoji-section-header">
+              {EMOJI_GROUP_NAMES[parseInt(activeCategory, 10)]}
+            </div>
+            <div className="emoji-grid">
+              {(groupedEmojis[parseInt(activeCategory, 10)] || []).map(
+                (entry) => (
+                  <MemoEmojiButton
+                    key={entry.hexcode}
+                    hexcode={entry.hexcode}
+                    emoji={entry.emoji}
+                    label={entry.label}
+                    onClick={() => addRecent(entry.emoji)}
+                  />
+                ),
+              )}
+            </div>
+          </div>
         )}
       </div>
     </div>
@@ -562,7 +790,8 @@ function GifPanel({
     <div className="unified-picker-body">
       {showFavorites && (
         <div className="gif-section-label">
-          <Icon name="Star" size={14} /> Favorites
+          <Icon name="Star" size={14} />
+          Favorites
         </div>
       )}
       {loading ? (

@@ -1,4 +1,4 @@
-import { useMemo } from "preact/hooks";
+import { useMemo, useState, useEffect } from "preact/hooks";
 import { memo } from "preact/compat";
 import DOMPurify from "dompurify";
 import { parseMarkdown } from "../../lib/markdown";
@@ -22,6 +22,29 @@ function parseEmbedMarkdown(text: string): string {
   const links: string[] = [];
   const parsed = parseMarkdown(text, links, undefined);
   return DOMPurify.sanitize(parsed, { ADD_ATTR: ["target"] });
+}
+
+function useImageAspectRatio(url: string | undefined): boolean | null {
+  const [isSquare, setIsSquare] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    if (!url) {
+      setIsSquare(null);
+      return;
+    }
+
+    const img = new Image();
+    img.onload = () => {
+      const ratio = img.width / img.height;
+      setIsSquare(ratio >= 0.9 && ratio <= 1.1);
+    };
+    img.onerror = () => {
+      setIsSquare(null);
+    };
+    img.src = url;
+  }, [url]);
+
+  return isSquare;
 }
 
 interface MessageEmbedProps {
@@ -56,12 +79,14 @@ function MessageEmbedInner({ embed, messageId }: MessageEmbedProps) {
     [embed.fields],
   );
 
+  const isSquareThumbnail = useImageAspectRatio(embed.thumbnail?.url);
+
   return (
     <div
-      className={`message-embed${embed.thumbnail ? " has-thumbnail" : ""}`}
+      className={`message-embed${embed.thumbnail ? " has-thumbnail" : ""}${isSquareThumbnail ? " square-thumbnail" : ""}`}
       style={borderColor ? { borderLeftColor: borderColor } : undefined}
     >
-      {embed.thumbnail && (
+      {!isSquareThumbnail && embed.thumbnail && (
         <img
           className="embed-thumbnail"
           src={embed.thumbnail.url}
@@ -153,6 +178,14 @@ function MessageEmbedInner({ embed, messageId }: MessageEmbedProps) {
           </div>
         )}
       </div>
+      {isSquareThumbnail && embed.thumbnail && (
+        <img
+          className="embed-thumbnail embed-thumbnail--right"
+          src={embed.thumbnail.url}
+          alt=""
+          loading="lazy"
+        />
+      )}
     </div>
   );
 }

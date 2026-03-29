@@ -132,8 +132,8 @@ export interface MessageEmbed {
   author?: MessageEmbedAuthor;
   footer?: MessageEmbedFooter;
   fields?: MessageEmbedField[];
-  image?: { url: string };
-  thumbnail?: { url: string };
+  image?: { url: string; width?: number; height?: number };
+  thumbnail?: { url: string; width?: number; height?: number };
   poll?: PollData;
 }
 

@@ -133,6 +133,13 @@ function MessageContentInner({
       }
     }
 
+    const usernameToNickname: Record<string, string> = {};
+    for (const [username, user] of Object.entries(users.value)) {
+      if (user.nickname) {
+        usernameToNickname[username.toLowerCase()] = user.nickname;
+      }
+    }
+
     const mentionCtx: MentionContext = {
       validUsernames: new Set(
         Object.keys(users.value).map((u) => u.toLowerCase()),
@@ -143,6 +150,7 @@ function MessageContentInner({
       validRoles: mentionableRoles,
       roleColors,
       currentServerUrl: serverUrl.value,
+      usernameToNickname,
     };
     const links: string[] = [];
     const parsed = parseMarkdown(content, links, mentionCtx);

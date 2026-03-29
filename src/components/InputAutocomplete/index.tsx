@@ -12,6 +12,7 @@ import {
 } from "../../state";
 import { avatarUrl } from "../../utils";
 import { emojiImgUrl } from "../../lib/emoji";
+import { emojiCache } from "../../lib/emoji-data-cache";
 
 type AutocompleteType = "user" | "channel" | "emoji" | "slash" | "role";
 
@@ -187,135 +188,36 @@ function searchRoles(query: string): AutocompleteItem[] {
   return results;
 }
 
-interface EmojiEntry {
-  label: string;
-  hexcode: string;
-  emoji: string;
-  tags?: string[];
-}
-
 function searchEmojis(query: string): AutocompleteItem[] {
-  const shortcodes: EmojiEntry[] = (window as any).shortcodes || [];
   const q = query.toLowerCase();
   const recent = recentEmojis.value;
-  const recentSet = new Set(recent);
 
-  const exact: AutocompleteItem[] = [];
-  const prefix: AutocompleteItem[] = [];
-  const rest: AutocompleteItem[] = [];
+  const results = emojiCache.search(q, 15);
 
-  for (const entry of shortcodes) {
-    if (!entry.emoji || !entry.label) continue;
-    const label = entry.label.toLowerCase().replace(/ /g, "_");
-    const matchesLabel = label.includes(q);
-    const matchesTags = entry.tags?.some((t) => t.toLowerCase().includes(q));
-    if (!matchesLabel && !matchesTags) continue;
-
-    const item: AutocompleteItem = {
-      type: "emoji",
-      label: entry.label.replace(/ /g, "_"),
-      insertText: `:${entry.label.replace(/ /g, "_")}:`,
-      icon: entry.emoji,
-      hexcode: entry.hexcode,
-    };
-
-    if (label === q) {
-      exact.push(item);
-    } else if (label.startsWith(q)) {
-      prefix.push(item);
-    } else {
-      rest.push(item);
-    }
-  }
-
-  const sortByRecent = (a: AutocompleteItem, b: AutocompleteItem) => {
-    const aRecent = a.hexcode && recentSet.has(a.hexcode);
-    const bRecent = b.hexcode && recentSet.has(b.hexcode);
-    if (aRecent && !bRecent) return -1;
-    if (!aRecent && bRecent) return 1;
-    const aIdx = a.hexcode ? recent.indexOf(a.hexcode) : -1;
-    const bIdx = b.hexcode ? recent.indexOf(b.hexcode) : -1;
-    return aIdx - bIdx;
-  };
-
-  return [
-    ...exact,
-    ...prefix.sort(sortByRecent),
-    ...rest.sort(sortByRecent),
-  ].slice(0, 15);
+  return results.map((entry) => ({
+    type: "emoji" as const,
+    label: entry.label.replace(/ /g, "_"),
+    insertText: `:${entry.label.replace(/ /g, "_")}:`,
+    icon: entry.emoji,
+    hexcode: entry.hexcode,
+  }));
 }
 
 function searchCustomEmojis(query: string): AutocompleteItem[] {
   const q = query.toLowerCase();
   const recent = recentEmojis.value;
-  const recentSet = new Set(recent);
 
-  const prefix: AutocompleteItem[] = [];
-  const rest: AutocompleteItem[] = [];
+  const results = emojiCache.searchCustomEmojis(q, 15);
 
-  const currentServer = serverUrl.value;
-  const currentServerEmojis = customEmojisByServer.value[currentServer] || {};
-  for (const emoji of Object.values(currentServerEmojis)) {
-    const name = emoji.name.toLowerCase();
-    if (name.includes(q)) {
-      const server = servers.value.find((s) => s.url === currentServer);
-      const item: AutocompleteItem = {
-        type: "emoji",
-        label: emoji.name,
-        insertText: `:${emoji.name}:`,
-        serverUrl: currentServer,
-        serverName: server?.name || currentServer,
-        fileName: emoji.fileName,
-        isCustomEmoji: true,
-      };
-      if (name.startsWith(q)) {
-        prefix.push(item);
-      } else {
-        rest.push(item);
-      }
-    }
-  }
-
-  for (const [sUrl, emojis] of Object.entries(customEmojisByServer.value)) {
-    if (sUrl === currentServer) continue;
-    for (const emoji of Object.values(emojis)) {
-      const name = emoji.name.toLowerCase();
-      if (name.includes(q)) {
-        const server = servers.value.find((s) => s.url === sUrl);
-        const item: AutocompleteItem = {
-          type: "emoji",
-          label: emoji.name,
-          insertText: `:${emoji.name}:`,
-          serverUrl: sUrl,
-          serverName: server?.name || sUrl,
-          fileName: emoji.fileName,
-          isCustomEmoji: true,
-        };
-        if (name.startsWith(q)) {
-          prefix.push(item);
-        } else {
-          rest.push(item);
-        }
-      }
-    }
-  }
-
-  const sortByRecent = (a: AutocompleteItem, b: AutocompleteItem) => {
-    const aKey = `${a.serverUrl}:${a.label}`;
-    const bKey = `${b.serverUrl}:${b.label}`;
-    const aRecent = recentSet.has(aKey);
-    const bRecent = recentSet.has(bKey);
-    if (aRecent && !bRecent) return -1;
-    if (!aRecent && bRecent) return 1;
-    const aIdx = recent.indexOf(aKey);
-    const bIdx = recent.indexOf(bKey);
-    return aIdx - bIdx;
-  };
-
-  return [...prefix.sort(sortByRecent), ...rest.sort(sortByRecent)].slice(
-    0,
-    15,
-  );
+  return results.map((emoji) => ({
+    type: "emoji" as const,
+    label: emoji.name,
+    insertText: `:${emoji.name}:`,
+    serverUrl: emoji.serverUrl,
+    serverName: emoji.serverName,
+    fileName: emoji.fileName,
+    isCustomEmoji: true,
+  }));
 }
 
 function searchSlashCommands(query: string): AutocompleteItem[] {

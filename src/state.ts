@@ -381,9 +381,7 @@ export function addUser(url: string, username: string, user: ServerUser) {
   };
 }
 
-export const DEFAULT_SERVERS: Server[] = [
-  { name: "OriginChats", url: "chats.mistium.com", icon: null },
-];
+export const DEFAULT_SERVERS: Server[] = [];
 
 export const recentEmojis = signal<string[]>([]);
 

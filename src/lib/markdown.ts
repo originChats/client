@@ -169,6 +169,7 @@ export interface MentionContext {
   validRoles?: Set<string>; // lowercase
   roleColors?: Record<string, string>; // lowercase role name -> color
   currentServerUrl?: string; // for detecting cross-server channel links
+  usernameToNickname?: Record<string, string>; // lowercase username -> nickname
 }
 
 export function parseMarkdown(
@@ -480,7 +481,10 @@ export function parseMarkdown(
     if (mentionCtx && !mentionCtx.validUsernames.has(user.toLowerCase())) {
       return match;
     }
-    return `<span class="mention" data-user="${escapeAttribute(user)}">@${user}</span>`;
+    const userLower = user.toLowerCase();
+    const nickname = mentionCtx?.usernameToNickname?.[userLower];
+    const displayName = nickname || user;
+    return `<span class="mention" data-user="${escapeAttribute(user)}">@${escapeHtml(displayName)}</span>`;
   });
 
   text = text.replace(/#([a-zA-Z0-9_-]+)/g, (match, channelName) => {
