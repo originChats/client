@@ -465,8 +465,6 @@ export function parseMarkdown(
     );
   }
 
-  console.log(text);
-
   text = text.replace(/@&amp;([a-zA-Z0-9_]+)/g, (match, roleName) => {
     const roleLower = roleName.toLowerCase();
     if (!mentionCtx?.allRoles?.has(roleLower)) {
