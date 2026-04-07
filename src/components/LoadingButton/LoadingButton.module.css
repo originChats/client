@@ -67,6 +67,10 @@
   transition: opacity var(--anim-fast) ease;
 }
 
+.loadingButton svg {
+  margin-right: 10px;
+}
+
 .loadingButton.loading .loadingButtonText {
   opacity: 0.8;
 }

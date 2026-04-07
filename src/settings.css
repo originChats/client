@@ -3820,7 +3820,7 @@ img.tenor-gif {
   flex: 1;
   font-size: 18px;
   font-weight: 600;
-  color: var(--primary, #4e5058);
+  color: var(--text-normal);
 }
 
 /* ── Transfer Credits (Account tab) ─────────────────────────────────────── */
@@ -5013,7 +5013,6 @@ img.tenor-gif {
   text-transform: uppercase;
   letter-spacing: 0.3px;
   margin-bottom: 8px;
-  display: block;
 }
 
 .settings-value {
