@@ -9,11 +9,17 @@ import {
   attachmentConfigByServer,
   servers,
   offlinePushServers,
+  serverAuthModeByServer,
+  token,
 } from "../../state";
-import { renderGuildSidebarSignal } from "../ui-signals";
+import {
+  renderGuildSidebarSignal,
+  showCrackedAuthModal,
+  showRoturRequiredModal,
+} from "../ui-signals";
 import { reloadServerIcon } from "../../utils";
 import { saveServers } from "../persistence";
-import { authenticateServer, enablePushForServer } from "../websocket";
+import { authenticateServer, enablePushForServer, wsSend } from "../websocket";
 import { DEFAULT_PERMISSIONS } from "../../state";
 
 export function handleHandshake(msg: Handshake, sUrl: string): void {
@@ -99,8 +105,53 @@ export function handleHandshake(msg: Handshake, sUrl: string): void {
     }
   }
 
+  const authMode = msg.val.auth_mode || "rotur";
+  serverAuthModeByServer.value = {
+    ...serverAuthModeByServer.value,
+    [sUrl]: authMode,
+  };
+
   renderGuildSidebarSignal.value++;
-  authenticateServer(sUrl);
+
+  if (authMode === "rotur" || authMode === undefined) {
+    if (!token.value) {
+      showRoturRequiredModal.value = sUrl;
+    } else {
+      authenticateServer(sUrl);
+    }
+  } else if (authMode === "cracked-only") {
+    const existing = servers.value.find((s) => s.url === sUrl);
+    if (existing?.crackedCredentials) {
+      wsSend(
+        {
+          cmd: "login",
+          username: existing.crackedCredentials.username,
+          password: existing.crackedCredentials.password,
+        },
+        sUrl,
+      );
+    } else {
+      showCrackedAuthModal.value = sUrl;
+    }
+  } else if (authMode === "cracked") {
+    const existing = servers.value.find((s) => s.url === sUrl);
+    if (existing?.crackedCredentials) {
+      wsSend(
+        {
+          cmd: "login",
+          username: existing.crackedCredentials.username,
+          password: existing.crackedCredentials.password,
+        },
+        sUrl,
+      );
+    } else if (!token.value) {
+      showCrackedAuthModal.value = sUrl;
+    } else {
+      showCrackedAuthModal.value = sUrl;
+    }
+  } else {
+    authenticateServer(sUrl);
+  }
 
   if (Notification.permission === "granted") {
     if (!offlinePushServers.value[sUrl]) {

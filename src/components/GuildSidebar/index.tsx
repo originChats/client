@@ -1,5 +1,5 @@
 import { Fragment } from "preact";
-import { useState, useRef } from "preact/hooks";
+import { useState, useRef, useEffect } from "preact/hooks";
 import { ConfirmDialog } from "../Modal";
 import {
   serverUrl,
@@ -59,6 +59,11 @@ export function GuildSidebar() {
   const [isDropping, setIsDropping] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<typeof drag>(null);
+  const dragListenersRef = useRef<{
+    onMove: (e: MouseEvent) => void;
+    onUp: () => void;
+  } | null>(null);
+  const dropTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const getConnectionClass = (url: string) => {
     const status = wsStatus[url];
@@ -120,6 +125,7 @@ export function GuildSidebar() {
     const onUp = async () => {
       document.removeEventListener("mousemove", onMove);
       document.removeEventListener("mouseup", onUp);
+      dragListenersRef.current = null;
 
       if (!hasDragged) {
         switchServer(url);
@@ -137,7 +143,7 @@ export function GuildSidebar() {
       }
 
       setIsDropping(true);
-      setTimeout(async () => {
+      dropTimeoutRef.current = setTimeout(async () => {
         const serversNotInFolders = servers.value.filter(
           (s) => !serverFolders.value.some((f) => f.serverUrls.includes(s.url)),
         );
@@ -171,12 +177,29 @@ export function GuildSidebar() {
         } catch (err) {
           console.error("Failed to save servers:", err);
         }
+        dropTimeoutRef.current = null;
       }, 150);
     };
 
+    dragListenersRef.current = { onMove, onUp };
     document.addEventListener("mousemove", onMove);
     document.addEventListener("mouseup", onUp);
   };
+
+  useEffect(() => {
+    return () => {
+      if (dragListenersRef.current) {
+        document.removeEventListener(
+          "mousemove",
+          dragListenersRef.current.onMove,
+        );
+        document.removeEventListener("mouseup", dragListenersRef.current.onUp);
+      }
+      if (dropTimeoutRef.current) {
+        clearTimeout(dropTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const handleServerContextMenu = (
     e: MouseEvent,
@@ -398,20 +421,6 @@ export function GuildSidebar() {
             .map((dm) => (
               <DMServerItem key={dm.channel} dm={dm} />
             ))}
-
-          <div
-            className={`${styles.guildItem} ${styles.inboxButton}${currentChannel.value?.name === "unified_inbox" ? ` ${styles.active}` : ""}`}
-            onClick={() => {
-              const channel = { name: "unified_inbox", type: "special" };
-              currentChannel.value = channel as any;
-              mobileSidebarOpen.value = false;
-            }}
-          >
-            <div className={styles.guildIcon}>
-              <Icon name="Bell" size={24} />
-            </div>
-            <div className={styles.guildPill} />
-          </div>
 
           <div className={styles.guildDivider} />
 

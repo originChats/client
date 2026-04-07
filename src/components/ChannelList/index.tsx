@@ -30,6 +30,7 @@ import {
   type NotificationLevel,
   newThreadCounts,
   clearNewThreadCount,
+  token,
 } from "../../state";
 import {
   selectChannel,
@@ -57,6 +58,7 @@ import { voiceManager, voiceState } from "../../voice";
 import { openUserPopout } from "../UserPopout";
 import type { VoiceUser } from "../../types";
 import { avatarUrl } from "../../utils";
+import { UserAvatar } from "../UserAvatar";
 import { useDisplayName } from "../../lib/useDisplayName";
 import { updateStatus, clearStatus } from "../../lib/rotur-api";
 import { saveNotifSettings } from "../../lib/persistence";
@@ -81,6 +83,7 @@ export function ChannelList() {
     forceUpdate(undefined);
   });
   const isDM = serverUrl.value === DM_SERVER_URL;
+  const hasToken = !!token.value;
   const rawChs = channels.value;
   const chs = isDM
     ? [...rawChs].sort((a, b) => (b.last_message || 0) - (a.last_message || 0))
@@ -386,13 +389,15 @@ export function ChannelList() {
                 <Icon name="Home" size={18} />
                 <span>Home</span>
               </div>
-              <div
-                className={`${styles.channelItem}${currentChannel.value?.name === "relationships" ? ` ${styles.active}` : ""}`}
-                onClick={selectRelationshipsChannel}
-              >
-                <Icon name="Users" size={18} />
-                <span>Friends</span>
-              </div>
+              {hasToken && (
+                <div
+                  className={`${styles.channelItem}${currentChannel.value?.name === "relationships" ? ` ${styles.active}` : ""}`}
+                  onClick={selectRelationshipsChannel}
+                >
+                  <Icon name="Users" size={18} />
+                  <span>Friends</span>
+                </div>
+              )}
               <div
                 className={`${styles.channelItem}${currentChannel.value?.name === "notes" ? ` ${styles.active}` : ""}`}
                 onClick={() =>
@@ -510,10 +515,7 @@ export function ChannelList() {
                           onClick={(e: any) => openUserPopout(e, vu.username)}
                         >
                           <div className={styles.voiceChannelUserAvatar}>
-                            <img
-                              src={vu.pfp || avatarUrl(vu.username)}
-                              alt={vu.username}
-                            />
+                            <UserAvatar username={vu.username} pfp={vu.pfp} />
                           </div>
                           <span className={styles.voiceChannelUsername}>
                             {vu.username}

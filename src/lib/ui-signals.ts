@@ -136,15 +136,6 @@ export const searchResults = signal<Message[]>([]);
 export const searchLoading = signal(false);
 export const pinnedLoading = signal(false);
 
-export interface UnifiedInboxMessage extends Message {
-  serverUrl: string;
-  serverName: string;
-  channel: string;
-}
-
-export const unifiedInboxMessages = signal<UnifiedInboxMessage[]>([]);
-export const unifiedInboxLoading = signal(false);
-
 export const userPopout = signal<{
   username: string;
   x: number;
@@ -181,6 +172,18 @@ export function closeContextMenu() {
 }
 
 export const showNotificationPrompt = signal(false);
+
+export const showLoginChoiceModal = signal(false);
+export const showCrackedAuthModal = signal<string | null>(null);
+export const showRoturRequiredModal = signal<string | null>(null);
+export const crackedAuthError = signal<string | null>(null);
+export const pendingCrackedCredentials = signal<{
+  serverUrl: string;
+  username: string;
+  password: string;
+} | null>(null);
+export const crackedAuthLoading = signal<boolean>(false);
+export const crackedAuthMode = signal<"choice" | "login">("choice");
 
 export interface ImageViewerState {
   url: string;

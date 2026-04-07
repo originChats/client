@@ -1,6 +1,7 @@
 export { handleHandshake } from "./handshake";
 export { handleReady } from "./ready";
 export { handleAuthSuccess } from "./auth_success";
+export { handleAuthError } from "./auth_error";
 export { handleChannelsGet } from "./channel/s_get";
 export { handleAttachmentDeleted } from "./attachment/deleted";
 export { handleTyping } from "./typing";

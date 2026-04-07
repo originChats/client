@@ -2,11 +2,51 @@ import {
   serverCapabilitiesByServer,
   readTimesByServer,
   DM_SERVER_URL,
+  serverAuthModeByServer,
+  servers,
 } from "../../state";
 import { wsSend } from "../ws-sender";
 import { readTimes as dbReadTimes } from "../db";
+import {
+  showCrackedAuthModal,
+  crackedAuthError,
+  pendingCrackedCredentials,
+  crackedAuthLoading,
+} from "../ui-signals";
+import { saveServers } from "../persistence";
 
 export function handleAuthSuccess(sUrl: string): void {
+  const authMode = serverAuthModeByServer.value[sUrl];
+  if (authMode === "cracked-only" || authMode === "cracked") {
+    if (showCrackedAuthModal.value === sUrl) {
+      showCrackedAuthModal.value = null;
+      crackedAuthError.value = null;
+      crackedAuthLoading.value = false;
+    }
+
+    const pending = pendingCrackedCredentials.value;
+    if (pending && pending.serverUrl === sUrl) {
+      servers.value = servers.value.map((s) =>
+        s.url === sUrl
+          ? {
+              ...s,
+              crackedCredentials: {
+                username: pending.username,
+                password: pending.password,
+              },
+            }
+          : s,
+      );
+      saveServers().catch((err) =>
+        console.error(
+          "[auth_success] Failed to save cracked credentials:",
+          err,
+        ),
+      );
+      pendingCrackedCredentials.value = null;
+    }
+  }
+
   const caps = serverCapabilitiesByServer.value[sUrl] ?? [];
   const serverHas = (cap: string) => caps.includes(cap);
   wsSend({ cmd: "channels_get" }, sUrl);

@@ -31,7 +31,6 @@ export const SPECIAL_CHANNELS = new Set([
   "new_message",
   "discovery",
   "roles",
-  "unified_inbox",
 ]);
 export const serverUrl = signal(DM_SERVER_URL);
 const priorityServer = signal<string | null>(null);
@@ -146,6 +145,10 @@ export const wsStatus: Record<
   "connecting" | "connected" | "disconnected" | "error"
 > = {};
 export const serverValidatorKeys: Record<string, string> = {};
+
+export type AuthMode = "rotur" | "cracked" | "cracked-only";
+
+export const serverAuthModeByServer = signal<Record<string, AuthMode>>({});
 
 /**
  * Capabilities advertised by each server in their handshake payload.

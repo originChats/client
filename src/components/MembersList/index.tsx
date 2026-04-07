@@ -14,7 +14,7 @@ import { renderMembersSignal, mobilePanelOpen } from "../../lib/ui-signals";
 import { Icon } from "../Icon";
 import { UserContextMenu, useUserContextMenu } from "../UserContextMenu";
 import { openUserPopout } from "../UserPopout";
-import { avatarUrl } from "../../utils";
+import { UserAvatar } from "../UserAvatar";
 import { useDisplayName } from "../../lib/useDisplayName";
 import { MessageContent } from "../MessageContent";
 import styles from "./MembersList.module.css";
@@ -225,7 +225,13 @@ function MemberItemInner({
       onContextMenu={(e: any) => onContextMenu(e, user.username)}
     >
       <div className={styles.memberAvatarWrapper}>
-        <img src={avatarUrl(user.username)} alt={displayName} />
+        <UserAvatar
+          username={user.username}
+          nickname={user.nickname}
+          pfp={user.pfp}
+          cracked={user.cracked}
+          alt={displayName}
+        />
         {showStatus && !offline && (
           <div
             className={`${styles.memberStatusIndicator} ${styles[statusClass]}`}

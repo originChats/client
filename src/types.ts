@@ -81,6 +81,8 @@ export interface ServerUser {
     text?: string;
   };
   account?: RoturAccount;
+  pfp?: string;
+  cracked?: boolean;
 }
 
 export interface MessageEmbedField {
@@ -177,6 +179,10 @@ export interface Server {
   url: string;
   icon?: string | null;
   banner?: string | null;
+  crackedCredentials?: {
+    username: string;
+    password: string;
+  };
 }
 
 export interface ServerFolder {

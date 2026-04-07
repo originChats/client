@@ -164,6 +164,7 @@ interface Handshake {
   val: {
     validator_key: string;
     capabilities?: string[];
+    auth_mode?: "rotur" | "cracked" | "cracked-only";
     attachments?: {
       enabled?: boolean;
       max_size: number;
@@ -190,11 +191,19 @@ interface Ready {
       status: "online" | "idle" | "dnd" | "offline";
       text?: string;
     };
+    cracked?: boolean;
+    pfp_url?: string;
   };
 }
 
 interface AuthSuccess {
   cmd: "auth_success";
+  val?: string;
+}
+
+interface AuthError {
+  cmd: "auth_error";
+  val: string;
 }
 
 interface RolesList {
@@ -572,6 +581,7 @@ export type {
   PollEnd,
   PollResults,
   PollGet,
+  AuthError,
 };
 
 interface PollOption {

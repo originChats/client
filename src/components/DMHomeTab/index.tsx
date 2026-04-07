@@ -1,5 +1,5 @@
 import { useSignalEffect } from "@preact/signals";
-import { friendRequests, servers } from "../../state";
+import { friendRequests, servers, token } from "../../state";
 import {
   selectRelationshipsChannel,
   selectChannel,
@@ -14,6 +14,8 @@ export function DMHomeTab() {
     friendRequests.value;
   });
 
+  const hasToken = !!token.value;
+
   return (
     <div className="dm-home-container">
       <Header />
@@ -24,42 +26,48 @@ export function DMHomeTab() {
         <h2 className="home-heading-title">Welcome Home</h2>
         <p className="home-heading-subtitle">What would you like to do?</p>
         <div className="home-options-grid">
-          <div
-            className="home-option-card"
-            onClick={() => selectRelationshipsChannel()}
-          >
-            <div className="home-option-icon">
-              <Icon name="Users" size={20} />
+          {hasToken && (
+            <div
+              className="home-option-card"
+              onClick={() => selectRelationshipsChannel()}
+            >
+              <div className="home-option-icon">
+                <Icon name="Users" size={20} />
+              </div>
+              <h3 className="home-option-title">
+                Manage Relationships
+                {friendRequests.value.length > 0 && (
+                  <span className="dm-home-card-badge">
+                    {friendRequests.value.length}
+                  </span>
+                )}
+              </h3>
+              <p className="home-option-description">
+                View and manage your friends
+              </p>
             </div>
-            <h3 className="home-option-title">
-              Manage Relationships
-              {friendRequests.value.length > 0 && (
-                <span className="dm-home-card-badge">
-                  {friendRequests.value.length}
-                </span>
-              )}
-            </h3>
-            <p className="home-option-description">
-              View and manage your friends
-            </p>
-          </div>
+          )}
 
-          <div
-            className="home-option-card"
-            onClick={() =>
-              selectChannel({
-                name: "new_message",
-                type: "new_message",
-                display_name: "New Message",
-              })
-            }
-          >
-            <div className="home-option-icon">
-              <Icon name="UserPlus" size={20} />
+          {hasToken && (
+            <div
+              className="home-option-card"
+              onClick={() =>
+                selectChannel({
+                  name: "new_message",
+                  type: "new_message",
+                  display_name: "New Message",
+                })
+              }
+            >
+              <div className="home-option-icon">
+                <Icon name="UserPlus" size={20} />
+              </div>
+              <h3 className="home-option-title">Create DM</h3>
+              <p className="home-option-description">
+                Start a new conversation
+              </p>
             </div>
-            <h3 className="home-option-title">Create DM</h3>
-            <p className="home-option-description">Start a new conversation</p>
-          </div>
+          )}
 
           <div
             className="home-option-card"

@@ -305,6 +305,40 @@ function MessageContentInner({
         });
       }
     });
+
+    const remoteEmojis = messageText.querySelectorAll<HTMLImageElement>(
+      "img.custom-emoji-remote",
+    );
+
+    remoteEmojis.forEach((img) => {
+      if (img.dataset.fetched) return;
+      img.dataset.fetched = "true";
+
+      const sUrl = img.dataset.surl;
+      const emojiId = img.dataset.emojiId;
+      const baseUrl = img.dataset.baseUrl;
+      if (!sUrl || !emojiId || !baseUrl) return;
+
+      fetch(`${baseUrl}/emojis/${emojiId}`)
+        .then((res) => {
+          if (!res.ok) {
+            console.error("Failed to fetch emoji:", res.status, res.statusText);
+            return null;
+          }
+          return res.json();
+        })
+        .then((emoji) => {
+          if (!emoji || !img.parentNode) return;
+          img.src = `${baseUrl}/emojis/${emoji.fileName}`;
+          img.alt = `:${emoji.name}:`;
+          img.title = emoji.name;
+          img.classList.remove("custom-emoji-remote");
+          img.classList.add("custom-emoji");
+        })
+        .catch((err) => {
+          console.error("Error fetching remote emoji:", err);
+        });
+    });
   }, [html, inlineImages]);
 
   return (

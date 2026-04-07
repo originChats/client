@@ -989,8 +989,6 @@ body.font-serif {
   background: var(--primary, #4e5058);
   color: #fff;
 }
-  color: #fff;
-}
 
 .server-nav-item svg {
   width: 18px;

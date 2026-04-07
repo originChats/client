@@ -79,9 +79,28 @@ export function reloadServerIcon(url: string): void {
   };
 }
 
+export function isCrackedAccount(username: string): boolean {
+  return username.startsWith("USR:");
+}
+
 export function avatarUrl(username: string): string {
   const bust = avatarBust.value[username];
   return `https://avatars.rotur.dev/${username}${bust ? `?v=${bust}` : ""}`;
+}
+
+export function getUserAvatar(
+  user: { username: string; pfp?: string; cracked?: boolean } | string,
+): string | undefined {
+  const username = typeof user === "string" ? user : user.username;
+  const pfp = typeof user === "string" ? undefined : user.pfp;
+  const cracked = typeof user === "string" ? false : user.cracked;
+
+  if (pfp) return pfp;
+
+  const isCracked = cracked || isCrackedAccount(username);
+  if (isCracked) return undefined;
+
+  return avatarUrl(username);
 }
 
 export function formatJoinDate(timestamp: number | string): string {

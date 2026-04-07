@@ -8,8 +8,11 @@ import {
   dmServers,
   roturMyGroups,
   roturStatuses,
+  token,
 } from "../../state";
 import { currentDMTab, showAccountModal } from "../../lib/ui-signals";
+import { getAuthRedirectUrl } from "../../lib/rotur-api";
+import { session as dbSession } from "../../lib/db";
 import {
   switchServer,
   selectChannel,
@@ -43,6 +46,35 @@ export function DMFriendsTab() {
   });
 
   const tab = currentDMTab.value;
+  const hasToken = !!token.value;
+
+  if (!hasToken) {
+    return (
+      <div className="dm-friends-container">
+        <Header />
+        <div className="dm-list">
+          <div className="rotur-login-required">
+            <Icon name="LogIn" size={48} />
+            <h3>Rotur Login Required</h3>
+            <p>
+              You need to be logged in with a Rotur account to access friends,
+              DMs, and groups.
+            </p>
+            <button
+              className="btn btn-primary"
+              onClick={() => {
+                dbSession.del("token");
+                window.location.href = getAuthRedirectUrl(window.location.href);
+              }}
+            >
+              <Icon name="LogIn" size={16} />
+              <span>Login with Rotur</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="dm-friends-container">

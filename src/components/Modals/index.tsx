@@ -14,6 +14,7 @@ import {
   currentUser,
   sendTypingIndicators,
   DM_SERVER_URL,
+  currentUserByServer,
   pingSound,
   pingVolume,
   customPingSound,
@@ -60,7 +61,8 @@ import {
   selectDiscoveryChannel,
 } from "../../lib/actions";
 import type { RoturAccount, RoturProfile } from "../../types";
-import { avatarUrl, formatJoinDate } from "../../utils";
+import { avatarUrl, formatJoinDate, isCrackedAccount } from "../../utils";
+import { wsSend } from "../../lib/ws-sender";
 import { getUserStatus, getUserRoles } from "../UserProfile";
 import {
   getMediaServers,
@@ -133,13 +135,34 @@ export function SettingsModal() {
     setSaving(true);
     setSaveMsg("");
     try {
-      const data = await updateProfile(key, value);
-      if (data.error) {
-        setSaveMsg(data.error);
-      } else {
+      const user = currentUser.value;
+      const isCracked = user && isCrackedAccount(user.username);
+
+      if (isCracked && key === "pfp") {
+        wsSend({ cmd: "pfp_set", url: value }, serverUrl.value);
         setSaveMsg("Saved!");
-        showInfo("Profile saved successfully", { autoDismissMs: 2000 });
+        showInfo("Profile picture updated", { autoDismissMs: 2000 });
+        if (user?.username) {
+          const currentUserInServer =
+            currentUserByServer.value[serverUrl.value];
+          if (currentUserInServer) {
+            currentUserInServer.pfp = value;
+            currentUserByServer.value = { ...currentUserByServer.value };
+          }
+          if (profile) {
+            setProfile({ ...profile, pfp: value });
+          }
+        }
         setTimeout(() => setSaveMsg(""), 2000);
+      } else {
+        const data = await updateProfile(key, value);
+        if (data.error) {
+          setSaveMsg(data.error);
+        } else {
+          setSaveMsg("Saved!");
+          showInfo("Profile saved successfully", { autoDismissMs: 2000 });
+          setTimeout(() => setSaveMsg(""), 2000);
+        }
       }
     } catch (e: any) {
       setSaveMsg(e.message || "Network error");
@@ -454,7 +477,19 @@ export function SettingsModal() {
                 <div className="user-settings-avatar-area">
                   <div
                     className="user-settings-avatar"
-                    onClick={() => fileInputRef.current?.click()}
+                    onClick={() => {
+                      const user = currentUser.value;
+                      const isCracked = user && isCrackedAccount(user.username);
+                      if (!isCracked) {
+                        fileInputRef.current?.click();
+                      }
+                    }}
+                    style={
+                      currentUser.value &&
+                      isCrackedAccount(currentUser.value.username)
+                        ? { cursor: "default" }
+                        : {}
+                    }
                   >
                     <img
                       src={
@@ -462,9 +497,14 @@ export function SettingsModal() {
                       }
                       alt=""
                     />
-                    <div className="user-settings-avatar-overlay">
-                      <Icon name="Camera" size={16} />
-                    </div>
+                    {!(
+                      currentUser.value &&
+                      isCrackedAccount(currentUser.value.username)
+                    ) && (
+                      <div className="user-settings-avatar-overlay">
+                        <Icon name="Camera" size={16} />
+                      </div>
+                    )}
                   </div>
                   <input
                     ref={fileInputRef}
@@ -487,6 +527,33 @@ export function SettingsModal() {
                     )}
                   </div>
                 </div>
+                {currentUser.value &&
+                  isCrackedAccount(currentUser.value.username) && (
+                    <div
+                      className="settings-field"
+                      style={{ marginTop: "12px" }}
+                    >
+                      <label>Profile Picture URL</label>
+                      <input
+                        type="text"
+                        className="settings-input"
+                        placeholder="https://example.com/avatar.png"
+                        value={profile?.pfp || ""}
+                        onInput={(e: any) => {
+                          const value = e.target.value;
+                          if (profile) {
+                            setProfile({ ...profile, pfp: value });
+                          }
+                        }}
+                        onBlur={(e: any) => {
+                          const value = e.target.value;
+                          if (value) {
+                            updateField("pfp", value);
+                          }
+                        }}
+                      />
+                    </div>
+                  )}
               </div>
 
               <div className="settings-field">
@@ -2534,3 +2601,5 @@ export function NotificationPromptModal() {
     </div>
   );
 }
+
+export { CrackedAuthModal } from "../CrackedAuthModal";

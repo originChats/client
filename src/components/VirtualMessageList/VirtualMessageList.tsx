@@ -185,6 +185,11 @@ export function VirtualMessageList<T>({
         });
       }
     }
+    return () => {
+      if (scrollAnimationRef.current) {
+        cancelAnimationFrame(scrollAnimationRef.current);
+      }
+    };
   }, [items, scrollToBottom, scrollTop]);
 
   useEffect(() => {
@@ -211,6 +216,11 @@ export function VirtualMessageList<T>({
         });
       });
     }
+    return () => {
+      if (scrollAnimationRef.current) {
+        cancelAnimationFrame(scrollAnimationRef.current);
+      }
+    };
   }, [scrollToIndex, positions, viewportHeight, estimateHeight, items.length]);
 
   const handleScroll = useCallback(

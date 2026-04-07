@@ -27,6 +27,7 @@ import {
   offlinePushServers,
   pushSubscriptionsByServer,
   serverCapabilitiesByServer,
+  serverAuthModeByServer,
   SPECIAL_CHANNELS,
   myStatus,
   autoIdleOnUnfocus,
@@ -40,6 +41,7 @@ import {
   showBanner,
   dismissBanner,
   upsertBanner,
+  pendingCrackedCredentials,
 } from "./ui-signals";
 import { wsSend, startMessageFetch } from "./ws-sender";
 
@@ -56,6 +58,7 @@ import {
   handleHandshake,
   handleReady,
   handleAuthSuccess,
+  handleAuthError,
   handleChannelsGet,
   handleThreadCreate,
   handleThreadDelete,
@@ -129,6 +132,13 @@ function getAudioContext(): AudioContext {
     audioCtx = new window.AudioContext();
   }
   return audioCtx;
+}
+
+export function cleanupAudioContext(): void {
+  if (audioCtx && audioCtx.state !== "closed") {
+    audioCtx.close();
+    audioCtx = null;
+  }
 }
 
 export function playPingSound(): void {
@@ -376,6 +386,12 @@ function clearServerState(sUrl: string): void {
     ),
   );
 
+  serverAuthModeByServer.value = Object.fromEntries(
+    Object.entries(serverAuthModeByServer.value).filter(
+      ([key]) => key !== sUrl,
+    ),
+  );
+
   delete loadedChannelsByServer[sUrl];
   delete reachedOldestByServer[sUrl];
   delete pendingReplyFetchesByServer[sUrl];
@@ -383,6 +399,10 @@ function clearServerState(sUrl: string): void {
   readTimesByServer.value = Object.fromEntries(
     Object.entries(readTimesByServer.value).filter(([key]) => key !== sUrl),
   );
+
+  if (pendingCrackedCredentials.value?.serverUrl === sUrl) {
+    pendingCrackedCredentials.value = null;
+  }
 
   renderChannelsSignal.value++;
   renderMessagesSignal.value++;
@@ -667,6 +687,9 @@ function handleMessage(msg: any, sUrl: string): void {
     case "auth_success":
       handleAuthSuccess(sUrl);
       break;
+    case "auth_error":
+      handleAuthError(msg, sUrl);
+      break;
     case "channels_get":
       handleChannelsGet(msg, sUrl);
       break;
@@ -895,16 +918,15 @@ function refreshCurrentChannel(): void {
   }
 }
 
-let visibilityHandlerAdded = false;
+let visibilityHandler: (() => void) | null = null;
 let autoIdleActive = false;
 let idleDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 const IDLE_DEBOUNCE_MS = 500;
 
 export function setupVisibilityHandler(): void {
-  if (visibilityHandlerAdded) return;
-  visibilityHandlerAdded = true;
+  if (visibilityHandler) return;
 
-  document.addEventListener("visibilitychange", () => {
+  visibilityHandler = () => {
     if (autoIdleOnUnfocus.value) {
       if (document.hidden) {
         if (idleDebounceTimer) clearTimeout(idleDebounceTimer);
@@ -958,7 +980,21 @@ export function setupVisibilityHandler(): void {
     if (!document.hidden) {
       refreshCurrentChannel();
     }
-  });
+  };
+
+  document.addEventListener("visibilitychange", visibilityHandler);
+}
+
+export function cleanupVisibilityHandler(): void {
+  if (visibilityHandler) {
+    document.removeEventListener("visibilitychange", visibilityHandler);
+    visibilityHandler = null;
+  }
+  if (idleDebounceTimer) {
+    clearTimeout(idleDebounceTimer);
+    idleDebounceTimer = null;
+  }
+  autoIdleActive = false;
 }
 
 export { wsSend } from "./ws-sender";

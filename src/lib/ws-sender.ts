@@ -41,6 +41,13 @@ function getAudioContext(): AudioContext {
   return audioCtx;
 }
 
+export function cleanupWsSenderAudio(): void {
+  if (audioCtx && audioCtx.state !== "closed") {
+    audioCtx.close();
+    audioCtx = null;
+  }
+}
+
 function playPingSound(
   type: "default" | "soft" | "bell" | "pop" | "none" | "custom" = "default",
   volume: number = 0.5,

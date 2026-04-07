@@ -51,8 +51,14 @@ import {
   loadFriendNicknames,
 } from "./lib/persistence";
 import { OriginFSClientClass } from "./originFSKit";
-import { connectToServer } from "./lib/websocket";
-import { setupVisibilityHandler } from "./lib/websocket";
+import { LocalOriginFSClass } from "./localOriginFSKit";
+import {
+  connectToServer,
+  setupVisibilityHandler,
+  cleanupVisibilityHandler,
+  cleanupAudioContext,
+} from "./lib/websocket";
+import { cleanupWsSenderAudio } from "./lib/ws-sender";
 import {
   selectHomeChannel,
   selectChannel,
@@ -70,6 +76,7 @@ import {
   getFollowing,
   getStatus,
 } from "./lib/rotur-api";
+import { showLoginChoiceModal } from "./lib/ui-signals";
 
 import { GuildSidebar } from "./components/GuildSidebar";
 import { ChannelList } from "./components/ChannelList";
@@ -79,7 +86,10 @@ import {
   AccountModal,
   DiscoveryModal,
   NotificationPromptModal,
+  CrackedAuthModal,
 } from "./components/Modals";
+import { LoginChoiceModal } from "./components/LoginChoiceModal";
+import { RoturRequiredModal } from "./components/RoturRequiredModal";
 import { ServerSettingsModal } from "./components/ServerSettings";
 import { ChannelEditModal } from "./components/Modals/ChannelEditModal";
 import { UserPopout } from "./components/UserPopout";
@@ -91,7 +101,7 @@ import { RolesTab } from "./components/RolesTab";
 import { VoiceCallView } from "./components/VoiceCallView";
 import { GlobalContextMenu } from "./components/ContextMenu";
 import { DiscoveryPage } from "./components/DiscoveryPage";
-import { UnifiedInboxPage } from "./components/UnifiedInboxPage";
+
 import { OfflineScreen } from "./components/OfflineScreen";
 import { LoadingScreen } from "./components/LoadingScreen";
 import { ThreadPanel } from "./components/ThreadPanel";
@@ -144,32 +154,51 @@ function App() {
       window.history.replaceState({}, document.title, window.location.pathname);
     } else if (savedToken) {
       token.value = savedToken;
-    } else {
-      // No token at all — if offline, show offline screen; otherwise redirect
-      if (!navigator.onLine) {
+    }
+
+    // If we have a token, validate it; otherwise use local storage
+    let meData: any = null;
+    let hasValidToken = false;
+
+    if (token.value) {
+      try {
+        meData = await validateToken();
+        hasValidToken = !!meData;
+      } catch {
+        meData = null;
+        hasValidToken = false;
+      }
+    }
+
+    if (!hasValidToken) {
+      if (!navigator.onLine && !token.value) {
         isOffline.value = true;
         setIsLoading(false);
         return;
       }
-      authRedirect();
-      return;
-    }
+      // No valid token — use local storage and show login choice
+      const localFS = new LocalOriginFSClass();
+      setOriginFS(localFS);
 
-    // Validate the token before proceeding — fails when offline
-    let meData: any;
-    try {
-      meData = await validateToken();
-    } catch {
-      meData = null;
-    }
+      const loadedServers = await loadServers();
+      servers.value = loadedServers;
 
-    if (!meData) {
-      if (!navigator.onLine) {
-        isOffline.value = true;
-        setIsLoading(false);
-        return;
+      const loadedFolders = await loadFolders();
+      serverFolders.value = loadedFolders;
+
+      const savedServerUrl =
+        (await dbSession.get<string>("serverUrl", "")) || DM_SERVER_URL;
+      serverUrl.value = savedServerUrl;
+
+      const localReadTimes: Record<string, Record<string, number>> = {};
+      localReadTimes[DM_SERVER_URL] = await dbReadTimes.get(DM_SERVER_URL);
+      for (const server of loadedServers) {
+        localReadTimes[server.url] = await dbReadTimes.get(server.url);
       }
-      authRedirect();
+      readTimesByServer.value = localReadTimes;
+
+      showLoginChoiceModal.value = true;
+      setIsLoading(false);
       return;
     }
 
@@ -270,7 +299,10 @@ function App() {
       });
     }
 
-    connectToServer(DM_SERVER_URL);
+    const hasRoturToken = !!token.value;
+    if (hasRoturToken) {
+      connectToServer(DM_SERVER_URL);
+    }
     loadedServers.forEach((s) => {
       if (s.url !== DM_SERVER_URL) connectToServer(s.url);
     });
@@ -289,6 +321,12 @@ function App() {
     }
 
     setupVisibilityHandler();
+
+    window.addEventListener("beforeunload", () => {
+      cleanupVisibilityHandler();
+      cleanupAudioContext();
+      cleanupWsSenderAudio();
+    });
 
     const pendingServer = sessionStorage.getItem("pendingServerJoin") ?? null;
 
@@ -367,7 +405,6 @@ function App() {
     currentChannel.value?.name === "new_message" &&
     serverUrl.value === DM_SERVER_URL;
   const showDiscovery = currentChannel.value?.name === "discovery";
-  const showUnifiedInbox = currentChannel.value?.name === "unified_inbox";
   const showRoles =
     currentChannel.value?.name === "roles" && serverUrl.value !== DM_SERVER_URL;
   const isForumChannel = currentChannel.value?.type === "forum";
@@ -383,11 +420,6 @@ function App() {
       ></div>
       {showDiscovery ? (
         <DiscoveryPage />
-      ) : showUnifiedInbox ? (
-        <div className="content">
-          <GuildSidebar />
-          <UnifiedInboxPage />
-        </div>
       ) : (
         <div className="content">
           <GuildSidebar />
@@ -419,6 +451,9 @@ function App() {
       {showServerSettingsModal.value && <ServerSettingsModal />}
       {showChannelEditModal.value && <ChannelEditModal />}
       <NotificationPromptModal />
+      <LoginChoiceModal />
+      <CrackedAuthModal />
+      <RoturRequiredModal />
       <UserPopout />
       <GlobalContextMenu />
       <UpdatePopup />

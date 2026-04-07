@@ -1,4 +1,4 @@
-import { useRef, useState } from "preact/hooks";
+import { useRef, useState, useEffect } from "preact/hooks";
 import { type ComponentChildren } from "preact";
 import { Icon } from "../Icon";
 import styles from "./MessageArea.module.css";
@@ -33,6 +33,7 @@ export function SwipeableMessage({
   const rafId = useRef<number | null>(null);
   const triggered = useRef(false);
   const pointerId = useRef<number | null>(null);
+  const actionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [actionDir, setActionDir] = useState<"reply" | "edit" | null>(null);
   const [triggered2, setTriggered2] = useState(false);
 
@@ -157,9 +158,10 @@ export function SwipeableMessage({
 
     if (triggered.current) {
       const dir = actionDir;
-      setTimeout(() => {
+      actionTimeoutRef.current = setTimeout(() => {
         if (dir === "reply") onReply();
         else if (dir === "edit") onEdit();
+        actionTimeoutRef.current = null;
       }, 50);
     }
 
@@ -172,6 +174,14 @@ export function SwipeableMessage({
     pointerId.current = null;
     springBack();
   };
+
+  useEffect(() => {
+    return () => {
+      if (actionTimeoutRef.current) {
+        clearTimeout(actionTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const iconName = actionDir === "edit" ? "Pencil" : "Reply";
   const iconColor =

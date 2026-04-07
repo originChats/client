@@ -24,7 +24,8 @@ import {
 import { showAccountModal } from "../../lib/ui-signals";
 import { Icon, ServerIcon } from "../Icon";
 import type { RoturAccount, RoturProfile, Server } from "../../types";
-import { avatarUrl, formatJoinDate } from "../../utils";
+import { formatJoinDate, isCrackedAccount } from "../../utils";
+import { UserAvatar } from "../UserAvatar";
 import { useDisplayName } from "../../lib/useDisplayName";
 import {
   getProfile as fetchRoturProfile,
@@ -46,10 +47,25 @@ function useProfile(username: string) {
     setProfile(null);
     setIsFollowing(roturFollowing.value.has(username.toLowerCase()));
 
+    if (isCrackedAccount(username)) {
+      const serverUsers = usersByServer.value[serverUrl.value] || {};
+      const serverUser = serverUsers[username.toLowerCase()];
+      if (serverUser) {
+        setProfile({
+          username: serverUser.username,
+          pfp: serverUser.pfp,
+          nickname: serverUser.nickname,
+        } as RoturProfile);
+      } else {
+        setProfile({ username } as RoturProfile);
+      }
+      setLoading(false);
+      return () => controller.abort();
+    }
+
     fetchRoturProfile(username, false, controller.signal)
       .then((profileData) => {
         setProfile(profileData);
-        // Sync follow state from authoritative profile response
         if (profileData.followed !== undefined) {
           setIsFollowing(profileData.followed);
           const lower = username.toLowerCase();
@@ -61,7 +77,6 @@ function useProfile(username: string) {
             );
           }
         }
-        // Seed roturStatuses from the profile's embedded customStatus
         if (profileData.customStatus) {
           roturStatuses.value = {
             ...roturStatuses.value,
@@ -368,8 +383,9 @@ export function UserProfileCard({
         </div>
         <div className={styles.profileCardAvatarRow}>
           <div className={styles.profileCardAvatar}>
-            <img
-              src={profile.pfp || avatarUrl(profile.username)}
+            <UserAvatar
+              username={profile.username}
+              pfp={profile.pfp}
               alt={profile.username}
             />
             <div
@@ -487,8 +503,9 @@ export function UserProfileCard({
         </div>
         <div className={styles.profilePanelAvatarRow}>
           <div className={styles.profilePanelAvatar}>
-            <img
-              src={profile.pfp || avatarUrl(profile.username)}
+            <UserAvatar
+              username={profile.username}
+              pfp={profile.pfp}
               alt={profile.username}
             />
             <div

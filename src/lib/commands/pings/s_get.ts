@@ -5,7 +5,6 @@ import {
   pingsInboxOffset,
   pingsInboxLoading,
 } from "../../../state";
-import { handleUnifiedInboxPingsGet } from "../../../components/UnifiedInboxPage";
 
 export function handlePingsGet(msg: PingsGet, sUrl?: string): void {
   const incoming = msg.messages || [];
@@ -21,9 +20,4 @@ export function handlePingsGet(msg: PingsGet, sUrl?: string): void {
   pingsInboxTotal.value = msg.total ?? incoming.length;
   pingsInboxOffset.value = offset;
   pingsInboxLoading.value = false;
-
-  // Also update unified inbox if this is a response for it
-  if (sUrl) {
-    handleUnifiedInboxPingsGet(msg, sUrl);
-  }
 }

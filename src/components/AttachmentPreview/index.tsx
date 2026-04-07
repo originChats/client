@@ -119,6 +119,10 @@ function AudioPlayer({ att }: { att: Attachment }) {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
+  const dragListenersRef = useRef<{
+    handleDrag: (e: MouseEvent) => void;
+    handleEnd: () => void;
+  } | null>(null);
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -183,6 +187,7 @@ function AudioPlayer({ att }: { att: Attachment }) {
     setIsDragging(false);
     window.removeEventListener("mousemove", handleProgressDrag);
     window.removeEventListener("mouseup", handleDragEnd);
+    dragListenersRef.current = null;
   };
 
   const handleDragStart = (e: MouseEvent) => {
@@ -190,7 +195,26 @@ function AudioPlayer({ att }: { att: Attachment }) {
     handleProgressClick(e);
     window.addEventListener("mousemove", handleProgressDrag);
     window.addEventListener("mouseup", handleDragEnd);
+    dragListenersRef.current = {
+      handleDrag: handleProgressDrag,
+      handleEnd: handleDragEnd,
+    };
   };
+
+  useEffect(() => {
+    return () => {
+      if (dragListenersRef.current) {
+        window.removeEventListener(
+          "mousemove",
+          dragListenersRef.current.handleDrag,
+        );
+        window.removeEventListener(
+          "mouseup",
+          dragListenersRef.current.handleEnd,
+        );
+      }
+    };
+  }, []);
 
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
 

@@ -1,5 +1,25 @@
 import hljs from "highlight.js/lib/core";
 import { servers, threadsByServer, customEmojisByServer } from "../state";
+import type { CustomEmoji } from "../types";
+
+async function fetchEmojiFromServer(
+  sUrl: string,
+  emojiId: string,
+): Promise<CustomEmoji | null> {
+  try {
+    const baseUrl = sUrl.startsWith("http") ? sUrl : `https://${sUrl}`;
+    const response = await fetch(`${baseUrl}/emojis/${emojiId}`);
+    if (!response.ok) return null;
+    const emoji = await response.json();
+    return {
+      id: emoji.id,
+      name: emoji.name,
+      fileName: emoji.fileName || emoji.id,
+    };
+  } catch {
+    return null;
+  }
+}
 import javascript from "highlight.js/lib/languages/javascript";
 import typescript from "highlight.js/lib/languages/typescript";
 import python from "highlight.js/lib/languages/python";
@@ -268,22 +288,19 @@ export function parseMarkdown(
   // Restore custom emoji placeholders as actual <img> tags
   for (const { placeholder, sUrl, emojiId } of customEmojiPlaceholders) {
     const emojis = customEmojisByServer.value[sUrl];
-    if (!emojis) {
-      text = text.replace(
-        placeholder,
-        `originChats:&lt;emoji&gt;//${sUrl}/${emojiId}`,
-      );
-      continue;
-    }
-    const emoji = emojis[emojiId];
-    if (!emoji) {
-      text = text.replace(
-        placeholder,
-        `originChats:&lt;emoji&gt;//${sUrl}/${emojiId}`,
-      );
-      continue;
+    let emoji: CustomEmoji | undefined;
+    if (emojis) {
+      emoji = emojis[emojiId];
     }
     const baseUrl = sUrl.startsWith("http") ? sUrl : `https://${sUrl}`;
+    if (!emoji) {
+      const url = `${baseUrl}/emojis/${emojiId}`;
+      text = text.replace(
+        placeholder,
+        `<img class="custom-emoji custom-emoji-remote" data-surl="${sUrl}" data-emoji-id="${emojiId}" data-base-url="${baseUrl}" src="${url}" alt=":${emojiId}:" title="${emojiId}" loading="lazy" />`,
+      );
+      continue;
+    }
     const url = `${baseUrl}/emojis/${emoji.fileName}`;
     text = text.replace(
       placeholder,

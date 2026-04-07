@@ -6,6 +6,9 @@ import { VirtualMessageContainer } from "../VirtualMessageList";
 import { useMessageWindowing } from "../../hooks/useMessageWindowing";
 import { SkeletonMessageList } from "../Skeleton";
 import styles from "./MessageArea.module.css";
+
+const highlightTimeouts = new Set<ReturnType<typeof setTimeout>>();
+
 import {
   currentChannel,
   currentThread,
@@ -121,7 +124,8 @@ import type { SlashCommandArgs } from "../SlashCommandInput";
 import { useScrollLock } from "../UserProfile/useScrollLock";
 import { PollCreateModal } from "../PollCreateModal";
 import type { Message, SlashCommand } from "../../types";
-import { avatarUrl } from "../../utils";
+import { avatarUrl, isCrackedAccount } from "../../utils";
+import { UserAvatar } from "../UserAvatar";
 import { useDisplayName, getDisplayName } from "../../lib/useDisplayName";
 import { SwipeableMessage } from "./SwipeableMessage";
 
@@ -354,7 +358,11 @@ function scrollToMessage(id: string): void {
     if (el) {
       el.scrollIntoView({ behavior: "smooth", block: "center" });
       el.classList.add("highlight-flash");
-      setTimeout(() => el.classList.remove("highlight-flash"), 2000);
+      const timeoutId = setTimeout(() => {
+        el.classList.remove("highlight-flash");
+        highlightTimeouts.delete(timeoutId);
+      }, 2000);
+      highlightTimeouts.add(timeoutId);
     }
   } else {
     const caps = serverCapabilities.value;
@@ -735,7 +743,11 @@ function RightPanel() {
           if (el) {
             el.scrollIntoView({ behavior: "smooth", block: "center" });
             el.classList.add("highlight-flash");
-            setTimeout(() => el.classList.remove("highlight-flash"), 2000);
+            const timeoutId = setTimeout(() => {
+              el.classList.remove("highlight-flash");
+              highlightTimeouts.delete(timeoutId);
+            }, 2000);
+            highlightTimeouts.add(timeoutId);
           }
         }, 100);
       }
@@ -1173,6 +1185,13 @@ export function MessageArea() {
       setTypingUsers(typingList);
     }, 500);
     return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      highlightTimeouts.forEach((timeoutId) => clearTimeout(timeoutId));
+      highlightTimeouts.clear();
+    };
   }, []);
 
   useEffect(() => {
@@ -2051,7 +2070,10 @@ export function MessageArea() {
       const interaction = msg.interaction;
       const webhook = msg.webhook;
       const displayName = webhook?.name || getDisplayName(msg.user);
-      const displayAvatar = webhook?.avatar || avatarUrl(msg.user);
+      const displayAvatar =
+        webhook?.avatar ||
+        users.value[msg.user?.toLowerCase()]?.pfp ||
+        (isCrackedAccount(msg.user) ? "" : avatarUrl(msg.user));
       const groupClass =
         isHead || interaction || webhook
           ? (replyTo && canReply) || interaction
@@ -2105,10 +2127,11 @@ export function MessageArea() {
                 }}
               >
                 <Icon name="CornerUpRight" size={20} />
-                <img
-                  src={avatarUrl(replyTo.user)}
+                <UserAvatar
+                  username={replyTo.user}
+                  pfp={users.value[replyTo.user?.toLowerCase()]?.pfp}
+                  cracked={users.value[replyTo.user?.toLowerCase()]?.cracked}
                   className="avatar-small"
-                  alt=""
                 />
                 <div className="reply-text">
                   <span
@@ -2131,10 +2154,13 @@ export function MessageArea() {
             {!replyTo && interaction && (
               <div className="message-reply">
                 <Icon name="CornerUpRight" size={20} />
-                <img
-                  src={avatarUrl(interaction.username)}
+                <UserAvatar
+                  username={interaction.username}
+                  pfp={users.value[interaction.username?.toLowerCase()]?.pfp}
+                  cracked={
+                    users.value[interaction.username?.toLowerCase()]?.cracked
+                  }
                   className="avatar-small"
-                  alt=""
                 />
                 <div className="reply-text">
                   <span
@@ -2155,8 +2181,11 @@ export function MessageArea() {
               <>
                 {replyTo || interaction ? (
                   <div className="message-group-body">
-                    <img
-                      src={displayAvatar}
+                    <UserAvatar
+                      username={msg.user}
+                      nickname={users.value[msg.user?.toLowerCase()]?.nickname}
+                      pfp={users.value[msg.user?.toLowerCase()]?.pfp}
+                      cracked={users.value[msg.user?.toLowerCase()]?.cracked}
                       className="avatar clickable"
                       alt={displayName}
                       onClick={(e: any) =>
@@ -2988,11 +3017,7 @@ interface ReplyBarProps {
   onClose: () => void;
 }
 
-function ReplyBar({
-  replyMessage,
-  editMessage,
-  onClose,
-}: ReplyBarProps) {
+function ReplyBar({ replyMessage, editMessage, onClose }: ReplyBarProps) {
   if (!replyMessage && !editMessage) return null;
 
   const msg = replyMessage || editMessage!;
