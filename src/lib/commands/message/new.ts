@@ -14,6 +14,7 @@ import {
   serverCapabilitiesByServer,
   readTimesByServer,
   typingUsersByServer,
+  DM_SERVER_URL,
 } from "../../../state";
 import { unreadState } from "../../../state";
 import {
@@ -22,11 +23,11 @@ import {
   renderGuildSidebarSignal,
 } from "../../ui-signals";
 import { getChannelNotifLevel } from "../../../state";
-import { wsSend, playPingSound } from "../../websocket";
+import { wsSend } from "../../ws-sender";
+import { playPingSound } from "../../websocket";
 import { readTimes as dbReadTimes } from "../../db";
 import { getMessageKey, truncateForNotification } from "../../message-utils";
 
-const DM_SERVER_URL = "dms.mistium.com";
 const _readTimeFlushTimers: Record<string, ReturnType<typeof setTimeout>> = {};
 
 function showNotification(title: string, body: string, channel: string): void {

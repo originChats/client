@@ -5,6 +5,7 @@ import {
   usersByServer,
   serverValidatorKeys,
   serverCapabilitiesByServer,
+  serverPermissionsByServer,
   attachmentConfigByServer,
   servers,
   offlinePushServers,
@@ -13,6 +14,7 @@ import { renderGuildSidebarSignal } from "../ui-signals";
 import { reloadServerIcon } from "../../utils";
 import { saveServers } from "../persistence";
 import { authenticateServer, enablePushForServer } from "../websocket";
+import { DEFAULT_PERMISSIONS } from "../../state";
 
 export function handleHandshake(msg: Handshake, sUrl: string): void {
   if (!channelsByServer.value[sUrl])
@@ -44,6 +46,20 @@ export function handleHandshake(msg: Handshake, sUrl: string): void {
       ? msg.val.capabilities
       : DEFAULT_CAPABILITIES,
   };
+
+  if (msg.val.roles && Array.isArray(msg.val.roles)) {
+    const permissions = msg.val.roles.flatMap((r) => r.permissions || []);
+    const uniquePerms = Array.from(new Set(permissions)).map((id: string) => {
+      const defaultPerm = DEFAULT_PERMISSIONS.find((p) => p.id === id);
+      return (
+        defaultPerm || { id, name: id, description: "", category: "Other" }
+      );
+    });
+    serverPermissionsByServer.value = {
+      ...serverPermissionsByServer.value,
+      [sUrl]: uniquePerms,
+    };
+  }
 
   if (msg.val.attachments) {
     const att = msg.val.attachments;

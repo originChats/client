@@ -111,11 +111,15 @@ export const renderGuildSidebarSignal = signal(0);
 export const renderChannelsSignal = signal(0);
 export const renderMessagesSignal = signal(0);
 export const renderMembersSignal = signal(0);
-export const renderVoiceSignal = signal(0);
+const renderVoiceSignal = signal(0);
 export const showSettingsModal = signal(false);
 export const showAccountModal = signal<string | null>(null);
 export const showDiscoveryModal = signal(false);
 export const showServerSettingsModal = signal(false);
+export const serverSettingsSection = signal<
+  "overview" | "channels" | "roles" | "members" | "bans" | "emojis"
+>("overview");
+export const serverSettingsUserEdit = signal<string | null>(null);
 export const currentDMTab = signal<
   "friends" | "requests" | "blocked" | "groups"
 >("friends");
@@ -131,6 +135,15 @@ export const pinnedMessages = signal<Message[]>([]);
 export const searchResults = signal<Message[]>([]);
 export const searchLoading = signal(false);
 export const pinnedLoading = signal(false);
+
+export interface UnifiedInboxMessage extends Message {
+  serverUrl: string;
+  serverName: string;
+  channel: string;
+}
+
+export const unifiedInboxMessages = signal<UnifiedInboxMessage[]>([]);
+export const unifiedInboxLoading = signal(false);
 
 export const userPopout = signal<{
   username: string;
@@ -177,7 +190,7 @@ export interface ImageViewerState {
 }
 export const imageViewerState = signal<ImageViewerState | null>(null);
 
-export const imageViewerUrl = signal<string>("");
+const imageViewerUrl = signal<string>("");
 
 export const channelListWidth = signal(340);
 

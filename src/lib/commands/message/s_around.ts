@@ -4,7 +4,7 @@ import {
   loadedChannelsByServer,
   reachedOldestByServer,
 } from "../../../state";
-import { finishMessageFetch } from "../../websocket";
+import { finishMessageFetch } from "../../ws-sender";
 import {
   getMessageKey,
   setMessages,

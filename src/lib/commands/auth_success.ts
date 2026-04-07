@@ -1,8 +1,10 @@
-import { serverCapabilitiesByServer, readTimesByServer } from "../../state";
-import { wsSend } from "../websocket";
+import {
+  serverCapabilitiesByServer,
+  readTimesByServer,
+  DM_SERVER_URL,
+} from "../../state";
+import { wsSend } from "../ws-sender";
 import { readTimes as dbReadTimes } from "../db";
-
-const DM_SERVER_URL = "dms.mistium.com";
 
 export function handleAuthSuccess(sUrl: string): void {
   const caps = serverCapabilitiesByServer.value[sUrl] ?? [];
@@ -14,7 +16,7 @@ export function handleAuthSuccess(sUrl: string): void {
   if (serverHas("slash_list")) wsSend({ cmd: "slash_list" }, sUrl);
   if (serverHas("emoji_get_all")) wsSend({ cmd: "emoji_get_all" }, sUrl);
   if (sUrl !== DM_SERVER_URL && serverHas("pings_get")) {
-    let channelReadTimes = readTimesByServer.value[sUrl];
+    const channelReadTimes = readTimesByServer.value[sUrl];
     if (!channelReadTimes || Object.keys(channelReadTimes).length === 0) {
       dbReadTimes.get(sUrl).then((times) => {
         if (times && Object.keys(times).length > 0) {

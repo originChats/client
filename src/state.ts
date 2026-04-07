@@ -31,9 +31,10 @@ export const SPECIAL_CHANNELS = new Set([
   "new_message",
   "discovery",
   "roles",
+  "unified_inbox",
 ]);
 export const serverUrl = signal(DM_SERVER_URL);
-export const priorityServer = signal<string | null>(null);
+const priorityServer = signal<string | null>(null);
 export const currentChannel = signal<Channel | null>(null);
 export const currentThread = signal<Thread | null>(null);
 export const servers = signal<Server[]>([]);
@@ -68,7 +69,7 @@ export const usersByServer = signal<Record<string, Record<string, ServerUser>>>(
 );
 export const currentUserByServer = signal<Record<string, RoturAccount>>({});
 export const rolesByServer = signal<Record<string, Record<string, Role>>>({});
-export const selfAssignableRolesByServer = signal<
+const selfAssignableRolesByServer = signal<
   Record<string, SelfAssignableRole[]>
 >({});
 export const slashCommandsByServer = signal<Record<string, SlashCommand[]>>({});
@@ -78,8 +79,8 @@ export const readTimesByServer = signal<Record<string, Record<string, number>>>(
 export const lastChannelByServer = signal<Record<string, string>>({});
 
 import { unreadState } from "./lib/state";
-export const unreadByChannel = unreadState.unreads;
-export const unreadPings = unreadState.pings;
+const unreadByChannel = unreadState.unreads;
+const unreadPings = unreadState.pings;
 export const typingUsersByServer = signal<
   Record<string, Record<string, Map<string, number>>>
 >({});
@@ -153,6 +154,200 @@ export const serverValidatorKeys: Record<string, string> = {};
  */
 export const serverCapabilitiesByServer = signal<Record<string, string[]>>({});
 
+export interface ServerPermission {
+  id: string;
+  name: string;
+  description: string;
+  category: string;
+}
+
+export const serverPermissionsByServer = signal<
+  Record<string, ServerPermission[]>
+>({});
+
+export const DEFAULT_PERMISSIONS: ServerPermission[] = [
+  {
+    id: "administrator",
+    name: "Administrator",
+    description: "Full permissions (bypasses all checks except owner)",
+    category: "Server",
+  },
+  {
+    id: "manage_server",
+    name: "Manage Server",
+    description: "Update server settings, emojis, and webhooks",
+    category: "Server",
+  },
+  {
+    id: "view_audit_log",
+    name: "View Audit Log",
+    description: "View server audit logs",
+    category: "Server",
+  },
+  {
+    id: "manage_roles",
+    name: "Manage Roles",
+    description: "Create, delete, and assign roles below own position",
+    category: "Roles",
+  },
+  {
+    id: "manage_channels",
+    name: "Manage Channels",
+    description: "Create, delete, and configure channels",
+    category: "Channels",
+  },
+  {
+    id: "manage_threads",
+    name: "Manage Threads",
+    description: "Lock, archive, and delete threads",
+    category: "Channels",
+  },
+  {
+    id: "manage_users",
+    name: "Manage Users",
+    description: "Ban, unban, timeout, and manage user nicknames",
+    category: "Moderation",
+  },
+  {
+    id: "kick_members",
+    name: "Kick Members",
+    description: "Kick users from the server",
+    category: "Moderation",
+  },
+  {
+    id: "manage_nicknames",
+    name: "Manage Nicknames",
+    description: "Change other users' nicknames",
+    category: "Moderation",
+  },
+  {
+    id: "change_nickname",
+    name: "Change Nickname",
+    description: "Change own nickname",
+    category: "Moderation",
+  },
+  {
+    id: "manage_messages",
+    name: "Manage Messages",
+    description: "Delete and pin any message across all channels",
+    category: "Messages",
+  },
+  {
+    id: "read_message_history",
+    name: "Read History",
+    description: "View previous messages in channel",
+    category: "Messages",
+  },
+  {
+    id: "send_messages",
+    name: "Send Messages",
+    description: "Send messages in text channels",
+    category: "Messages",
+  },
+  {
+    id: "send_tts",
+    name: "Send TTS",
+    description: "Send text-to-speech messages",
+    category: "Messages",
+  },
+  {
+    id: "embed_links",
+    name: "Embed Links",
+    description: "Embed links in messages",
+    category: "Messages",
+  },
+  {
+    id: "attach_files",
+    name: "Attach Files",
+    description: "Attach files to messages",
+    category: "Messages",
+  },
+  {
+    id: "add_reactions",
+    name: "Add Reactions",
+    description: "Add reactions to messages",
+    category: "Messages",
+  },
+  {
+    id: "external_emojis",
+    name: "External Emojis",
+    description: "Use external/custom emojis",
+    category: "Messages",
+  },
+  {
+    id: "mention_everyone",
+    name: "Mention Everyone",
+    description: "Mention the @everyone role",
+    category: "Special",
+  },
+  {
+    id: "use_slash_commands",
+    name: "Use Slash Commands",
+    description: "Use slash commands in chat",
+    category: "Special",
+  },
+  {
+    id: "create_invite",
+    name: "Create Invite",
+    description: "Create channel invites",
+    category: "Invites",
+  },
+  {
+    id: "manage_invites",
+    name: "Manage Invites",
+    description: "Manage and revoke invites",
+    category: "Invites",
+  },
+  {
+    id: "connect",
+    name: "Connect",
+    description: "Connect to voice channels",
+    category: "Voice",
+  },
+  {
+    id: "speak",
+    name: "Speak",
+    description: "Speak in voice channels",
+    category: "Voice",
+  },
+  {
+    id: "stream",
+    name: "Stream",
+    description: "Stream video in voice channels",
+    category: "Voice",
+  },
+  {
+    id: "mute_members",
+    name: "Mute Members",
+    description: "Mute users in voice channels",
+    category: "Voice",
+  },
+  {
+    id: "deafen_members",
+    name: "Deafen Members",
+    description: "Deafen users in voice channels",
+    category: "Voice",
+  },
+  {
+    id: "move_members",
+    name: "Move Members",
+    description: "Move users between voice channels",
+    category: "Voice",
+  },
+  {
+    id: "use_voice_activity",
+    name: "Voice Activity",
+    description: "Use voice activity detection",
+    category: "Voice",
+  },
+  {
+    id: "priority_speaker",
+    name: "Priority Speaker",
+    description: "Be heard over other speakers",
+    category: "Voice",
+  },
+];
+
 export interface AttachmentConfig {
   enabled: boolean;
   max_size: number;
@@ -164,11 +359,11 @@ export interface AttachmentConfig {
 export const attachmentConfigByServer = signal<
   Record<string, AttachmentConfig>
 >({});
-export const authRetries: Record<string, number> = {};
-export const authRetryTimeouts: Record<string, number> = {};
+const authRetries: Record<string, number> = {};
+const authRetryTimeouts: Record<string, number> = {};
 export const reconnectAttempts: Record<string, number> = {};
 export const reconnectTimeouts: Record<string, number> = {};
-export const pendingReplyTimeouts: Record<string, number> = {};
+const pendingReplyTimeouts: Record<string, number> = {};
 
 /**
  * Set to the username being added via `dm add` while we wait for the DMS
@@ -182,7 +377,7 @@ export function setPendingDMAddUsername(username: string | null) {
 
 export const serversAttempted: Set<string> = new Set();
 
-export let originFS: any = null;
+let originFS: any = null;
 export function setOriginFS(fs: any) {
   originFS = fs;
 }
@@ -224,14 +419,11 @@ export function hasCapability(cap: string): boolean {
   return serverCapabilities.value.includes(cap);
 }
 
-export function setChannelsForServer(url: string, ch: Channel[]) {
+function setChannelsForServer(url: string, ch: Channel[]) {
   channelsByServer.value = { ...channelsByServer.value, [url]: ch };
 }
 
-export function setThreadsForServer(
-  url: string,
-  threads: Record<string, Thread[]>,
-) {
+function setThreadsForServer(url: string, threads: Record<string, Thread[]>) {
   threadsByServer.value = { ...threadsByServer.value, [url]: threads };
 }
 
@@ -308,7 +500,7 @@ export function clearNewThreadCount(url: string, channelName: string) {
   }
 }
 
-export function setThreadMessagesForServer(
+function setThreadMessagesForServer(
   url: string,
   threadId: string,
   msgs: Message[],
@@ -322,25 +514,19 @@ export function setThreadMessagesForServer(
   };
 }
 
-export function setMessagesForServer(
-  url: string,
-  msgs: Record<string, Message[]>,
-) {
+function setMessagesForServer(url: string, msgs: Record<string, Message[]>) {
   messagesByServer.value = { ...messagesByServer.value, [url]: msgs };
 }
 
-export function setUsersForServer(
-  url: string,
-  usrs: Record<string, ServerUser>,
-) {
+function setUsersForServer(url: string, usrs: Record<string, ServerUser>) {
   usersByServer.value = { ...usersByServer.value, [url]: usrs };
 }
 
-export function setCurrentUserForServer(url: string, user: RoturAccount) {
+function setCurrentUserForServer(url: string, user: RoturAccount) {
   currentUserByServer.value = { ...currentUserByServer.value, [url]: user };
 }
 
-export function addMessage(channelName: string, msg: Message) {
+function addMessage(channelName: string, msg: Message) {
   const current = messagesByServer.value[serverUrl.value] || {};
   const channelMsgs = current[channelName] || [];
   messagesByServer.value = {
@@ -352,7 +538,7 @@ export function addMessage(channelName: string, msg: Message) {
   };
 }
 
-export function updateMessage(
+function updateMessage(
   channelName: string,
   msgId: string,
   update: Partial<Message>,
@@ -373,7 +559,7 @@ export function updateMessage(
   }
 }
 
-export function addUser(url: string, username: string, user: ServerUser) {
+function addUser(url: string, username: string, user: ServerUser) {
   const current = usersByServer.value[url] || {};
   usersByServer.value = {
     ...usersByServer.value,
@@ -389,7 +575,7 @@ export const customEmojisByServer = signal<
   Record<string, Record<string, CustomEmoji>>
 >({});
 
-export function getCustomEmojiByName(
+function getCustomEmojiByName(
   name: string,
 ): { emoji: CustomEmoji; serverUrl: string } | null {
   const lowerName = name.toLowerCase();
@@ -403,10 +589,7 @@ export function getCustomEmojiByName(
   return null;
 }
 
-export function getCustomEmojiUrl(
-  serverUrlStr: string,
-  emoji: CustomEmoji,
-): string {
+function getCustomEmojiUrl(serverUrlStr: string, emoji: CustomEmoji): string {
   const baseUrl = serverUrlStr.startsWith("http")
     ? serverUrlStr
     : `https://${serverUrlStr}`;
@@ -653,7 +836,7 @@ const THEME_VARS: Record<AppTheme, Record<string, string>> = {
   },
 };
 
-export function applyTheme(theme: AppTheme) {
+function applyTheme(theme: AppTheme) {
   const vars = THEME_VARS[theme] || THEME_VARS.dark;
   const root = document.documentElement;
   for (const [key, val] of Object.entries(vars)) {
@@ -666,7 +849,7 @@ export function applyTheme(theme: AppTheme) {
   applyPingHighlightColor(pingHighlightColor.value);
 }
 
-export function applyFont(font: AppFont) {
+function applyFont(font: AppFont) {
   const fontClasses: AppFont[] = [
     "system",
     "geometric",
@@ -682,17 +865,17 @@ export function applyFont(font: AppFont) {
   }
 }
 
-export function applyAvatarShape(shape: AvatarShape) {
+function applyAvatarShape(shape: AvatarShape) {
   const r = shape === "circle" ? "50%" : shape === "rounded" ? "22%" : "6px";
   document.documentElement.style.setProperty("--avatar-radius", r);
 }
 
-export function applyBubbleRadius(px: number) {
+function applyBubbleRadius(px: number) {
   document.documentElement.style.setProperty("--chat-radius", `${px}px`);
   document.documentElement.style.setProperty("--border-radius", `${px}px`);
 }
 
-export function applyAccentColor(hex: string) {
+function applyAccentColor(hex: string) {
   if (!hex) {
     // clear override — re-apply theme defaults
     const vars = THEME_VARS[appTheme.value] || THEME_VARS.dark;
@@ -708,7 +891,7 @@ export function applyAccentColor(hex: string) {
   document.documentElement.style.setProperty("--primary-hover", hex + "cc");
 }
 
-export function applyPingHighlightColor(hex: string) {
+function applyPingHighlightColor(hex: string) {
   if (!hex) {
     // restore default mention colour
     document.documentElement.style.setProperty("--mention", "#9b87f5");
@@ -717,15 +900,15 @@ export function applyPingHighlightColor(hex: string) {
   document.documentElement.style.setProperty("--mention", hex);
 }
 
-export function applyMessageFontSize(px: number) {
+function applyMessageFontSize(px: number) {
   document.documentElement.style.setProperty("--message-font-size", `${px}px`);
 }
 
-export function applyCompactMode(on: boolean) {
+function applyCompactMode(on: boolean) {
   document.body.classList.toggle("compact-mode", on);
 }
 
-export function applyMaxImageWidth(px: number) {
+function applyMaxImageWidth(px: number) {
   document.documentElement.style.setProperty(
     "--max-inline-image-width",
     `${px}px`,

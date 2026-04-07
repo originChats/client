@@ -5,3 +5,5 @@ dist
 *.js
 **/*.module.css.d.ts
 **/*.css.d.ts
+.fallow
+.vscode

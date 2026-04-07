@@ -6,6 +6,7 @@ import { MessageContent } from "../MessageContent";
 import type { Message } from "../../types";
 import { openUserPopout } from "../UserPopout";
 import { useDisplayName, useUserColor } from "../../lib/useDisplayName";
+import { Icon } from "../Icon";
 import styles from "./MessageGroupRow.module.css";
 
 export interface MessageGroup {
@@ -32,6 +33,8 @@ interface MessageGroupRowProps {
   onContextMenu?: (e: any) => void;
   translatedMessages?: Record<string, string>;
   translatingMessageId?: string | null;
+  showReply?: boolean;
+  replyUserColor?: string;
 }
 
 function MessageGroupRowInner({
@@ -40,6 +43,8 @@ function MessageGroupRowInner({
   onContextMenu,
   translatedMessages = {},
   translatingMessageId,
+  showReply = false,
+  replyUserColor,
 }: MessageGroupRowProps) {
   const headUser = group.head.user;
   const displayName = useDisplayName(headUser);
@@ -51,6 +56,17 @@ function MessageGroupRowInner({
     : null;
   const headIsTranslating =
     translatingMessageId && group.head.id === translatingMessageId;
+
+  const replyTo = group.head.reply_to as
+    | { id: string; user: string; content?: string }
+    | undefined;
+  const replyPreview = replyTo?.content
+    ? replyTo.content.split("\n")[0].substring(0, 100)
+    : replyTo
+      ? "Click to see message"
+      : null;
+  const replyUser = replyTo?.user;
+  const replyDisplayUser = useDisplayName(replyUser || "");
 
   const followingMessages = useMemo(
     () =>
@@ -103,6 +119,25 @@ function MessageGroupRowInner({
         onClick={(e: any) => openUserPopout(e, headUser)}
       />
       <div className={styles.messageGroupContent}>
+        {showReply && replyTo && replyUser && (
+          <div className={styles.replyContext}>
+            <Icon name="CornerUpRight" size={14} />
+            <img
+              src={avatarUrl(replyUser)}
+              className={styles.replyAvatar}
+              alt={replyUser}
+            />
+            <span
+              className={styles.replyUsername}
+              style={{ color: replyUserColor }}
+            >
+              {replyDisplayUser}
+            </span>
+            <span className={styles.replyPreview}>
+              {replyPreview || "Click to see message"}
+            </span>
+          </div>
+        )}
         <div className={styles.messageHeader}>
           <span
             className={`${styles.username} ${styles.clickable}`}

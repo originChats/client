@@ -320,7 +320,7 @@ export function ThreadPanel() {
   );
 }
 
-export function ThreadView() {
+function ThreadView() {
   const thread = currentThread.value;
   const supportsJoinLeave =
     hasCapability("thread_join") && hasCapability("thread_leave");

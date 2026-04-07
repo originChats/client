@@ -8,7 +8,7 @@ import {
 } from "../../state";
 import { statusState } from "../state";
 import { renderMembersSignal } from "../ui-signals";
-import { wsSend } from "../websocket";
+import { wsSend } from "../ws-sender";
 
 export function handleReady(msg: Ready, sUrl: string): void {
   currentUserByServer.value = {

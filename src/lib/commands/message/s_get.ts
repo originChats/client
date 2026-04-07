@@ -6,16 +6,15 @@ import {
   serverUrl,
   currentChannel,
   channelsByServer,
+  DM_SERVER_URL,
 } from "../../../state";
-import { finishMessageFetch } from "../../websocket";
+import { finishMessageFetch } from "../../ws-sender";
 import { selectChannel } from "../../actions";
 import {
   getMessageKey,
   setMessages,
   mergeAndSortMessages,
 } from "../../message-utils";
-
-const DM_SERVER_URL = "dms.mistium.com";
 
 export function handleMessagesGet(msg: MessagesGet, sUrl: string): void {
   const messageKey = getMessageKey(msg);

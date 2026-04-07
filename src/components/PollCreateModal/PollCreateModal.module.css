@@ -27,7 +27,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 16px 20px;
-  border-bottom: 1px solid var(--border);
+  
 }
 
 .header h3 {
@@ -76,16 +76,16 @@
 .field input[type="number"] {
   width: 100%;
   background: var(--surface-light);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 10px 12px;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 14px;
   font-size: 14px;
   color: var(--text);
 }
 
 .field input:focus {
   outline: none;
-  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(78, 80, 88, 0.3);
 }
 
 .charCount {
@@ -137,9 +137,9 @@
 
 .addOptionBtn {
   background: none;
-  border: 1px dashed var(--border);
-  border-radius: 6px;
-  padding: 10px;
+  border: none;
+  border-radius: 8px;
+  padding: 12px;
   color: var(--primary);
   cursor: pointer;
   display: flex;
@@ -179,13 +179,13 @@
   justify-content: flex-end;
   gap: 12px;
   padding: 16px 20px;
-  border-top: 1px solid var(--border);
+  
 }
 
 .cancelBtn {
   background: var(--surface-light);
-  border: 1px solid var(--border);
-  border-radius: 6px;
+  border: none;
+  border-radius: 8px;
   padding: 10px 20px;
   font-size: 14px;
   color: var(--text);

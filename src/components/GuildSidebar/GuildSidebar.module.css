@@ -155,6 +155,18 @@
   background: var(--primary);
 }
 
+.inboxButton .guildIcon {
+  background: var(--surface-light);
+}
+
+.inboxButton:hover .guildIcon {
+  background: var(--primary);
+}
+
+.inboxButton.active .guildIcon {
+  background: var(--primary);
+}
+
 .homeGuild.serverError .guildIcon {
   background: var(--surface);
   border: var(--space-1) solid var(--danger);

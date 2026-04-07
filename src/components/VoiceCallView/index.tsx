@@ -47,7 +47,10 @@ export function VoiceCallView({ embedded = false }: VoiceCallViewProps) {
     : styles.voiceCallView;
 
   return (
-    <div className={rootClass}>
+    <div
+      className={rootClass}
+      {...(embedded ? { "data-voice-call-embedded": true } : {})}
+    >
       <div className={styles.voiceCallHeader}>
         <div className={styles.voiceCallHeaderLeft}>
           <Icon name="Mic" size={20} />

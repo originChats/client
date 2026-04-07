@@ -3,7 +3,7 @@
   bottom: 20px;
   right: 20px;
   background: var(--bg-secondary, #1a1a1a);
-  border: 1px solid var(--border, #2a2a2a);
+  
   border-radius: 12px;
   padding: 16px;
   display: flex;
@@ -68,7 +68,7 @@
 
 .update-popup-dismiss {
   background: transparent;
-  border: 1px solid var(--border, #2a2a2a);
+  
   color: var(--text-muted, #888);
   border-radius: 6px;
   padding: 8px 16px;

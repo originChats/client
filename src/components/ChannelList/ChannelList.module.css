@@ -26,7 +26,7 @@
 
 @media (max-width: 768px) {
   .channelHeader {
-    border-bottom: 1px solid var(--border);
+    
   }
 }
 
@@ -241,6 +241,7 @@
   flex-shrink: 0;
   gap: 4px;
   margin: 0 8px 8px;
+  border: none;
 }
 
 .channelUserPanelIdentity {
@@ -586,7 +587,7 @@
 
 .statusModalHeader {
   align-items: center;
-  border-bottom: 1px solid var(--border);
+  border-bottom: none;
   display: flex;
   justify-content: space-between;
   padding: 16px;
@@ -613,7 +614,7 @@
 
 .statusModalText {
   background: var(--surface-light);
-  border: 1px solid var(--border);
+  border: none;
   border-radius: var(--radius-sm);
   color: var(--text);
   font-size: 14px;
@@ -624,7 +625,7 @@
 }
 
 .statusModalText:focus {
-  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(78, 80, 88, 0.3);
 }
 
 .statusModalError {
@@ -634,7 +635,7 @@
 }
 
 .statusModalFooter {
-  border-top: 1px solid var(--border);
+  border-top: none;
   display: flex;
   gap: 8px;
   justify-content: flex-end;

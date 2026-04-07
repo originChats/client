@@ -94,21 +94,20 @@
   position: relative;
   align-items: center;
   background: var(--surface-light);
-  border: 1px solid transparent;
+  border: none;
   border-radius: 25px;
   display: flex;
   gap: var(--space-2);
   padding: var(--space-1) var(--space-2);
   transition:
     background-color var(--anim-normal) var(--ease-standard),
-    border-color var(--anim-normal) var(--ease-standard),
     box-shadow var(--anim-normal) var(--ease-standard);
   width: 100%;
 }
 
 .inputWrapper:focus-within {
   background: var(--surface-hover);
-  box-shadow: 0 0 0 2px rgba(78, 80, 88, 0.1);
+  box-shadow: 0 0 0 2px rgba(78, 80, 88, 0.15);
 }
 
 .sendBtn {
@@ -147,7 +146,7 @@
 
 .plusDropdown {
   background: var(--surface);
-  border: 1px solid var(--border);
+  border: none;
   border-radius: var(--radius-md);
   bottom: calc(100% + 8px);
   box-shadow: var(--shadow-2);
@@ -351,7 +350,7 @@
 
 .typingAvatar {
   background: var(--surface-light);
-  border: 1px solid var(--border);
+  border: none;
   border-radius: var(--avatar-radius, 50%);
   flex-shrink: 0;
   height: 16px;
@@ -609,7 +608,7 @@
 
 .reactionTooltip {
   background: var(--surface, #0a0a0c);
-  border: 1px solid var(--border);
+  border: none;
   border-radius: 10px;
   bottom: calc(100% + 8px);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
@@ -632,7 +631,7 @@
 
 .reactionTooltip::after {
   border: 6px solid transparent;
-  border-top-color: var(--border);
+  border-top-color: var(--surface, #0a0a0c);
   content: "";
   top: 100%;
   left: 50%;
@@ -668,7 +667,7 @@
 .reactionModal {
   animation: scaleIn var(--anim-normal) var(--ease-standard);
   background: var(--surface-light);
-  border: 1px solid var(--border);
+  border: none;
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-3);
   display: flex;
@@ -680,7 +679,7 @@
 
 .reactionModalHeader {
   align-items: center;
-  border-bottom: 1px solid var(--border);
+  border-bottom: none;
   display: flex;
   gap: var(--space-3);
   padding: var(--space-3) var(--space-4);
@@ -793,7 +792,7 @@
 
 .pendingImageWrapper {
   background: var(--surface-light);
-  border: 3px solid var(--border);
+  border: none;
   border-radius: 15px;
   flex-shrink: 0;
   height: 80px;
@@ -1016,7 +1015,7 @@
 
 .rightPanelHeader {
   align-items: center;
-  border-bottom: 1px solid var(--border);
+  border-bottom: none;
   color: var(--text);
   display: flex;
   font-size: 14px;
@@ -1051,19 +1050,19 @@
   display: flex;
   gap: 6px;
   padding: 8px 12px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: none;
   flex-shrink: 0;
 }
 
 .rightPanelSearchInput input {
   background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
+  border: none;
+  border-radius: 8px;
   color: var(--text);
   flex: 1;
   font-size: 13px;
   outline: none;
-  padding: 6px 10px;
+  padding: 8px 12px;
 }
 
 .rightPanelSearchInput input:focus {
@@ -1073,13 +1072,13 @@
 .searchSubmitBtn {
   align-items: center;
   background: var(--surface-hover);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
+  border: none;
+  border-radius: 8px;
   color: var(--text-dim);
   cursor: pointer;
   display: flex;
   justify-content: center;
-  padding: 6px 8px;
+  padding: 8px 12px;
   transition: all var(--anim-fast) ease;
 }
 
@@ -1355,13 +1354,13 @@
 
 .inboxPanelLoadMore {
   background: transparent;
-  border: 1px solid var(--border);
+  border: none;
   border-radius: var(--radius-sm, 6px);
   color: var(--text-dim);
   cursor: pointer;
   font-size: 12px;
   margin: 8px 10px 4px;
-  padding: 6px 12px;
+  padding: 8px 14px;
   transition:
     background var(--anim-fast),
     color var(--anim-fast);
@@ -1402,7 +1401,7 @@
 .modal {
   animation: scaleIn var(--anim-normal) var(--ease-standard);
   background: var(--surface);
-  border: 1px solid var(--border);
+  border: none;
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-3);
   max-height: 90vh;
@@ -1413,7 +1412,7 @@
 
 .modalHeader {
   align-items: center;
-  border-bottom: 1px solid var(--border);
+  border-bottom: none;
   display: flex;
   justify-content: space-between;
   padding: 18px 20px;
@@ -1432,7 +1431,7 @@
 }
 
 .modalFooter {
-  border-top: 1px solid var(--border);
+  border-top: none;
   display: flex;
   gap: 10px;
   justify-content: flex-end;
@@ -1455,18 +1454,18 @@
 
 .formInput {
   background: var(--surface-light);
-  border: 1px solid var(--border);
+  border: none;
   border-radius: var(--radius-md);
   color: var(--text);
   font-size: 14px;
   outline: none;
-  padding: 9px 12px;
-  transition: border-color var(--anim-fast) var(--ease-standard);
+  padding: 10px 14px;
+  transition: box-shadow var(--anim-fast) var(--ease-standard);
   width: 100%;
 }
 
 .formInput:focus {
-  border-color: var(--accent, #9b87f5);
+  box-shadow: 0 0 0 2px rgba(155, 135, 245, 0.3);
 }
 
 .formError {
@@ -1485,20 +1484,20 @@
 .giftExpiryRadio {
   align-items: center;
   background: var(--surface-light);
-  border: 2px solid var(--border);
+  border: none;
   border-radius: var(--radius-md);
   color: var(--text);
   cursor: pointer;
   display: flex;
   font-size: 13px;
   gap: 6px;
-  padding: 7px 12px;
+  padding: 8px 14px;
   transition: all var(--anim-fast) var(--ease-standard);
 }
 
 .giftExpiryRadio:has(input:checked) {
-  background: rgba(155, 135, 245, 0.1);
-  border-color: var(--accent, #9b87f5);
+  background: rgba(155, 135, 245, 0.15);
+  box-shadow: 0 0 0 2px rgba(155, 135, 245, 0.4);
 }
 
 .giftExpiryRadio input[type="radio"] {
@@ -1522,7 +1521,7 @@
 }
 
 .giftSummaryTotal {
-  border-top: 1px solid var(--border);
+  border-top: none;
   color: var(--text);
   font-weight: 600;
   margin-top: 6px;
@@ -1560,7 +1559,7 @@
 
 .dmProfilePanelHeader {
   align-items: center;
-  border-bottom: 1px solid var(--border);
+  border-bottom: none;
   color: var(--text);
   display: flex;
   font-size: 14px;

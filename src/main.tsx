@@ -91,6 +91,7 @@ import { RolesTab } from "./components/RolesTab";
 import { VoiceCallView } from "./components/VoiceCallView";
 import { GlobalContextMenu } from "./components/ContextMenu";
 import { DiscoveryPage } from "./components/DiscoveryPage";
+import { UnifiedInboxPage } from "./components/UnifiedInboxPage";
 import { OfflineScreen } from "./components/OfflineScreen";
 import { LoadingScreen } from "./components/LoadingScreen";
 import { ThreadPanel } from "./components/ThreadPanel";
@@ -366,6 +367,7 @@ function App() {
     currentChannel.value?.name === "new_message" &&
     serverUrl.value === DM_SERVER_URL;
   const showDiscovery = currentChannel.value?.name === "discovery";
+  const showUnifiedInbox = currentChannel.value?.name === "unified_inbox";
   const showRoles =
     currentChannel.value?.name === "roles" && serverUrl.value !== DM_SERVER_URL;
   const isForumChannel = currentChannel.value?.type === "forum";
@@ -381,6 +383,11 @@ function App() {
       ></div>
       {showDiscovery ? (
         <DiscoveryPage />
+      ) : showUnifiedInbox ? (
+        <div className="content">
+          <GuildSidebar />
+          <UnifiedInboxPage />
+        </div>
       ) : (
         <div className="content">
           <GuildSidebar />

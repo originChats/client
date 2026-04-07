@@ -12,7 +12,7 @@
   flex: 0 0 40%;
   max-height: 40%;
   min-height: 220px;
-  border-bottom: 1px solid var(--border);
+  
   border-radius: 16px 16px 0 0;
   overflow: hidden;
   background: var(--surface, #1e1e2e);
@@ -56,7 +56,7 @@
 .voiceCallHeader {
   align-items: center;
   background: rgba(0, 0, 0, 0.3);
-  border-bottom: 1px solid var(--border);
+  
   display: flex;
   flex-shrink: 0;
   justify-content: space-between;
@@ -115,7 +115,7 @@
 
 .voiceCallVideoTile {
   background: #000;
-  border: 2px solid var(--border);
+  border: none;
   border-radius: 12px;
   flex: 1 1 45%;
   min-height: 200px;
@@ -276,7 +276,7 @@
 .voiceCallControls {
   align-items: center;
   background: rgba(0, 0, 0, 0.3);
-  border-top: 1px solid var(--border);
+  
   display: flex;
   flex-shrink: 0;
   gap: 12px;

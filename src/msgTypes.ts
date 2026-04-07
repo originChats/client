@@ -176,6 +176,10 @@ interface Handshake {
       banner?: string;
       name?: string;
     };
+    roles?: Array<{
+      name: string;
+      permissions: string[];
+    }>;
   };
 }
 

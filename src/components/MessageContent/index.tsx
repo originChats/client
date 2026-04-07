@@ -140,6 +140,8 @@ function MessageContentInner({
       }
     }
 
+    const allRoles = new Set(Object.keys(rolesMap).map((r) => r.toLowerCase()));
+
     const mentionCtx: MentionContext = {
       validUsernames: new Set(
         Object.keys(users.value).map((u) => u.toLowerCase()),
@@ -148,6 +150,7 @@ function MessageContentInner({
         channels.value.filter((c) => c.name).map((c) => c.name.toLowerCase()),
       ),
       validRoles: mentionableRoles,
+      allRoles,
       roleColors,
       currentServerUrl: serverUrl.value,
       usernameToNickname,

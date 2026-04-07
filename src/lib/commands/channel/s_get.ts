@@ -7,11 +7,10 @@ import {
   lastChannelByServer,
   pendingDMAddUsername,
   setPendingDMAddUsername,
+  DM_SERVER_URL,
 } from "../../../state";
 import { renderChannelsSignal } from "../../ui-signals";
 import { selectChannel } from "../../actions";
-
-const DM_SERVER_URL = "dms.mistium.com";
 
 export function handleChannelsGet(msg: { val: Channel[] }, sUrl: string): void {
   channelsByServer.value = { ...channelsByServer.value, [sUrl]: msg.val };

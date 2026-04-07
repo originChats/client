@@ -21,7 +21,7 @@
   width: 100%;
   padding: 10px 12px;
   background: var(--input-bg, #0a0a0c);
-  border: 1px solid var(--border, #2a2a33);
+  
   border-radius: 4px;
   color: var(--text, #ededed);
   font-size: 14px;
@@ -114,7 +114,7 @@
 
 .webhook-card {
   background: var(--surface-light, #141419);
-  border: 1px solid var(--border, #2a2a33);
+  
   border-radius: 8px;
   padding: 16px;
   display: flex;
@@ -160,7 +160,7 @@
   padding: 8px 12px;
   background: var(--input-bg, #0a0a0c);
   border-radius: 4px;
-  border: 1px solid var(--border, #2a2a33);
+  
 }
 
 .webhook-token-label {
@@ -189,7 +189,7 @@
   width: 32px;
   height: 32px;
   background: var(--surface-hover, #1f1f26);
-  border: 1px solid var(--border, #2a2a33);
+  
   border-radius: 4px;
   color: var(--text, #ededed);
   cursor: pointer;
@@ -214,7 +214,7 @@
   gap: 8px;
   padding: 8px 16px;
   background: var(--surface-hover, #1f1f26);
-  border: 1px solid var(--border, #2a2a33);
+  
   border-radius: 4px;
   color: var(--text, #ededed);
   font-size: 14px;
@@ -252,7 +252,7 @@
   border-radius: 50%;
   background: var(--surface, #0a0a0c);
   object-fit: cover;
-  border: 2px solid var(--border, #2a2a33);
+  
 }
 
 /* Tag Input Styles */
@@ -298,7 +298,7 @@
   gap: 6px;
   padding: 8px;
   background: var(--input-bg, #0a0a0c);
-  border: 1px solid var(--border, #2a2a33);
+  
   border-radius: 4px;
   min-height: 38px;
   position: relative;
@@ -315,7 +315,7 @@
   gap: 6px;
   padding: 4px 8px;
   background: var(--surface-hover, #1f1f26);
-  border: 1px solid var(--border, #2a2a33);
+  
   border-radius: 4px;
   font-size: 13px;
   color: var(--text, #ededed);
@@ -355,7 +355,7 @@
   left: 0;
   right: 0;
   background: var(--surface, #0a0a0c);
-  border: 1px solid var(--border, #2a2a33);
+  
   border-radius: 4px;
   max-height: 200px;
   overflow-y: auto;

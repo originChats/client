@@ -13,6 +13,7 @@ import {
   DM_SERVER_URL,
   serverNotifSettings,
   type NotificationLevel,
+  currentChannel,
 } from "../../state";
 import type { ServerFolder } from "../../types";
 import { wsSend } from "../../lib/websocket";
@@ -397,6 +398,20 @@ export function GuildSidebar() {
             .map((dm) => (
               <DMServerItem key={dm.channel} dm={dm} />
             ))}
+
+          <div
+            className={`${styles.guildItem} ${styles.inboxButton}${currentChannel.value?.name === "unified_inbox" ? ` ${styles.active}` : ""}`}
+            onClick={() => {
+              const channel = { name: "unified_inbox", type: "special" };
+              currentChannel.value = channel as any;
+              mobileSidebarOpen.value = false;
+            }}
+          >
+            <div className={styles.guildIcon}>
+              <Icon name="Bell" size={24} />
+            </div>
+            <div className={styles.guildPill} />
+          </div>
 
           <div className={styles.guildDivider} />
 

@@ -2,7 +2,7 @@
 
 .profileCard {
   background: var(--surface);
-  border: 1px solid var(--border);
+  border: none;
   border-radius: 12px;
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
   overflow: hidden;
@@ -26,7 +26,7 @@
 
 .accountLoadingSpinner {
   animation: spin 1s linear infinite;
-  border: 3px solid var(--border);
+  border: 3px solid var(--surface-light);
   border-radius: 50%;
   border-top-color: var(--primary);
   height: 32px;
@@ -66,7 +66,7 @@
 .profileCardSystemPill {
   align-items: center;
   background: var(--surface-light);
-  border: 1px solid var(--border);
+  border: none;
   border-radius: 99px;
   color: var(--text-dim);
   display: flex;
@@ -233,7 +233,7 @@
 }
 
 .profileCardSection {
-  border-top: 1px solid var(--border);
+  
   margin-top: 10px;
   padding-top: 10px;
 }
@@ -265,7 +265,7 @@
 
 .profileCardRole {
   background: var(--surface-light);
-  border: 1px solid var(--border);
+  border: none;
   border-radius: 4px;
   color: var(--text);
   font-size: 11px;
@@ -298,7 +298,7 @@
 /* ============= PROFILE ACTIONS ============= */
 
 .profileActions {
-  border-top: 1px solid var(--border);
+  border-top: none;
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -315,7 +315,7 @@
 .profileActionBtn {
   align-items: center;
   background: var(--surface-light);
-  border: 1px solid var(--border);
+  border: none;
   border-radius: 50%;
   color: var(--text);
   cursor: pointer;
@@ -328,19 +328,17 @@
 
 .profileActionBtn:hover {
   background: var(--surface-hover);
-  border-color: var(--text-dim);
 }
 
 .profileActionBtn.danger:hover {
   background: rgba(237, 66, 69, 0.15);
-  border-color: var(--danger);
   color: var(--danger);
 }
 
 .profileActionBtnWide {
   align-items: center;
   background: var(--surface-light);
-  border: 1px solid var(--border);
+  border: none;
   border-radius: 6px;
   color: var(--text);
   cursor: pointer;
@@ -354,7 +352,6 @@
 
 .profileActionBtnWide:hover {
   background: var(--surface-hover);
-  border-color: var(--text-dim);
 }
 
 .profileActionBtnWide.danger {
@@ -380,7 +377,7 @@
 
 .profilePanelHeader {
   align-items: center;
-  border-bottom: 1px solid var(--border);
+  
   color: var(--text);
   display: flex;
   font-size: 14px;
@@ -516,7 +513,7 @@
 }
 
 .profilePanelSection {
-  border-top: 1px solid var(--border);
+  
   margin-top: 12px;
   padding: 12px 16px;
 }
@@ -602,22 +599,31 @@
 /* ============= FOLLOW BUTTON ============= */
 
 .profileFollowBtn {
-  display: flex;
   align-items: center;
   gap: 6px;
   padding: 6px 14px;
   border-radius: 6px;
-  border: 1px solid var(--border);
+  border: none;
   background: var(--surface-light);
   color: var(--text);
   font-size: 13px;
   cursor: pointer;
-  transition:
-    background 0.15s,
-    border-color 0.15s;
+  transition: background 0.15s;
   margin: 8px 16px 0;
   width: calc(100% - 32px);
   justify-content: center;
+}
+
+.profileFollowBtn:hover {
+  background: var(--surface-hover);
+}
+
+.profileFollowBtn.following {
+  color: var(--primary);
+}
+
+.profileFollowBtn.following:hover {
+  background: color-mix(in srgb, var(--primary) 10%, transparent);
 }
 
 .profileFollowBtn:hover {

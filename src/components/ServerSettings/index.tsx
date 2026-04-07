@@ -22,6 +22,13 @@ import { wsSend } from "../../lib/websocket";
 import { Icon } from "../Icon";
 import type { Role, Channel, ServerUser, CustomEmoji } from "../../types";
 import { avatarUrl } from "../../utils";
+import {
+  isServerOwner,
+  canManageChannels,
+  canManageRoles,
+  canManageUsers,
+  canManageEmojis,
+} from "../../lib/permissions";
 
 type Section =
   | "overview"
@@ -425,20 +432,20 @@ function UserRolesEditor({
                     <Icon name="Plus" size={12} />
                   </button>
                 ))}
+                <div className="user-roles-footer">
+                  <button className="settings-btn-confirm" onClick={handleSave}>
+                    Save Changes
+                  </button>
+                </div>
               </div>
             )}
           </div>
-
-          <div className="user-roles-footer">
-            <button className="settings-btn-confirm" onClick={handleSave}>
-              Save Changes
-            </button>
-          </div>
+          );
         </>
-      )}
+      )};
     </div>
   );
-}
+};
 
 export function ServerSettingsModal() {
   const [section, setSection] = useState<Section>("overview");
@@ -538,9 +545,14 @@ export function ServerSettingsModal() {
 
   const myServerUser =
     usersByServer.value[serverUrl.value]?.[
-      currentUser.value?.username?.toLowerCase() || ""
+    currentUser.value?.username?.toLowerCase() || ""
     ];
-  const isOwner = myServerUser?.roles?.includes("owner");
+  const owner = isServerOwner(serverUrl.value);
+  const canChannels = canManageChannels(serverUrl.value);
+  const canRoles = canManageRoles(serverUrl.value);
+  const canUsers = canManageUsers(serverUrl.value);
+  const canEmojis = canManageEmojis(serverUrl.value);
+  const isOwner = owner;
 
   const server = currentServer.value;
   const usersList = Object.values(users.value);
@@ -1002,12 +1014,12 @@ export function ServerSettingsModal() {
             {(
               [
                 "overview",
-                "channels",
-                "roles",
-                "members",
-                "bans",
-                "emojis",
-              ] as Section[]
+                canChannels ? "channels" : null,
+                canRoles ? "roles" : null,
+                canUsers ? "members" : null,
+                canUsers ? "bans" : null,
+                canEmojis ? "emojis" : null,
+              ].filter(Boolean) as Section[]
             ).map((s) => (
               <button
                 key={s}
@@ -1080,17 +1092,10 @@ export function ServerSettingsModal() {
           )}
 
           {section === "channels" && (
-            <div className="server-section-body">
-              {isOwner && (
-                <div className="settings-section-actions">
-                  <button
-                    className="settings-action-btn"
-                    onClick={openCreateChannel}
-                  >
-                    <Icon name="Plus" size={16} /> Create Channel
-                  </button>
-                </div>
-              )}
+            <div
+              className="server-section-body"
+              style={{ position: "relative" }}
+            >
               {channelsList.length === 0 ? (
                 <div className="settings-empty">No channels found</div>
               ) : (
@@ -1445,7 +1450,7 @@ export function ServerSettingsModal() {
                                     role.name,
                                     "color",
                                     (e.target as HTMLInputElement).value ||
-                                      null,
+                                    null,
                                   );
                                 }}
                                 onBlur={() => saveRoleField(role.name, "color")}
@@ -1554,43 +1559,43 @@ export function ServerSettingsModal() {
                             {!["owner", "admin", "moderator"].includes(
                               role.name,
                             ) && (
-                              <label className="checkbox-label">
-                                <input
-                                  type="checkbox"
-                                  checked={
-                                    (getRoleEditValue(
-                                      role,
-                                      "self_assignable",
-                                    ) as boolean) ?? false
-                                  }
-                                  onChange={(e) => {
-                                    const checked = (
-                                      e.target as HTMLInputElement
-                                    ).checked;
-                                    updateRoleField(
-                                      role.name,
-                                      "self_assignable",
-                                      checked,
-                                    );
-                                    wsSend(
-                                      {
-                                        cmd: "role_update",
-                                        name: role.name,
-                                        self_assignable: checked,
-                                      },
-                                      serverUrl.value,
-                                    );
-                                    showInfo(
-                                      `Role "${role.name}" ${checked ? "is now self-assignable" : "is no longer self-assignable"}`,
-                                    );
-                                  }}
-                                />
-                                <span>
-                                  Self-assignable (users can assign to
-                                  themselves)
-                                </span>
-                              </label>
-                            )}
+                                <label className="checkbox-label">
+                                  <input
+                                    type="checkbox"
+                                    checked={
+                                      (getRoleEditValue(
+                                        role,
+                                        "self_assignable",
+                                      ) as boolean) ?? false
+                                    }
+                                    onChange={(e) => {
+                                      const checked = (
+                                        e.target as HTMLInputElement
+                                      ).checked;
+                                      updateRoleField(
+                                        role.name,
+                                        "self_assignable",
+                                        checked,
+                                      );
+                                      wsSend(
+                                        {
+                                          cmd: "role_update",
+                                          name: role.name,
+                                          self_assignable: checked,
+                                        },
+                                        serverUrl.value,
+                                      );
+                                      showInfo(
+                                        `Role "${role.name}" ${checked ? "is now self-assignable" : "is no longer self-assignable"}`,
+                                      );
+                                    }}
+                                  />
+                                  <span>
+                                    Self-assignable (users can assign to
+                                    themselves)
+                                  </span>
+                                </label>
+                              )}
                           </div>
                           <div className="role-permissions-section">
                             <div className="permissions-header">
@@ -2013,19 +2018,6 @@ export function ServerSettingsModal() {
                   <div className="settings-field-group">
                     {editingUser === userDetailModal.username ? (
                       <>
-                        <div className="settings-field">
-                          <label>Username</label>
-                          <input
-                            type="text"
-                            value={editUsername}
-                            onInput={(e) =>
-                              setEditUsername(
-                                (e.target as HTMLInputElement).value,
-                              )
-                            }
-                            placeholder="Username"
-                          />
-                        </div>
                         <div className="settings-field">
                           <label>Nickname</label>
                           <div className="settings-nickname-field">

@@ -1,7 +1,7 @@
 import Peer from "peerjs";
 import type { MediaConnection } from "peerjs";
 import { signal } from "@preact/signals";
-import { wsSend } from "./lib/websocket";
+import { wsSend } from "./lib/ws-sender";
 import {
   serverUrl,
   micThreshold as micThresholdSignal,

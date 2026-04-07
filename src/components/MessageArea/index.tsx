@@ -39,6 +39,8 @@ import {
   attachmentConfigByServer,
   rolesByServer,
   customEmojisByServer,
+  servers,
+  serverCapabilitiesByServer,
 } from "../../state";
 
 import {
@@ -173,6 +175,17 @@ function formatRelativeTime(timestamp: number): string {
   });
 }
 
+function formatFullDateTime(timestamp: number): string {
+  const date = new Date(timestamp * 1000);
+  return date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
+}
+
 interface PendingImage {
   url: string;
   fileName: string;
@@ -285,9 +298,9 @@ async function sendMessage() {
     ),
     ...(isThread
       ? {
-        thread_id: currentThread.value?.id,
-        channel: (currentChannel.value as any).parent_channel,
-      }
+          thread_id: currentThread.value?.id,
+          channel: (currentChannel.value as any).parent_channel,
+        }
       : { channel: currentChannel.value.name }),
   };
   if (attachmentsToSend.length > 0) {
@@ -464,7 +477,7 @@ function RightPanel() {
       isDMServer &&
       dmUser &&
       currentChannel.value?.icon ===
-      avatarUrl(currentChannel.value?.display_name ?? "");
+        avatarUrl(currentChannel.value?.display_name ?? "");
 
     if (is1on1DM) {
       return (
@@ -669,6 +682,10 @@ function RightPanel() {
     const loading = pingsInboxLoading.value;
     const offset = pingsInboxOffset.value;
     const hasMore = offset + msgs.length < total;
+    const currentServerData = servers.value.find(
+      (s) => s.url === serverUrl.value,
+    );
+    const serverName = currentServerData?.name || serverUrl.value;
 
     const loadMore = () => {
       if (!canInbox) return;
@@ -724,6 +741,39 @@ function RightPanel() {
       }
     };
 
+    const InboxMessageRow = ({ msg }: { msg: any }) => {
+      const msgWithTimestamp = {
+        ...msg,
+        timestamp: msg.timestamp,
+      };
+      const replyUserColor = msg.reply_to?.user
+        ? users.value[msg.reply_to.user?.toLowerCase()]?.color || undefined
+        : undefined;
+      return (
+        <div className="inbox-message-row">
+          <div className="inbox-message-context">
+            <span className="inbox-context-server">{serverName}</span>
+            <Icon name="ChevronRight" size={10} />
+            <span className="inbox-context-channel">
+              <Icon name="Hash" size={10} />
+              {msg.channel}
+            </span>
+            <span className="inbox-context-time">
+              {formatFullDateTime(msg.timestamp)}
+            </span>
+          </div>
+          <MessageGroupRow
+            key={msg.id}
+            group={{ head: msgWithTimestamp, following: [] }}
+            onClick={() => jumpToMessage(msg)}
+            onContextMenu={(e: any) => handleInboxContextMenu(e, msg)}
+            showReply={true}
+            replyUserColor={replyUserColor}
+          />
+        </div>
+      );
+    };
+
     return (
       <div className={`members-list ${panelClass}`}>
         <div className="right-panel-header">
@@ -745,7 +795,7 @@ function RightPanel() {
             <div className="right-panel-unsupported">
               <Icon name="Bell" size={32} />
               <span>
-                This feature doesn't seem to be supported on this server.
+                This feature doesn\'t seem to be supported on this server.
               </span>
             </div>
           ) : loading && msgs.length === 0 ? (
@@ -759,110 +809,12 @@ function RightPanel() {
             </div>
           ) : (
             <>
-              {msgs.map((msg, idx) => {
-                const showChannel =
-                  idx === 0 || msgs[idx - 1].channel !== msg.channel;
-                const isLastInGroup =
-                  idx === msgs.length - 1 ||
-                  msgs[idx + 1].channel !== msg.channel;
-                return (
-                  <div
-                    key={msg.id || `${msg.channel}-${msg.timestamp}`}
-                    className="inbox-ping-card-wrapper"
-                  >
-                    {showChannel && (
-                      <div className="inbox-ping-group-header">
-                        <Icon name="Hash" size={12} />
-                        <span className="inbox-ping-card-channel">
-                          {msg.channel}
-                        </span>
-                      </div>
-                    )}
-                    <div
-                      className={`inbox-ping-card${isLastInGroup ? " inbox-ping-card--last" : ""}`}
-                      onClick={() => jumpToMessage(msg)}
-                      onContextMenu={(e: any) => handleInboxContextMenu(e, msg)}
-                    >
-                      {msg.reply_to && (
-                        <div className="inbox-ping-card-reply">
-                          <Icon name="CornerUpRight" size={14} />
-                          <img
-                            src={`https://avatars.rotur.dev/${msg.reply_to.user}`}
-                            className="inbox-ping-card-reply-avatar"
-                            alt={msg.reply_to.user}
-                          />
-                          <span
-                            className="inbox-ping-card-reply-user"
-                            style={{
-                              color:
-                                users.value[msg.reply_to.user?.toLowerCase()]
-                                  ?.color || undefined,
-                            }}
-                          >
-                            {msg.reply_to.user}
-                          </span>
-                          <span className="inbox-ping-card-reply-text">
-                            {(() => {
-                              const allChannels: Record<string, Message[]> =
-                                messagesByServer.value[serverUrl.value] || {};
-                              for (const channelMsgs of Object.values(
-                                allChannels,
-                              )) {
-                                const found = channelMsgs.find(
-                                  (m) => m.id === msg.reply_to!.id,
-                                );
-                                if (found) {
-                                  return (
-                                    <MessageContent
-                                      content={found.content.split("\n")[0]}
-                                      currentUsername={
-                                        currentUser.value?.username
-                                      }
-                                      authorUsername={msg.reply_to!.user}
-                                      isReply
-                                    />
-                                  );
-                                }
-                              }
-                              return null;
-                            })()}
-                          </span>
-                        </div>
-                      )}
-                      <div className="inbox-ping-card-body">
-                        <img
-                          src={`https://avatars.rotur.dev/${msg.user}`}
-                          className="inbox-ping-card-avatar"
-                          alt={msg.user}
-                        />
-                        <div className="inbox-ping-card-content">
-                          <div className="inbox-ping-card-header">
-                            <MessageUsername
-                              username={msg.user}
-                              color={
-                                users.value[msg.user?.toLowerCase()]?.color ??
-                                undefined
-                              }
-                              className="inbox-ping-card-username"
-                            />
-                            <span className="inbox-ping-card-time">
-                              {formatRelativeTime(msg.timestamp)}
-                            </span>
-                          </div>
-                          <span className="inbox-ping-card-text">
-                            {msg.content.length > 150
-                              ? msg.content.substring(0, 150) + "…"
-                              : msg.content}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="inbox-ping-card-action">
-                        <Icon name="ExternalLink" size={14} />
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
+              {msgs.map((msg) => (
+                <InboxMessageRow
+                  key={msg.id || `${msg.channel}-${msg.timestamp}`}
+                  msg={msg}
+                />
+              ))}
               {hasMore && (
                 <button
                   className="inbox-panel-load-more"
@@ -957,17 +909,17 @@ export function MessageArea() {
           wsSend(
             threadId
               ? {
-                cmd: "messages_around",
-                thread_id: threadId,
-                around: oldestMsg.id,
-                bounds: { above: 0, below: 100 },
-              }
+                  cmd: "messages_around",
+                  thread_id: threadId,
+                  around: oldestMsg.id,
+                  bounds: { above: 0, below: 100 },
+                }
               : {
-                cmd: "messages_around",
-                channel: ch,
-                around: oldestMsg.id,
-                bounds: { above: 0, below: 100 },
-              },
+                  cmd: "messages_around",
+                  channel: ch,
+                  around: oldestMsg.id,
+                  bounds: { above: 0, below: 100 },
+                },
             sUrl,
           );
         } else {
@@ -976,8 +928,18 @@ export function MessageArea() {
       } else {
         wsSend(
           threadId
-            ? { cmd: "messages_get", thread_id: threadId, start: msgs.length, limit: 100 }
-            : { cmd: "messages_get", channel: ch, start: msgs.length, limit: 100 },
+            ? {
+                cmd: "messages_get",
+                thread_id: threadId,
+                start: msgs.length,
+                limit: 100,
+              }
+            : {
+                cmd: "messages_get",
+                channel: ch,
+                start: msgs.length,
+                limit: 100,
+              },
           sUrl,
         );
       }
@@ -1008,17 +970,17 @@ export function MessageArea() {
           wsSend(
             threadId
               ? {
-                cmd: "messages_around",
-                thread_id: threadId,
-                around: newestMsg.id,
-                bounds: { above: 100, below: 0 },
-              }
+                  cmd: "messages_around",
+                  thread_id: threadId,
+                  around: newestMsg.id,
+                  bounds: { above: 100, below: 0 },
+                }
               : {
-                cmd: "messages_around",
-                channel: ch,
-                around: newestMsg.id,
-                bounds: { above: 100, below: 0 },
-              },
+                  cmd: "messages_around",
+                  channel: ch,
+                  around: newestMsg.id,
+                  bounds: { above: 100, below: 0 },
+                },
             sUrl,
           );
         } else {
@@ -1285,10 +1247,10 @@ export function MessageArea() {
 
   const currentMessages = currentChannel.value
     ? messages.value[
-    currentChannel.value.type === "thread" && currentThread.value
-      ? currentThread.value.id
-      : currentChannel.value.name
-    ] || []
+        currentChannel.value.type === "thread" && currentThread.value
+          ? currentThread.value.id
+          : currentChannel.value.name
+      ] || []
     : [];
   const messageKey =
     currentChannel.value?.type === "thread" && currentThread.value
@@ -1458,13 +1420,13 @@ export function MessageArea() {
             prev.map((att) =>
               att.id === tempId
                 ? {
-                  ...att,
-                  id: result.id,
-                  url: result.url,
-                  uploading: false,
-                  expires_at: result.expires_at,
-                  permanent: result.permanent,
-                }
+                    ...att,
+                    id: result.id,
+                    url: result.url,
+                    uploading: false,
+                    expires_at: result.expires_at,
+                    permanent: result.permanent,
+                  }
                 : att,
             ),
           );
@@ -2575,9 +2537,9 @@ export function MessageArea() {
               {pendingAttachments.map((att) => {
                 const daysUntilExpiry = att.expires_at
                   ? Math.max(
-                    0,
-                    Math.ceil((att.expires_at - Date.now() / 1000) / 86400),
-                  )
+                      0,
+                      Math.ceil((att.expires_at - Date.now() / 1000) / 86400),
+                    )
                   : null;
                 const showExpiry =
                   !att.permanent &&
@@ -2800,14 +2762,14 @@ export function MessageArea() {
                   accept={
                     hasCapability("attachment_upload")
                       ? (() => {
-                        const types =
-                          attachmentConfigByServer.value[serverUrl.value]
-                            ?.allowed_types;
-                        if (types && types.includes("*")) return "*/*";
-                        return mimeTypeToAcceptString(
-                          types || ["image/*", "video/*"],
-                        );
-                      })()
+                          const types =
+                            attachmentConfigByServer.value[serverUrl.value]
+                              ?.allowed_types;
+                          if (types && types.includes("*")) return "*/*";
+                          return mimeTypeToAcceptString(
+                            types || ["image/*", "video/*"],
+                          );
+                        })()
                       : "image/*,video/*"
                   }
                   multiple
@@ -3026,7 +2988,7 @@ interface ReplyBarProps {
   onClose: () => void;
 }
 
-export function ReplyBar({
+function ReplyBar({
   replyMessage,
   editMessage,
   onClose,

@@ -41,6 +41,7 @@ import {
   dismissBanner,
   upsertBanner,
 } from "./ui-signals";
+import { wsSend, startMessageFetch } from "./ws-sender";
 
 // ── Reconnect config ──────────────────────────────────────────────────────────
 const RECONNECT_BASE_DELAY_MS = 2000;
@@ -189,7 +190,7 @@ export function playPingSound(): void {
 }
 
 let notifPermissionRequested = false;
-export function requestNotificationPermission(): void {
+function requestNotificationPermission(): void {
   if (notifPermissionRequested) return;
   notifPermissionRequested = true;
   if ("Notification" in window && Notification.permission === "default") {
@@ -199,13 +200,8 @@ export function requestNotificationPermission(): void {
 
 // ── Web Push subscription management ─────────────────────────────────────────
 
-/**
- * Enable offline push notifications for a server.
- * Flow:
- *   1. Request notification permission if needed.
- *   2. Ask the server for its VAPID public key via `push_get_vapid`.
- *   3. The server responds with `push_vapid` → `subscribeToPushForServer` is called.
- */
+import { subscribeToPushForServer, disablePushForServer } from "./push-manager";
+
 export async function enablePushForServer(sUrl: string): Promise<void> {
   if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
     console.warn("[Push] Web Push not supported in this browser.");
@@ -231,116 +227,12 @@ export async function enablePushForServer(sUrl: string): Promise<void> {
     return;
   }
 
-  // Ask the server for its VAPID public key.
-  // The server will respond with a `push_vapid` message handled below.
   wsSend({ cmd: "push_get_vapid" }, sUrl);
 }
 
-/**
- * Called when the server responds with its VAPID public key.
- * Subscribes via PushManager and sends the subscription back to the server.
- */
-export async function subscribeToPushForServer(
-  sUrl: string,
-  vapidPublicKey: string,
-): Promise<void> {
-  try {
-    const reg = await navigator.serviceWorker.ready;
-
-    // Unsubscribe any previous subscription first so we always get a fresh one
-    const existing = await reg.pushManager.getSubscription();
-    if (existing) await existing.unsubscribe();
-
-    // Convert VAPID key from base64url to Uint8Array
-    const keyBytes = urlBase64ToUint8Array(vapidPublicKey);
-
-    const subscription = await reg.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: keyBytes as unknown as ArrayBuffer,
-    });
-
-    const subJson = subscription.toJSON();
-    pushSubscriptionsByServer[sUrl] = subJson;
-
-    // Send subscription to the server
-    wsSend(
-      {
-        cmd: "push_subscribe",
-        subscription: subJson,
-        vapid_public_key: vapidPublicKey,
-      },
-      sUrl,
-    );
-
-    // Persist the opt-in flag
-    offlinePushServers.value = { ...offlinePushServers.value, [sUrl]: true };
-    console.log(`[Push] Subscribed to push notifications for ${sUrl}`);
-  } catch (err) {
-    console.error(`[Push] Failed to subscribe for ${sUrl}:`, err);
-  }
-}
-
-/**
- * Disable offline push notifications for a server.
- * Unsubscribes locally and notifies the server to remove the subscription.
- */
-export async function disablePushForServer(sUrl: string): Promise<void> {
-  try {
-    const reg = await navigator.serviceWorker.ready;
-    const subscription = await reg.pushManager.getSubscription();
-
-    if (subscription) {
-      // Tell the server to remove this endpoint
-      wsSend(
-        {
-          cmd: "push_unsubscribe",
-          endpoint: subscription.endpoint,
-        },
-        sUrl,
-      );
-      await subscription.unsubscribe();
-    }
-
-    delete pushSubscriptionsByServer[sUrl];
-    const next = { ...offlinePushServers.value };
-    delete next[sUrl];
-    offlinePushServers.value = next;
-    console.log(`[Push] Unsubscribed from push notifications for ${sUrl}`);
-  } catch (err) {
-    console.error(`[Push] Failed to unsubscribe for ${sUrl}:`, err);
-  }
-}
-
-/** Convert a base64url-encoded VAPID public key to a Uint8Array. */
-function urlBase64ToUint8Array(base64String: string): Uint8Array {
-  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
-  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
-  const rawData = window.atob(base64);
-  const arr = new Uint8Array(rawData.length);
-  for (let i = 0; i < rawData.length; i++) {
-    arr[i] = rawData.charCodeAt(i);
-  }
-  return arr;
-}
+export { subscribeToPushForServer, disablePushForServer };
 
 const CONNECTION_TIMEOUT = 5000;
-const pendingMessageFetchesByServer: Record<
-  string,
-  Record<string, boolean>
-> = {};
-
-export function startMessageFetch(sUrl: string, channelName: string): void {
-  if (!pendingMessageFetchesByServer[sUrl]) {
-    pendingMessageFetchesByServer[sUrl] = {};
-  }
-  pendingMessageFetchesByServer[sUrl][channelName] = true;
-}
-
-export function finishMessageFetch(sUrl: string, channelName: string): void {
-  if (pendingMessageFetchesByServer[sUrl]) {
-    delete pendingMessageFetchesByServer[sUrl][channelName];
-  }
-}
 
 const pendingReplyFetchesByServer: Record<string, Set<string>> = {};
 
@@ -399,16 +291,6 @@ export function jumpToMessageAround(
   return wsSend(payload, sUrl);
 }
 
-export function wsSend(data: any, sUrl?: string): boolean {
-  const url = sUrl || serverUrl.value;
-  const conn = wsConnections[url];
-  if (conn && conn.socket && conn.socket.readyState === WebSocket.OPEN) {
-    conn.socket.send(JSON.stringify(data));
-    return true;
-  }
-  return false;
-}
-
 async function generateValidator(validatorKey: string): Promise<string> {
   return generateValidatorApi(validatorKey);
 }
@@ -449,7 +331,7 @@ export function closeWebSocket(url: string): void {
   delete wsStatus[url];
 }
 
-export function clearServerState(sUrl: string): void {
+function clearServerState(sUrl: string): void {
   channelsByServer.value = Object.fromEntries(
     Object.entries(channelsByServer.value).filter(([key]) => key !== sUrl),
   );
@@ -496,7 +378,6 @@ export function clearServerState(sUrl: string): void {
 
   delete loadedChannelsByServer[sUrl];
   delete reachedOldestByServer[sUrl];
-  delete pendingMessageFetchesByServer[sUrl];
   delete pendingReplyFetchesByServer[sUrl];
 
   readTimesByServer.value = Object.fromEntries(
@@ -863,7 +744,7 @@ function handleMessage(msg: any, sUrl: string): void {
       handleMessagesSearch(msg);
       break;
     case "pings_get":
-      handlePingsGet(msg);
+      handlePingsGet(msg, sUrl);
       break;
     case "messages_pinned":
       handleMessagesPinned(msg);
@@ -983,7 +864,7 @@ function handleMessage(msg: any, sUrl: string): void {
       console.debug(`[${sUrl}] Unhandled message type:`, msg.cmd || msg.type);
   }
 }
-export function refreshCurrentChannel(): void {
+function refreshCurrentChannel(): void {
   const sUrl = serverUrl.value;
   const channel = currentChannel.value;
   if (!sUrl || !channel || SPECIAL_CHANNELS.has(channel.name)) return;
@@ -1079,3 +960,5 @@ export function setupVisibilityHandler(): void {
     }
   });
 }
+
+export { wsSend } from "./ws-sender";

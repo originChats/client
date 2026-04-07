@@ -1,6 +1,6 @@
 import type { PushVapid, PushSubscribed } from "@/msgTypes";
 import { offlinePushServers } from "../../../state";
-import { subscribeToPushForServer } from "../../websocket";
+import { subscribeToPushForServer } from "../../push-manager";
 import { showBanner } from "../../ui-signals";
 
 export function handlePushVapid(msg: PushVapid, sUrl: string): void {

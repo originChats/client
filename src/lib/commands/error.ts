@@ -3,10 +3,9 @@ import {
   offlinePushServers,
   pendingDMAddUsername,
   setPendingDMAddUsername,
+  DM_SERVER_URL,
 } from "../../state";
 import { showBanner } from "../ui-signals";
-
-const DM_SERVER_URL = "dms.mistium.com";
 
 export function handleError(msg: ServerError, sUrl: string): void {
   const errText: string =

@@ -172,7 +172,12 @@ export function RolesTab() {
                           className={`${styles.rolePill} ${role.assigned ? styles.assigned : ""}`}
                           style={
                             role.color
-                              ? { "--role-color": role.color }
+                              ? {
+                                  "--role-color": role.color,
+                                  background: role.assigned
+                                    ? `${role.color}15`
+                                    : undefined,
+                                }
                               : undefined
                           }
                           onClick={() => toggleRole(role.name, role.assigned)}
@@ -190,7 +195,7 @@ export function RolesTab() {
                           <span className={styles.roleName}>{role.name}</span>
                           {role.assigned && (
                             <span className={styles.checkIcon}>
-                              <Icon name="Check" size={14} />
+                              <Icon name="Check" size={12} />
                             </span>
                           )}
                         </button>
@@ -212,7 +217,12 @@ export function RolesTab() {
                           className={`${styles.rolePill} ${role.assigned ? styles.assigned : ""}`}
                           style={
                             role.color
-                              ? { "--role-color": role.color }
+                              ? {
+                                  "--role-color": role.color,
+                                  background: role.assigned
+                                    ? `${role.color}15`
+                                    : undefined,
+                                }
                               : undefined
                           }
                           onClick={() => toggleRole(role.name, role.assigned)}
@@ -230,7 +240,7 @@ export function RolesTab() {
                           <span className={styles.roleName}>{role.name}</span>
                           {role.assigned && (
                             <span className={styles.checkIcon}>
-                              <Icon name="Check" size={14} />
+                              <Icon name="Check" size={12} />
                             </span>
                           )}
                         </button>
