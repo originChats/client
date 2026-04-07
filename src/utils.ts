@@ -1,6 +1,6 @@
 import { signal } from "@preact/signals";
 
-export const IMAGE_EXTENSIONS = [
+const IMAGE_EXTENSIONS = [
   "jpg",
   "jpeg",
   "png",
@@ -11,12 +11,12 @@ export const IMAGE_EXTENSIONS = [
   "ico",
   "avif",
 ];
-export const VIDEO_EXTENSIONS = ["mp4", "webm", "mov", "ogg", "avi", "mkv"];
+const VIDEO_EXTENSIONS = ["mp4", "webm", "mov", "ogg", "avi", "mkv"];
 
-export const YOUTUBE_REGEX =
+const YOUTUBE_REGEX =
   /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/shorts\/)([a-zA-Z0-9_-]+)/;
 
-export function hasExtension(url: string, extensions: string[]): boolean {
+function hasExtension(url: string, extensions: string[]): boolean {
   const urlLower = url.toLowerCase();
   return extensions.some(
     (ext) =>
@@ -26,13 +26,13 @@ export function hasExtension(url: string, extensions: string[]): boolean {
   );
 }
 
-export function escapeHtml(text: string): string {
+function escapeHtml(text: string): string {
   const div = document.createElement("div");
   div.textContent = text;
   return div.innerHTML;
 }
 
-export function blobToDataURL(blob: Blob): Promise<string> {
+function blobToDataURL(blob: Blob): Promise<string> {
   return new Promise((resolve) => {
     const reader = new FileReader();
     reader.onloadend = () => resolve(reader.result as string);
@@ -40,7 +40,7 @@ export function blobToDataURL(blob: Blob): Promise<string> {
   });
 }
 
-export const TRUSTED_DOMAINS = [
+const TRUSTED_DOMAINS = [
   "avatars.rotur.dev",
   "photos.rotur.dev",
   "roturcdn.milosantos.com",
@@ -50,7 +50,7 @@ export const TRUSTED_DOMAINS = [
   "cdn.discordapp.com",
 ];
 
-export function proxyImageUrl(url: string): string {
+function proxyImageUrl(url: string): string {
   if (!url || url.startsWith("data:") || url.startsWith("blob:")) return url;
   try {
     const urlObj = new URL(url);
@@ -61,7 +61,7 @@ export function proxyImageUrl(url: string): string {
   return `https://wsrv.nl/?url=${encodeURIComponent(url)}`;
 }
 
-export const avatarBust = signal<Record<string, number>>({});
+const avatarBust = signal<Record<string, number>>({});
 
 export function reloadAvatar(username: string): void {
   avatarBust.value = {
@@ -88,7 +88,7 @@ export function avatarUrl(username: string): string {
   return `https://avatars.rotur.dev/${username}${bust ? `?v=${bust}` : ""}`;
 }
 
-export function getUserAvatar(
+function getUserAvatar(
   user: { username: string; pfp?: string; cracked?: boolean } | string,
 ): string | undefined {
   const username = typeof user === "string" ? user : user.username;

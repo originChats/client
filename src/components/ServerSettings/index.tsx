@@ -440,9 +440,8 @@ function UserRolesEditor({
               </div>
             )}
           </div>
-          );
         </>
-      )};
+      )}
     </div>
   );
 };

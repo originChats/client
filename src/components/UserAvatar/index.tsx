@@ -40,6 +40,7 @@ function UserAvatarInner({
     justifyContent: "center",
     textTransform: "uppercase",
     userSelect: "none",
+    height: "100%",
   };
 
   if (size) {

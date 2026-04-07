@@ -37,7 +37,7 @@ export function getShortcodeMap(): Record<string, string> {
   return shortcodeMap;
 }
 
-export function setShortcodeMap(map: Record<string, string>) {
+function setShortcodeMap(map: Record<string, string>) {
   shortcodeMap = map;
   (window as any).shortcodeMap = map;
 }

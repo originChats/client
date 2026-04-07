@@ -13,7 +13,7 @@ function trimMessages(messages: Message[]): Message[] {
   return messages.slice(-MAX_MESSAGES_PER_CHANNEL);
 }
 
-export class MessageState {
+class MessageState {
   readonly byServer = signal<MessagesMap>({});
   readonly loaded = new Map<ServerUrl, Set<MessageKey>>();
   readonly reachedOldest = new Map<ServerUrl, Set<MessageKey>>();
@@ -155,9 +155,3 @@ export class MessageState {
 }
 
 export const messageState = new MessageState();
-
-export const currentServerMessages = computed(() => {
-  const serverUrl = (globalThis as any).__currentServerUrl;
-  if (!serverUrl) return {};
-  return messageState.byServer.value[serverUrl] || {};
-});

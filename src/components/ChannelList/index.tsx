@@ -515,7 +515,17 @@ export function ChannelList() {
                           onClick={(e: any) => openUserPopout(e, vu.username)}
                         >
                           <div className={styles.voiceChannelUserAvatar}>
-                            <UserAvatar username={vu.username} pfp={vu.pfp} />
+                            <UserAvatar
+                              username={vu.username}
+                              nickname={
+                                users.value[vu.username?.toLowerCase()]
+                                  ?.nickname
+                              }
+                              pfp={vu.pfp}
+                              cracked={
+                                users.value[vu.username?.toLowerCase()]?.cracked
+                              }
+                            />
                           </div>
                           <span className={styles.voiceChannelUsername}>
                             {vu.username}
@@ -615,6 +625,8 @@ export function ChannelList() {
               );
             }
 
+            const channelDescription = (channel as any).description;
+
             return (
               <div
                 key={channel.name}
@@ -622,6 +634,7 @@ export function ChannelList() {
                 data-channel-name={channel.name}
                 onClick={() => handleChannelClick(channel)}
                 onContextMenu={(e: any) => handleChannelContextMenu(e, channel)}
+                title={channelDescription || undefined}
               >
                 {isDM && channel.icon ? (
                   <img

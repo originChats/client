@@ -7,7 +7,7 @@ interface NoteMessage {
   _isNew?: boolean;
 }
 
-export class NotesChannel {
+class NotesChannel {
   private db: IDBDatabase | null = null;
   private initialised = false;
   private readonly messagesKey = "notes_messages";

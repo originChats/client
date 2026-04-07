@@ -40,7 +40,7 @@ export function useFocusTrap(isActive: boolean) {
   return containerRef;
 }
 
-export function useFocusRestoration(isActive: boolean) {
+function useFocusRestoration(isActive: boolean) {
   const previousFocusRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {

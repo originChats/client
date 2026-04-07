@@ -12,7 +12,7 @@ import {
   channelEditFromSettings,
   webhooksByServer,
   webhooksLoading,
-  handleError,
+  showUIError,
   showError,
   showInfo,
   showServerSettingsModal,

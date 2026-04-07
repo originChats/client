@@ -14,7 +14,6 @@
     "css:types": "tcm src"
   },
   "dependencies": {
-    "@preact/preset-vite": "^2.10.3",
     "@preact/signals": "^2.8.2",
     "@twemoji/api": "^17.0.2",
     "dompurify": "^3.2.4",
@@ -24,6 +23,7 @@
     "preact": "^10.28.4"
   },
   "devDependencies": {
+    "@preact/preset-vite": "^2.10.3",
     "@eslint/js": "^10.0.1",
     "@types/dompurify": "^3.2.0",
     "eslint": "^10.0.3",

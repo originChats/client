@@ -2,7 +2,7 @@ import type { Signal } from "@preact/signals";
 
 type ByServerSignal<T> = Signal<Record<string, T>>;
 
-export function updateByServer<T>(
+function updateByServer<T>(
   signal: ByServerSignal<T>,
   sUrl: string,
   value: T,
@@ -10,7 +10,7 @@ export function updateByServer<T>(
   signal.value = { ...signal.value, [sUrl]: value };
 }
 
-export function updateByServerNested<T, K extends keyof T>(
+function updateByServerNested<T, K extends keyof T>(
   signal: ByServerSignal<Record<string, T>>,
   sUrl: string,
   key: string,
@@ -27,7 +27,7 @@ export function updateByServerNested<T, K extends keyof T>(
   };
 }
 
-export function ensureServerState<T>(
+function ensureServerState<T>(
   signal: ByServerSignal<T>,
   sUrl: string,
   defaultValue: T,

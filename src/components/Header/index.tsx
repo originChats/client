@@ -137,10 +137,15 @@ export function Header() {
             <span>{currentServer.value?.name || "Direct Messages"}</span>
           </div>
           <div className={styles["channel-name"]}>
-            #
+            #{" "}
             {currentChannel.value?.display_name ||
               currentChannel.value?.name ||
               "home"}
+            {(currentChannel.value as any)?.description && (
+              <span style={{ marginLeft: 8, opacity: 0.6 }}>
+                {(currentChannel.value as any).description}
+              </span>
+            )}
           </div>
         </div>
       </div>
@@ -198,6 +203,11 @@ export function Header() {
             currentChannel.value?.name ||
             "home"}
         </span>
+        {(currentChannel.value as any)?.description && (
+          <span className={styles.mainHeaderChannelDescription}>
+            {(currentChannel.value as any).description}
+          </span>
+        )}
         {thread && thread.participants && thread.participants.length > 0 && (
           <span className={styles.headerThreadParticipants}>
             <Icon name="Users" size={14} />

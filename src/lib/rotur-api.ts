@@ -25,9 +25,9 @@ import type {
 // ── Configuration ────────────────────────────────────────────────────────────
 
 /** The single origin that the raw token is allowed to reach. */
-export const ROTUR_API_BASE = "https://api.rotur.dev";
-export const ROTUR_AVATARS_BASE = "https://avatars.rotur.dev";
-export const ROTUR_AUTH_URL = "https://rotur.dev/auth";
+const ROTUR_API_BASE = "https://api.rotur.dev";
+const ROTUR_AVATARS_BASE = "https://avatars.rotur.dev";
+const ROTUR_AUTH_URL = "https://rotur.dev/auth";
 export const ROTUR_GIFT_URL = "https://rotur.dev/gift";
 
 // ── Internal helpers ─────────────────────────────────────────────────────────
@@ -122,7 +122,7 @@ async function authDelete<T>(
 // ── Auth / Account ───────────────────────────────────────────────────────────
 
 /** Get the authenticated user's account data. */
-export async function getMe(signal?: AbortSignal): Promise<any> {
+async function getMe(signal?: AbortSignal): Promise<any> {
   return authGet<any>("/me", undefined, signal);
 }
 
@@ -169,7 +169,7 @@ export async function getProfile(
 }
 
 /** Check if a username exists (no auth needed). */
-export async function userExists(
+async function userExists(
   username: string,
   signal?: AbortSignal,
 ): Promise<boolean> {
@@ -254,7 +254,7 @@ export async function unfollowUser(username: string): Promise<any> {
 }
 
 /** Get a user's followers (public, no auth). */
-export async function getFollowers(
+async function getFollowers(
   username: string,
   signal?: AbortSignal,
 ): Promise<RoturFollowersResult> {
@@ -324,7 +324,7 @@ export async function searchGroups(
   return data.groups || [];
 }
 
-export async function getGroup(
+async function getGroup(
   grouptag: string,
   signal?: AbortSignal,
 ): Promise<RoturGroupDetails> {
@@ -387,11 +387,11 @@ export async function claimGift(code: string): Promise<any> {
   return authPost<any>(`/gifts/claim/${encodeURIComponent(code)}`);
 }
 
-export async function cancelGift(id: string): Promise<any> {
+async function cancelGift(id: string): Promise<any> {
   return authPost<any>(`/gifts/cancel/${encodeURIComponent(id)}`);
 }
 
-export async function getMyGifts(
+async function getMyGifts(
   signal?: AbortSignal,
 ): Promise<{ gifts: RoturGift[] }> {
   return authGet<{ gifts: RoturGift[] }>("/gifts/mine", undefined, signal);
@@ -400,13 +400,13 @@ export async function getMyGifts(
 // ── Economy / Stats ──────────────────────────────────────────────────────────
 
 /** Public stats endpoints – no auth. */
-export async function getEconomyStats(
+async function getEconomyStats(
   signal?: AbortSignal,
 ): Promise<RoturEconomyStats> {
   return get<RoturEconomyStats>("/stats/economy", undefined, signal);
 }
 
-export async function getUserStats(
+async function getUserStats(
   signal?: AbortSignal,
 ): Promise<RoturUserStats> {
   return get<RoturUserStats>("/stats/users", undefined, signal);
@@ -421,7 +421,7 @@ export async function getClaimTime(signal?: AbortSignal): Promise<any> {
 }
 
 /** Transfer credits. Token only in query param, not in body. */
-export async function transferCredits(
+async function transferCredits(
   to: string,
   amount: number,
 ): Promise<any> {
@@ -430,49 +430,49 @@ export async function transferCredits(
 
 // ── Posts / Feed ──────────────────────────────────────────────────────────────
 
-export async function getFeed(signal?: AbortSignal): Promise<any> {
+async function getFeed(signal?: AbortSignal): Promise<any> {
   return get<any>("/feed", undefined, signal);
 }
 
-export async function getFollowingFeed(signal?: AbortSignal): Promise<any> {
+async function getFollowingFeed(signal?: AbortSignal): Promise<any> {
   return authGet<any>("/following_feed", undefined, signal);
 }
 
 // ── Notifications ────────────────────────────────────────────────────────────
 
-export async function getNotifications(signal?: AbortSignal): Promise<any> {
+async function getNotifications(signal?: AbortSignal): Promise<any> {
   return authGet<any>("/notifications", undefined, signal);
 }
 
 // ── Badges ───────────────────────────────────────────────────────────────────
 
-export async function getBadges(signal?: AbortSignal): Promise<any> {
+async function getBadges(signal?: AbortSignal): Promise<any> {
   return authGet<any>("/badges", undefined, signal);
 }
 
 // ── Notes ────────────────────────────────────────────────────────────────────
 
-export async function setUserNote(
+async function setUserNote(
   username: string,
   note: string,
 ): Promise<any> {
   return authPost<any>(`/me/note/${encodeURIComponent(username)}`, { note });
 }
 
-export async function deleteUserNote(username: string): Promise<any> {
+async function deleteUserNote(username: string): Promise<any> {
   return authDelete<any>(`/me/note/${encodeURIComponent(username)}`);
 }
 
 // ── Link codes ───────────────────────────────────────────────────────────────
 
-export async function getLinkCode(signal?: AbortSignal): Promise<any> {
+async function getLinkCode(signal?: AbortSignal): Promise<any> {
   return get<any>("/link/code", undefined, signal);
 }
 
-export async function getLinkStatus(signal?: AbortSignal): Promise<any> {
+async function getLinkStatus(signal?: AbortSignal): Promise<any> {
   return get<any>("/link/status", undefined, signal);
 }
 
-export async function linkCodeToAccount(code: string): Promise<any> {
+async function linkCodeToAccount(code: string): Promise<any> {
   return authPost<any>("/link/code", { code });
 }

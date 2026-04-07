@@ -1,4 +1,4 @@
-export interface ValidationRule {
+interface ValidationRule {
   min?: number;
   max?: number;
   pattern?: RegExp;
@@ -6,15 +6,12 @@ export interface ValidationRule {
   custom?: (value: string) => string | null;
 }
 
-export interface ValidationResult {
+interface ValidationResult {
   isValid: boolean;
   error?: string;
 }
 
-export function validateField(
-  value: string,
-  rules: ValidationRule,
-): ValidationResult {
+function validateField(value: string, rules: ValidationRule): ValidationResult {
   // Check required
   if (rules.required && !value.trim()) {
     return { isValid: false, error: "This field is required" };
@@ -59,7 +56,7 @@ export function getCharacterCountColor(current: number, max: number): string {
   return "var(--text-dim)";
 }
 
-export const commonRules = {
+const commonRules = {
   username: {
     min: 3,
     max: 20,

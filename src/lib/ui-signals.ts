@@ -71,7 +71,7 @@ export function showInfo(
 }
 
 /** Log error and show user-friendly error banner */
-export function handleError(
+export function showUIError(
   error: unknown,
   userMessage: string,
   opts?: {
@@ -116,10 +116,10 @@ export const showSettingsModal = signal(false);
 export const showAccountModal = signal<string | null>(null);
 export const showDiscoveryModal = signal(false);
 export const showServerSettingsModal = signal(false);
-export const serverSettingsSection = signal<
+const serverSettingsSection = signal<
   "overview" | "channels" | "roles" | "members" | "bans" | "emojis"
 >("overview");
-export const serverSettingsUserEdit = signal<string | null>(null);
+const serverSettingsUserEdit = signal<string | null>(null);
 export const currentDMTab = signal<
   "friends" | "requests" | "blocked" | "groups"
 >("friends");

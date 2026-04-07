@@ -35,7 +35,7 @@ let mediaServers: MediaServer[] = [];
 let mediaServersLoaded: Promise<void>;
 let roturPhotosSessionId = null as string | null;
 
-export async function loadMediaServers(): Promise<void> {
+async function loadMediaServers(): Promise<void> {
   const saved = await mediaServersDb.get<MediaServer[]>();
   if (saved && saved.length > 0) {
     mediaServers = saved;
@@ -45,7 +45,7 @@ export async function loadMediaServers(): Promise<void> {
   }
 }
 
-export async function saveMediaServers(): Promise<void> {
+async function saveMediaServers(): Promise<void> {
   await mediaServersDb.set(mediaServers);
 }
 
@@ -58,7 +58,7 @@ export function getMediaServers(): MediaServer[] {
   return [...mediaServers];
 }
 
-export function getMediaServerById(id: string): MediaServer | undefined {
+function getMediaServerById(id: string): MediaServer | undefined {
   return mediaServers.find((s) => s.id === id);
 }
 

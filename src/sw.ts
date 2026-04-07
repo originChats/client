@@ -1,3 +1,4 @@
+// fallow-ignore-file unused-file
 /// <reference lib="webworker" />
 import {
   cleanupOutdatedCaches,

@@ -104,7 +104,7 @@ async function saveToCache(url: string, dataUri: string): Promise<void> {
   } catch {}
 }
 
-export async function deleteExpiredCache(): Promise<void> {
+async function deleteExpiredCache(): Promise<void> {
   try {
     const db = await openDb();
 
@@ -229,7 +229,7 @@ export async function getCachedImage(url: string): Promise<string | null> {
   return pending;
 }
 
-export function createCachedImageUrl(url: string): string {
+function createCachedImageUrl(url: string): string {
   const blobUrl = URL.createObjectURL(new Blob());
   URL.revokeObjectURL(blobUrl);
   return blobUrl;
@@ -312,7 +312,7 @@ export function getCachedImageSize(
   return null;
 }
 
-export async function getCachedImageSizeAsync(
+async function getCachedImageSizeAsync(
   url: string,
 ): Promise<{ width: number; height: number } | null> {
   if (!url || url.startsWith("data:") || url.startsWith("blob:")) return null;

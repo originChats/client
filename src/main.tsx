@@ -41,7 +41,7 @@ import {
   mobilePanelOpen,
   closeMobileNav,
   showNotificationPrompt,
-  handleError,
+  showUIError,
 } from "./lib/ui-signals";
 import {
   loadServers,
@@ -272,7 +272,7 @@ function App() {
         }
       }
     } catch (e) {
-      handleError(e, "Failed to load message read status from cloud", {
+      showUIError(e, "Failed to load message read status from cloud", {
         autoDismissMs: 5000,
       });
     }
@@ -294,7 +294,7 @@ function App() {
       serverNotifSettings.value = mergedServer;
       channelNotifSettings.value = mergedChannel;
     } catch (e) {
-      handleError(e, "Failed to load notification settings", {
+      showUIError(e, "Failed to load notification settings", {
         autoDismissMs: 5000,
       });
     }

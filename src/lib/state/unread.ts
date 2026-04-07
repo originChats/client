@@ -2,7 +2,7 @@ import { signal, computed } from "@preact/signals";
 
 type ChannelKey = `${string}:${string}`;
 
-export class UnreadState {
+class UnreadState {
   private readonly _pings = signal<Record<ChannelKey, number>>({});
   private readonly _unreads = signal<Record<ChannelKey, number>>({});
 
@@ -189,7 +189,9 @@ export class UnreadState {
   }
 }
 
-export const unreadState = new UnreadState();
+const unreadState = new UnreadState();
 
-export const totalPings = computed(() => unreadState.getTotalPings());
-export const totalUnreads = computed(() => unreadState.getTotalUnreads());
+const totalPings = computed(() => unreadState.getTotalPings());
+const totalUnreads = computed(() => unreadState.getTotalUnreads());
+
+export { unreadState };

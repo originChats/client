@@ -58,7 +58,7 @@ async function db(): Promise<IDBDatabase> {
 
 // ── Primitives ────────────────────────────────────────────────────────────────
 
-export async function dbGet<T = unknown>(
+async function dbGet<T = unknown>(
   store: StoreName,
   key: string,
 ): Promise<T | undefined> {
@@ -71,7 +71,7 @@ export async function dbGet<T = unknown>(
   });
 }
 
-export async function dbSet(
+async function dbSet(
   store: StoreName,
   key: string,
   value: unknown,
@@ -85,7 +85,7 @@ export async function dbSet(
   });
 }
 
-export async function dbDel(store: StoreName, key: string): Promise<void> {
+async function dbDel(store: StoreName, key: string): Promise<void> {
   const d = await db();
   return new Promise((resolve, reject) => {
     const tx = d.transaction(store, "readwrite");
@@ -96,7 +96,7 @@ export async function dbDel(store: StoreName, key: string): Promise<void> {
 }
 
 /** Read all key-value pairs in a store as a plain object. */
-export async function dbGetAll<T = unknown>(
+async function dbGetAll<T = unknown>(
   store: StoreName,
 ): Promise<Record<string, T>> {
   const d = await db();
@@ -168,7 +168,7 @@ export const mediaServersDb = {
 };
 
 /** Server folders. */
-export const foldersDb = {
+const foldersDb = {
   get: <T>(): Promise<T | undefined> => dbGet<T>("folders", "folders"),
   set: (value: unknown) => dbSet("folders", "folders", value),
 };

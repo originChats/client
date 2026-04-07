@@ -57,7 +57,7 @@ export function useUserColor(
   return color;
 }
 
-export function getUserColor(
+function getUserColor(
   username: string,
   overrideServerUrl?: string,
 ): string | undefined {

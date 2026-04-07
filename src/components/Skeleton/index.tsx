@@ -1,7 +1,7 @@
 import { h } from "preact";
 import styles from "./Skeleton.module.css";
 
-export function SkeletonBase({
+function SkeletonBase({
   className = "",
   style = {},
 }: {
@@ -13,11 +13,11 @@ export function SkeletonBase({
   );
 }
 
-export function SkeletonAvatar() {
+function SkeletonAvatar() {
   return <div className={styles.skeletonAvatar} />;
 }
 
-export function SkeletonText({
+function SkeletonText({
   width = "100%",
   className = "",
 }: {
@@ -32,7 +32,7 @@ export function SkeletonText({
   );
 }
 
-export function SkeletonListItem() {
+function SkeletonListItem() {
   return (
     <div className={styles.skeletonListItem}>
       <SkeletonAvatar />
@@ -44,7 +44,7 @@ export function SkeletonListItem() {
   );
 }
 
-export function SkeletonMessage() {
+function SkeletonMessage() {
   return (
     <div className={styles.skeletonMessage}>
       <div className={styles.skeletonMessageAvatar} />
@@ -60,7 +60,7 @@ export function SkeletonMessage() {
   );
 }
 
-export function SkeletonCard() {
+function SkeletonCard() {
   return (
     <div className={styles.skeletonCard}>
       <div className={styles.skeletonCardHeader}>
@@ -76,7 +76,7 @@ export function SkeletonCard() {
   );
 }
 
-export function SkeletonList({ count = 5 }: { count?: number }) {
+function SkeletonList({ count = 5 }: { count?: number }) {
   return (
     <>
       {Array.from({ length: count }).map((_, i) => (

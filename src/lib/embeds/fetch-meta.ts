@@ -161,6 +161,6 @@ export async function fetchLinkMetadata(
   }
 }
 
-export function clearMetadataCache(): void {
+function clearMetadataCache(): void {
   META_CACHE.clear();
 }

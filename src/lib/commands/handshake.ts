@@ -8,7 +8,6 @@ import {
   serverPermissionsByServer,
   attachmentConfigByServer,
   servers,
-  offlinePushServers,
   serverAuthModeByServer,
   token,
 } from "../../state";
@@ -19,7 +18,8 @@ import {
 } from "../ui-signals";
 import { reloadServerIcon } from "../../utils";
 import { saveServers } from "../persistence";
-import { authenticateServer, enablePushForServer, wsSend } from "../websocket";
+import { authenticateServer } from "../websocket";
+import { wsSend } from "../ws-sender";
 import { DEFAULT_PERMISSIONS } from "../../state";
 
 export function handleHandshake(msg: Handshake, sUrl: string): void {
@@ -105,7 +105,8 @@ export function handleHandshake(msg: Handshake, sUrl: string): void {
     }
   }
 
-  const authMode = msg.val.auth_mode || "rotur";
+  const rawAuthMode = msg.val.auth_mode;
+  const authMode = rawAuthMode ?? "rotur";
   serverAuthModeByServer.value = {
     ...serverAuthModeByServer.value,
     [sUrl]: authMode,
@@ -113,49 +114,46 @@ export function handleHandshake(msg: Handshake, sUrl: string): void {
 
   renderGuildSidebarSignal.value++;
 
-  if (authMode === "rotur" || authMode === undefined) {
-    if (!token.value) {
-      showRoturRequiredModal.value = sUrl;
-    } else {
+  const existing = servers.value.find((s) => s.url === sUrl);
+  switch (authMode) {
+    case "rotur":
+      if (!token.value) {
+        showRoturRequiredModal.value = sUrl;
+      } else {
+        authenticateServer(sUrl);
+      }
+      break;
+    case "cracked-only":
+      if (existing?.crackedCredentials) {
+        wsSend(
+          {
+            cmd: "login",
+            username: existing.crackedCredentials.username,
+            password: existing.crackedCredentials.password,
+          },
+          sUrl,
+        );
+      } else {
+        showCrackedAuthModal.value = sUrl;
+      }
+      break;
+    case "cracked":
+      if (existing?.crackedCredentials) {
+        wsSend(
+          {
+            cmd: "login",
+            username: existing.crackedCredentials.username,
+            password: existing.crackedCredentials.password,
+          },
+          sUrl,
+        );
+      } else if (!token.value) {
+        showCrackedAuthModal.value = sUrl;
+      } else {
+        authenticateServer(sUrl);
+      }
+      break;
+    default:
       authenticateServer(sUrl);
-    }
-  } else if (authMode === "cracked-only") {
-    const existing = servers.value.find((s) => s.url === sUrl);
-    if (existing?.crackedCredentials) {
-      wsSend(
-        {
-          cmd: "login",
-          username: existing.crackedCredentials.username,
-          password: existing.crackedCredentials.password,
-        },
-        sUrl,
-      );
-    } else {
-      showCrackedAuthModal.value = sUrl;
-    }
-  } else if (authMode === "cracked") {
-    const existing = servers.value.find((s) => s.url === sUrl);
-    if (existing?.crackedCredentials) {
-      wsSend(
-        {
-          cmd: "login",
-          username: existing.crackedCredentials.username,
-          password: existing.crackedCredentials.password,
-        },
-        sUrl,
-      );
-    } else if (!token.value) {
-      showCrackedAuthModal.value = sUrl;
-    } else {
-      showCrackedAuthModal.value = sUrl;
-    }
-  } else {
-    authenticateServer(sUrl);
-  }
-
-  if (Notification.permission === "granted") {
-    if (!offlinePushServers.value[sUrl]) {
-      enablePushForServer(sUrl);
-    }
   }
 }

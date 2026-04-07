@@ -131,7 +131,7 @@ export function emojiImgUrl(value: string, isChar = false): string | null {
   return `${TWEMOJI_CDN_BASE}/${hexcode}.svg`;
 }
 
-export function getEmojiImgOrDataUri(emoji: string): string | null {
+function getEmojiImgOrDataUri(emoji: string): string | null {
   if (useSystemEmojis.value) return null;
 
   const hexcode = twemoji.convert.toCodePoint(emoji);
@@ -145,11 +145,11 @@ export function getEmojiImgOrDataUri(emoji: string): string | null {
   return dataUriCache.get(hexcode) || `${TWEMOJI_CDN_BASE}/${hexcode}.svg`;
 }
 
-export function getCachedEmojiDataUri(hexcode: string): string | null {
+function getCachedEmojiDataUri(hexcode: string): string | null {
   return dataUriCache.get(hexcode) || null;
 }
 
-export function useEmojiImg(emoji: string): string | null {
+function useEmojiImg(emoji: string): string | null {
   return getEmojiImgOrDataUri(emoji);
 }
 

@@ -37,7 +37,7 @@ export async function subscribeToPushForServer(
   }
 }
 
-export async function disablePushForServer(sUrl: string): Promise<void> {
+async function disablePushForServer(sUrl: string): Promise<void> {
   try {
     const reg = await navigator.serviceWorker.ready;
     const subscription = await reg.pushManager.getSubscription();

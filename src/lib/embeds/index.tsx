@@ -1,22 +1,3 @@
-export * from "./types";
-export * from "./utils";
-export * from "./fetch-meta";
-export { YouTubeEmbed } from "./youtube";
-export { TenorEmbed } from "./tenor";
-export { GitHubUserEmbed } from "./github-user";
-export { GitHubRepoEmbed } from "./github-repo";
-export { GitHubCommitEmbed } from "./github-commit";
-export { GitHubPREmbed } from "./github-pr";
-export { VideoEmbed } from "./video";
-export { ImageEmbed } from "./image";
-export { GiftEmbed } from "./gift";
-export { WikipediaEmbed } from "./wikipedia";
-export { SpotifyEmbed } from "./spotify";
-export { SteamEmbed } from "./steam";
-export { MistWarpEmbed } from "./mistwarp";
-export { OriginChatsServerEmbed } from "./originchats-server";
-export { LinkPreviewEmbed } from "./link-preview";
-
 import { type EmbedInfo } from "./types";
 import { YouTubeEmbed } from "./youtube";
 import { TenorEmbed } from "./tenor";

@@ -53,7 +53,7 @@ import {
 import { Icon, ServerIcon } from "../Icon";
 import { Checkbox } from "../Checkbox";
 import { LoadingButton } from "../LoadingButton";
-import { handleError, showInfo } from "../../lib/ui-signals";
+import { showUIError, showInfo } from "../../lib/ui-signals";
 import { getCharacterCountColor } from "../../lib/validation";
 import {
   switchServer,
@@ -166,7 +166,7 @@ export function SettingsModal() {
       }
     } catch (e: any) {
       setSaveMsg(e.message || "Network error");
-      handleError(e, "Failed to save profile changes", { autoDismissMs: 3000 });
+      showUIError(e, "Failed to save profile changes", { autoDismissMs: 3000 });
     } finally {
       setSaving(false);
     }
@@ -1614,7 +1614,7 @@ function StandingTab() {
         setLoading(false);
       })
       .catch((e) => {
-        handleError(e, "Failed to load standing information");
+        showUIError(e, "Failed to load standing information");
         setError(true);
         setLoading(false);
       });
@@ -2248,7 +2248,7 @@ export function AccountModal({ username }: { username: string }) {
           setProfile({ ...profile, followers: (profile.followers || 0) + 1 });
       }
     } catch (e) {
-      handleError(e, "Failed to update follow status", {
+      showUIError(e, "Failed to update follow status", {
         autoDismissMs: 3000,
       });
     } finally {

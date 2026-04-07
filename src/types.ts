@@ -3,6 +3,7 @@ export interface Channel {
   type: string;
   display_name?: string;
   icon?: string;
+  description?: string | null;
   permissions?: {
     view?: string[];
     send?: string[];

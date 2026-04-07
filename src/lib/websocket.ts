@@ -24,8 +24,6 @@ import {
   customPingSound,
   servers,
   readTimesByServer,
-  offlinePushServers,
-  pushSubscriptionsByServer,
   serverCapabilitiesByServer,
   serverAuthModeByServer,
   SPECIAL_CHANNELS,
@@ -199,19 +197,6 @@ export function playPingSound(): void {
   }
 }
 
-let notifPermissionRequested = false;
-function requestNotificationPermission(): void {
-  if (notifPermissionRequested) return;
-  notifPermissionRequested = true;
-  if ("Notification" in window && Notification.permission === "default") {
-    Notification.requestPermission();
-  }
-}
-
-// ── Web Push subscription management ─────────────────────────────────────────
-
-import { subscribeToPushForServer, disablePushForServer } from "./push-manager";
-
 export async function enablePushForServer(sUrl: string): Promise<void> {
   if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
     console.warn("[Push] Web Push not supported in this browser.");
@@ -239,8 +224,6 @@ export async function enablePushForServer(sUrl: string): Promise<void> {
 
   wsSend({ cmd: "push_get_vapid" }, sUrl);
 }
-
-export { subscribeToPushForServer, disablePushForServer };
 
 const CONNECTION_TIMEOUT = 5000;
 

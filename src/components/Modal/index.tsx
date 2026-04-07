@@ -134,7 +134,7 @@ export interface PromptDialogProps {
   cancelText?: string;
 }
 
-export function PromptDialog({
+function PromptDialog({
   isOpen,
   onClose,
   onConfirm,

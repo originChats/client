@@ -2458,6 +2458,7 @@ body.font-serif {
   font-size: 13px;
   font-weight: 500;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  height: 40px;
 }
 
 .available-role-btn:hover {

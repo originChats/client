@@ -31,7 +31,8 @@ import {
   renderChannelsSignal,
   renderMessagesSignal,
 } from "./ui-signals";
-import { wsSend, closeWebSocket } from "./websocket";
+import { wsSend } from "./ws-sender";
+import { closeWebSocket } from "./ws-connection";
 import { startMessageFetch } from "./ws-sender";
 import { saveServers, saveReadTimes } from "./persistence";
 import { session as dbSession, readTimes as dbReadTimes } from "./db";

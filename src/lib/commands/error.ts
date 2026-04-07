@@ -12,7 +12,7 @@ import {
   showCrackedAuthModal,
   crackedAuthError,
 } from "../ui-signals";
-import { closeWebSocket } from "../websocket";
+import { closeWebSocket } from "../ws-connection";
 
 export function handleError(msg: ServerError, sUrl: string): void {
   const errText: string =

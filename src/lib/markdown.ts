@@ -556,7 +556,7 @@ export function highlightCodeInContainer(container: HTMLElement): void {
   });
 }
 
-export function stripMarkdown(text: string): string {
+function stripMarkdown(text: string): string {
   return text
     .replace(/```[\s\S]*?```/g, "")
     .replace(/`[^`]+`/g, "")

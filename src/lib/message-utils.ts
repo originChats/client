@@ -23,7 +23,7 @@ function ensureServerState(sUrl: string): void {
   }
 }
 
-export function appendMessage(
+function appendMessage(
   serverUrl: string,
   key: string,
   message: any,
@@ -41,7 +41,7 @@ export function appendMessage(
   renderMessagesSignal.value++;
 }
 
-export function prependMessages(
+function prependMessages(
   serverUrl: string,
   key: string,
   messages: any[],

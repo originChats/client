@@ -117,7 +117,7 @@ export async function saveNotifSettings(): Promise<void> {
   }
 }
 
-export async function fetchMyAccountData(): Promise<void> {
+async function fetchMyAccountData(): Promise<void> {
   if (!token.value) return;
   try {
     const data = await getFriends();

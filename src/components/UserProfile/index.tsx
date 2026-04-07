@@ -385,6 +385,11 @@ export function UserProfileCard({
           <div className={styles.profileCardAvatar}>
             <UserAvatar
               username={profile.username}
+              nickname={
+                usersByServer.value[serverUrl.value]?.[
+                  profile.username?.toLowerCase()
+                ]?.nickname
+              }
               pfp={profile.pfp}
               alt={profile.username}
             />
@@ -505,6 +510,11 @@ export function UserProfileCard({
           <div className={styles.profilePanelAvatar}>
             <UserAvatar
               username={profile.username}
+              nickname={
+                usersByServer.value[serverUrl.value]?.[
+                  profile.username?.toLowerCase()
+                ]?.nickname
+              }
               pfp={profile.pfp}
               alt={profile.username}
             />

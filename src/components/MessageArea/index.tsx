@@ -2129,6 +2129,7 @@ export function MessageArea() {
                 <Icon name="CornerUpRight" size={20} />
                 <UserAvatar
                   username={replyTo.user}
+                  nickname={users.value[replyTo.user?.toLowerCase()]?.nickname}
                   pfp={users.value[replyTo.user?.toLowerCase()]?.pfp}
                   cracked={users.value[replyTo.user?.toLowerCase()]?.cracked}
                   className="avatar-small"
@@ -2156,6 +2157,9 @@ export function MessageArea() {
                 <Icon name="CornerUpRight" size={20} />
                 <UserAvatar
                   username={interaction.username}
+                  nickname={
+                    users.value[interaction.username?.toLowerCase()]?.nickname
+                  }
                   pfp={users.value[interaction.username?.toLowerCase()]?.pfp}
                   cracked={
                     users.value[interaction.username?.toLowerCase()]?.cracked
