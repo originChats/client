@@ -978,6 +978,7 @@ export function cleanupVisibilityHandler(): void {
     idleDebounceTimer = null;
   }
   autoIdleActive = false;
+  cleanupAudioContext();
 }
 
 export { wsSend } from "./ws-sender";

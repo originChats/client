@@ -63,21 +63,28 @@ export function handleMessageNew(msg: MessageNew, sUrl: string): void {
   const isThreadMessage = !!msg.thread_id;
   const messageKey = getMessageKey(msg);
 
-  const channelIsLoaded =
-    loadedChannelsByServer[sUrl]?.has(messageKey) ?? false;
-  if (channelIsLoaded) {
-    const channelMsgs = messagesByServer.value[sUrl]?.[messageKey] || [];
-    const alreadyExists = channelMsgs.some(
-      (m: Message) => m.id === msg.message.id,
-    );
-    if (!alreadyExists) {
-      messagesByServer.value = {
-        ...messagesByServer.value,
-        [sUrl]: {
-          ...messagesByServer.value[sUrl],
-          [messageKey]: [...channelMsgs, msg.message],
-        },
-      };
+  const isCurrentChannel =
+    sUrl === serverUrl.value &&
+    ((isThreadMessage && currentThread.value?.id === msg.thread_id) ||
+      (!isThreadMessage && currentChannel.value?.name === messageKey));
+
+  if (isCurrentChannel) {
+    const channelIsLoaded =
+      loadedChannelsByServer[sUrl]?.has(messageKey) ?? false;
+    if (channelIsLoaded) {
+      const channelMsgs = messagesByServer.value[sUrl]?.[messageKey] || [];
+      const alreadyExists = channelMsgs.some(
+        (m: Message) => m.id === msg.message.id,
+      );
+      if (!alreadyExists) {
+        messagesByServer.value = {
+          ...messagesByServer.value,
+          [sUrl]: {
+            ...messagesByServer.value[sUrl],
+            [messageKey]: [...channelMsgs, msg.message],
+          },
+        };
+      }
     }
   }
 

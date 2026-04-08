@@ -188,17 +188,10 @@ function searchRoles(query: string): AutocompleteItem[] {
   return results;
 }
 
-interface EmojiEntry {
-  label: string;
-  hexcode: string;
-  emoji: string;
-  tags?: string[];
-}
-
 function searchEmojis(query: string): AutocompleteItem[] {
   const q = query.toLowerCase();
 
-  const allEmojis: EmojiEntry[] = (window as any).shortcodes || [];
+  const allEmojis = emojiCache.getAllEmojis();
   const results: AutocompleteItem[] = [];
 
   for (const entry of allEmojis) {

@@ -379,6 +379,10 @@ export function setPendingDMAddUsername(username: string | null) {
 
 export const serversAttempted: Set<string> = new Set();
 
+export function clearServersAttempted(): void {
+  serversAttempted.clear();
+}
+
 let originFS: any = null;
 export function setOriginFS(fs: any) {
   originFS = fs;

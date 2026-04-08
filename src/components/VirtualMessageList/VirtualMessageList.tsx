@@ -25,6 +25,8 @@ interface VirtualListProps<T> {
   onItemsRendered?: (startIndex: number, endIndex: number) => void;
 }
 
+const MAX_MEASURED_HEIGHTS = 500;
+
 interface MeasuredHeights {
   heights: Map<string, number>;
   positions: number[];
@@ -63,6 +65,13 @@ export function VirtualMessageList<T>({
         const currentMeasured = measuredHeightsRef.current.get(key);
         if (currentMeasured !== height) {
           measuredHeightsRef.current.set(key, height);
+          if (measuredHeightsRef.current.size > MAX_MEASURED_HEIGHTS) {
+            const keys = [...measuredHeightsRef.current.keys()];
+            const toRemove = keys.slice(0, keys.length - MAX_MEASURED_HEIGHTS);
+            for (const k of toRemove) {
+              measuredHeightsRef.current.delete(k);
+            }
+          }
         }
       }
     },

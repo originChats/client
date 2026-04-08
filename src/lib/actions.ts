@@ -47,6 +47,20 @@ import {
 } from "./rotur-api";
 import { Channel, Thread } from "@/types";
 
+import { messageState } from "./state";
+
+function clearOtherChannels(sUrl: string, keepChannel: string): void {
+  const serverMessages = messagesByServer.value[sUrl];
+  if (!serverMessages) return;
+
+  for (const channel of Object.keys(serverMessages)) {
+    if (channel !== keepChannel) {
+      delete serverMessages[channel];
+    }
+  }
+  messagesByServer.value = { ...messagesByServer.value };
+}
+
 export function selectChannel(channel: {
   name: string;
   type: string;
@@ -56,7 +70,6 @@ export function selectChannel(channel: {
 
   currentChannel.value = channel as any;
 
-  // Clear thread selection when selecting a non-thread channel
   if (channel.type !== "thread") {
     currentThread.value = null;
   }
@@ -66,19 +79,22 @@ export function selectChannel(channel: {
   markChannelAsRead(channel.name);
 
   if (SPECIAL_CHANNELS.has(channel.name)) {
+    messageState.setCurrentChannel(null, null);
     renderChannelsSignal.value++;
     return;
   }
 
-  // Don't fetch messages for forum channels - they use threads instead
   if (channel.type === "forum") {
+    messageState.setCurrentChannel(null, null);
     renderChannelsSignal.value++;
     renderMessagesSignal.value++;
     updateUrlFromState();
     return;
   }
 
-  // Persist the last-visited channel for this server
+  clearOtherChannels(sUrl, channel.name);
+  messageState.setCurrentChannel(sUrl, channel.name);
+
   lastChannelByServer.value = {
     ...lastChannelByServer.value,
     [sUrl]: channel.name,
@@ -89,11 +105,8 @@ export function selectChannel(channel: {
     /* empty */
   }
 
-  const hasLoaded = loadedChannelsByServer[sUrl]?.has(channel.name) ?? false;
-  if (!hasLoaded) {
-    startMessageFetch(sUrl, channel.name);
-    wsSend({ cmd: "messages_get", channel: channel.name, limit: 100 }, sUrl);
-  }
+  startMessageFetch(sUrl, channel.name);
+  wsSend({ cmd: "messages_get", channel: channel.name, limit: 100 }, sUrl);
 
   renderChannelsSignal.value++;
   updateUrlFromState();
@@ -106,6 +119,7 @@ export function selectHomeChannel(): void {
     type: "home",
     display_name: "Home",
   } as Channel;
+  messageState.setCurrentChannel(null, null);
   renderChannelsSignal.value++;
   updateUrlFromState();
 }
@@ -117,6 +131,7 @@ export function selectRelationshipsChannel(): void {
     type: "relationships",
     display_name: "Friends",
   } as Channel;
+  messageState.setCurrentChannel(null, null);
   renderChannelsSignal.value++;
   updateUrlFromState();
 }
@@ -127,6 +142,7 @@ export function selectDiscoveryChannel(): void {
     type: "discovery",
     display_name: "Discover",
   } as Channel;
+  messageState.setCurrentChannel(null, null);
   renderChannelsSignal.value++;
   updateUrlFromState();
 }
@@ -137,6 +153,7 @@ export function selectRolesChannel(): void {
     type: "roles",
     display_name: "Roles",
   } as Channel;
+  messageState.setCurrentChannel(null, null);
   renderChannelsSignal.value++;
   updateUrlFromState();
   wsSend({ cmd: "self_roles_list" }, serverUrl.value);
@@ -144,6 +161,15 @@ export function selectRolesChannel(): void {
 
 export async function switchServer(url: string): Promise<boolean> {
   console.log(`[switchServer] Switching to server: ${url}`);
+
+  const currentSUrl = serverUrl.value;
+  if (currentSUrl && currentSUrl !== url) {
+    messagesByServer.value = Object.fromEntries(
+      Object.entries(messagesByServer.value).filter(
+        ([key]) => key !== currentSUrl,
+      ),
+    );
+  }
 
   const connStatus = wsConnections[url]?.status;
 
@@ -472,22 +498,21 @@ export function selectThread(thread: Thread | null): void {
       parent_channel: thread.parent_channel,
     } as Channel;
 
-    // Clear thread unread counts
     const sUrl = serverUrl.value;
     unreadState.clearThread(sUrl, thread.id);
 
-    // Fetch thread messages
-    const hasLoaded = loadedChannelsByServer[sUrl]?.has(thread.id) ?? false;
-    if (!hasLoaded) {
-      startMessageFetch(sUrl, thread.id);
-      wsSend({ cmd: "messages_get", thread_id: thread.id, limit: 30 }, sUrl);
-    }
+    clearOtherChannels(sUrl, thread.id);
+    messageState.setCurrentChannel(sUrl, thread.id);
+
+    startMessageFetch(sUrl, thread.id);
+    wsSend({ cmd: "messages_get", thread_id: thread.id, limit: 30 }, sUrl);
 
     renderMessagesSignal.value++;
     renderChannelsSignal.value++;
     renderGuildSidebarSignal.value++;
     updateUrlFromState();
   } else {
+    messageState.setCurrentChannel(null, null);
     const currentChannelValue = currentChannel.value;
     const currentThreadValue = currentThread.value;
     if (

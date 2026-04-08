@@ -3,6 +3,13 @@ import { messagesByServer } from "../state";
 
 type MessageKeyInput = { thread_id?: string; channel: string };
 
+const MAX_MESSAGES_PER_CHANNEL = 100;
+
+function trimMessages(messages: any[]): any[] {
+  if (messages.length <= MAX_MESSAGES_PER_CHANNEL) return messages;
+  return messages.slice(-MAX_MESSAGES_PER_CHANNEL);
+}
+
 export function getMessageKey(msg: MessageKeyInput): string {
   return msg.thread_id || msg.channel;
 }
@@ -23,11 +30,7 @@ function ensureServerState(sUrl: string): void {
   }
 }
 
-function appendMessage(
-  serverUrl: string,
-  key: string,
-  message: any,
-): void {
+function appendMessage(serverUrl: string, key: string, message: any): void {
   ensureServerState(serverUrl);
   const existing = messagesByServer.value[serverUrl][key] || [];
   if (existing.some((m) => m.id === message.id)) return;
@@ -35,7 +38,7 @@ function appendMessage(
     ...messagesByServer.value,
     [serverUrl]: {
       ...messagesByServer.value[serverUrl],
-      [key]: [...existing, message],
+      [key]: trimMessages([...existing, message]),
     },
   };
   renderMessagesSignal.value++;
@@ -54,7 +57,7 @@ function prependMessages(
     ...messagesByServer.value,
     [serverUrl]: {
       ...messagesByServer.value[serverUrl],
-      [key]: [...newOnes, ...existing],
+      [key]: trimMessages([...newOnes, ...existing]),
     },
   };
   renderMessagesSignal.value++;
@@ -102,9 +105,10 @@ export function setMessages(
   messages: any[],
 ): void {
   ensureServerState(serverUrl);
+  const trimmed = trimMessages(messages);
   messagesByServer.value = {
     ...messagesByServer.value,
-    [serverUrl]: { ...messagesByServer.value[serverUrl], [key]: messages },
+    [serverUrl]: { ...messagesByServer.value[serverUrl], [key]: trimmed },
   };
   renderMessagesSignal.value++;
 }
@@ -126,9 +130,10 @@ export function insertMessage(
           message,
           ...messages.slice(insertIdx),
         ];
+  const trimmed = trimMessages(newMessages);
   messagesByServer.value = {
     ...messagesByServer.value,
-    [serverUrl]: { ...messagesByServer.value[serverUrl], [key]: newMessages },
+    [serverUrl]: { ...messagesByServer.value[serverUrl], [key]: trimmed },
   };
   renderMessagesSignal.value++;
 }

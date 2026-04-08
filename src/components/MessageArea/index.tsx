@@ -70,7 +70,6 @@ import {
 } from "../../lib/websocket";
 import {
   highlightCodeInContainer,
-  setShortcodeMap,
   replaceShortcodes,
   convertChannelMentionsToLinks,
 } from "../../lib/markdown";
@@ -80,7 +79,7 @@ import {
   joinThread,
   selectThread,
 } from "../../lib/actions";
-import { getShortcodeMap, loadShortcodes } from "../../lib/shortcodes";
+import { loadShortcodes } from "../../lib/shortcodes";
 
 function transformCustomEmojisToUrls(text: string): string {
   return text.replace(/:[\w][\w-]*:/g, (match) => {
@@ -111,7 +110,11 @@ import {
 import type { PendingAttachment } from "../../lib/attachment-uploader";
 import { MessageContent } from "../MessageContent";
 import { MessageGroupRow } from "../MessageGroupRow";
-import { MessageActionButtons } from "../MessageActionButtons";
+import {
+  FloatingActionButtons,
+  showActionButtons,
+  hideActionButtons,
+} from "../MessageActionButtons/FloatingActionButtons";
 import { MessageEmbed } from "../MessageEmbed";
 import { WebhookBadge } from "../WebhookBadge";
 import { AttachmentPreview } from "../AttachmentPreview";
@@ -1195,9 +1198,7 @@ export function MessageArea() {
   }, []);
 
   useEffect(() => {
-    loadShortcodes().then(() => {
-      setShortcodeMap(getShortcodeMap());
-    });
+    loadShortcodes();
   }, []);
 
   // Reset scroll lock and snap to bottom on channel switch
@@ -2093,21 +2094,33 @@ export function MessageArea() {
             className={groupClass}
             data-msg-id={msg.id}
             onContextMenu={(e: any) => handleMessageContextMenu(e, msg)}
+            onMouseEnter={(e: any) => {
+              const target = e.currentTarget as HTMLElement;
+              showActionButtons({
+                element: target,
+                message: msg,
+                onReply: () => startReply(msg),
+                onReact: (emoji: string) => handleReaction(msg, emoji),
+                onOpenEmojiPicker: () => {
+                  setReactingToMessage(msg);
+                  setPickerTab("emoji");
+                  setShowPicker(true);
+                },
+                onContextMenu: (e: MouseEvent) =>
+                  handleMessageContextMenu(e as any, msg),
+                canReact,
+                canReply,
+                isOwn,
+              });
+            }}
+            onMouseLeave={(e: any) => {
+              const relatedTarget = e.relatedTarget as HTMLElement;
+              if (relatedTarget?.closest(".messageActionButtons")) {
+                return;
+              }
+              hideActionButtons();
+            }}
           >
-            <MessageActionButtons
-              message={msg}
-              onReply={() => startReply(msg)}
-              onReact={(emoji) => handleReaction(msg, emoji)}
-              onOpenEmojiPicker={() => {
-                setReactingToMessage(msg);
-                setPickerTab("emoji");
-                setShowPicker(true);
-              }}
-              onContextMenu={(e) => handleMessageContextMenu(e as any, msg)}
-              canReact={canReact}
-              canReply={canReply}
-              isOwn={isOwn}
-            />
             {replyTo && canReply && (
               <div
                 className="message-reply"
@@ -2439,6 +2452,7 @@ export function MessageArea() {
           onDragLeave={handleDragLeave as any}
           onDrop={handleDrop as any}
         >
+          <FloatingActionButtons />
           {isDragging && (
             <div className="drag-drop-overlay">
               <div className="drag-drop-content">

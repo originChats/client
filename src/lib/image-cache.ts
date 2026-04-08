@@ -1,6 +1,10 @@
 const CACHE_DURATION_MS = 2 * 24 * 60 * 60 * 1000;
 const MAX_CACHE_ENTRIES = 50;
 const MAX_SIZE_CACHE_ENTRIES = 200;
+const MAX_PENDING_FETCHES = 100;
+const MEMORY_CACHE_MAX_SIZE = 30 * 1024 * 1024;
+const IDB_MAX_SIZE = 100 * 1024 * 1024;
+const IDB_MAX_ENTRIES = 500;
 
 const DB_NAME = "originchats";
 const STORE_NAME = "imageCache";
@@ -10,6 +14,7 @@ const DB_VERSION = 3;
 interface CachedImage {
   dataUri: string;
   timestamp: number;
+  size: number;
 }
 
 interface CachedImageSize {
@@ -20,6 +25,7 @@ interface CachedImageSize {
 
 const memoryCache = new Map<string, CachedImage>();
 const sizeMemoryCache = new Map<string, CachedImageSize>();
+let memoryCacheSize = 0;
 const channelLoadingState = new Map<
   string,
   {
@@ -84,14 +90,23 @@ async function getFromCache(url: string): Promise<CachedImage | undefined> {
 }
 
 async function saveToCache(url: string, dataUri: string): Promise<void> {
-  if (memoryCache.size >= MAX_CACHE_ENTRIES) {
-    const oldestKey = memoryCache.keys().next().value;
-    if (oldestKey) {
-      memoryCache.delete(oldestKey);
+  const size = dataUri.length;
+  if (memoryCacheSize + size > MEMORY_CACHE_MAX_SIZE) {
+    const entries = [...memoryCache.entries()];
+    entries.sort((a, b) => a[1].timestamp - b[1].timestamp);
+    for (const [key, entry] of entries) {
+      if (memoryCacheSize + size <= MEMORY_CACHE_MAX_SIZE) break;
+      memoryCache.delete(key);
+      memoryCacheSize -= entry.size;
     }
   }
-  const entry: CachedImage = { dataUri, timestamp: Date.now() };
+  const existing = memoryCache.get(url);
+  if (existing) {
+    memoryCacheSize -= existing.size;
+  }
+  const entry: CachedImage = { dataUri, timestamp: Date.now(), size };
   memoryCache.set(url, entry);
+  memoryCacheSize += size;
   try {
     const db = await openDb();
     if (!db.objectStoreNames.contains(STORE_NAME)) return;
@@ -127,11 +142,31 @@ async function deleteExpiredCache(): Promise<void> {
       };
 
       tx.oncomplete = () => {
+        const entries: { key: IDBValidKey; entry: CachedImage }[] = [];
+        let totalSize = 0;
+
         keys.forEach((key, i) => {
           const entry = vals[i];
-          if (entry && now - entry.timestamp > CACHE_DURATION_MS) {
+          if (entry) {
+            totalSize += entry.size;
+            entries.push({ key, entry });
+          }
+        });
+
+        entries.sort((a, b) => a.entry.timestamp - b.entry.timestamp);
+
+        let deletedSize = 0;
+
+        entries.forEach(({ key, entry }) => {
+          const expired = now - entry.timestamp > CACHE_DURATION_MS;
+          const overSizeLimit = totalSize - deletedSize > IDB_MAX_SIZE;
+          const overEntryLimit =
+            keys.length - (deletedSize > 0 ? 1 : 0) > IDB_MAX_ENTRIES;
+
+          if (expired || overSizeLimit || overEntryLimit) {
             const deleteTx = db.transaction(STORE_NAME, "readwrite");
             deleteTx.objectStore(STORE_NAME).delete(key);
+            deletedSize += entry.size;
           }
         });
       };
@@ -163,6 +198,20 @@ async function deleteExpiredCache(): Promise<void> {
             deleteTx.objectStore(SIZE_STORE_NAME).delete(key);
           }
         });
+
+        if (keys.length > IDB_MAX_ENTRIES) {
+          const entries: { key: IDBValidKey; entry: CachedImageSize }[] = [];
+          keys.forEach((key, i) => {
+            if (vals[i]) entries.push({ key, entry: vals[i] });
+          });
+          entries.sort((a, b) => a.entry.timestamp - b.entry.timestamp);
+
+          const toDelete = entries.slice(0, keys.length - IDB_MAX_ENTRIES);
+          toDelete.forEach(({ key }) => {
+            const deleteTx = db.transaction(SIZE_STORE_NAME, "readwrite");
+            deleteTx.objectStore(SIZE_STORE_NAME).delete(key);
+          });
+        }
       };
     }
   } catch {}
@@ -186,6 +235,7 @@ async function fetchAsDataUri(url: string): Promise<string | null> {
 }
 
 const pendingFetches = new Map<string, Promise<string | null>>();
+let pendingFetchCount = 0;
 
 export function getCachedImageSync(url: string): string | null {
   if (!url || url.startsWith("data:") || url.startsWith("blob:")) return url;
@@ -209,11 +259,21 @@ export async function getCachedImage(url: string): Promise<string | null> {
     }
   }
 
+  if (pendingFetchCount >= MAX_PENDING_FETCHES) {
+    const oldestKey = pendingFetches.keys().next().value;
+    if (oldestKey) {
+      pendingFetches.delete(oldestKey);
+      pendingFetchCount--;
+    }
+  }
+
   let pending = pendingFetches.get(url);
   if (!pending) {
+    pendingFetchCount++;
     pending = fetchAsDataUri(url)
       .then((dataUri) => {
         pendingFetches.delete(url);
+        pendingFetchCount--;
         if (dataUri) {
           saveToCache(url, dataUri);
         }
@@ -221,6 +281,7 @@ export async function getCachedImage(url: string): Promise<string | null> {
       })
       .catch((err) => {
         pendingFetches.delete(url);
+        pendingFetchCount--;
         throw err;
       });
     pendingFetches.set(url, pending);
@@ -242,6 +303,16 @@ export function startChannelLoad(
   const state = channelLoadingState.get(channelId);
   if (state) {
     if (state.timeout) clearTimeout(state.timeout);
+    channelLoadingState.delete(channelId);
+  }
+
+  if (channelLoadingState.size > 20) {
+    const oldestKey = channelLoadingState.keys().next().value;
+    if (oldestKey) {
+      const old = channelLoadingState.get(oldestKey);
+      if (old?.timeout) clearTimeout(old.timeout);
+      channelLoadingState.delete(oldestKey);
+    }
   }
 
   const urlsToLoad = imageUrls.filter((url) => !getCachedImageSync(url));

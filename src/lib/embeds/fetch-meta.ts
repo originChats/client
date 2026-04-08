@@ -3,6 +3,7 @@ const META_CACHE = new Map<
   { data: LinkMetadata | null; timestamp: number }
 >();
 const CACHE_TTL = 5 * 60 * 1000;
+const MAX_META_CACHE_SIZE = 100;
 
 export interface LinkMetadata {
   title: string;
@@ -132,6 +133,17 @@ export async function fetchLinkMetadata(
   const cached = META_CACHE.get(url);
   if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
     return cached.data;
+  }
+
+  if (META_CACHE.size >= MAX_META_CACHE_SIZE) {
+    const now = Date.now();
+    const entries = [...META_CACHE.entries()];
+    entries.sort((a, b) => a[1].timestamp - b[1].timestamp);
+    const toDelete = entries.slice(
+      0,
+      META_CACHE.size - MAX_META_CACHE_SIZE + 1,
+    );
+    toDelete.forEach(([k]) => META_CACHE.delete(k));
   }
 
   try {

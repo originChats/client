@@ -33,6 +33,8 @@ class EmojiDataCache {
   private allEmojis: EmojiEntry[] | null = null;
   private searchTrie: TrieNode | null = null;
   private customEmojiCache: Map<string, CustomEmojiItem[]> | null = null;
+  private customEmojiFlatCache: CustomEmojiItem[] | null = null;
+  private shortcodeMap: Map<string, string> | null = null;
   private initialized = false;
   private initPromise: Promise<void> | null = null;
   private initStarted = false;
@@ -107,14 +109,9 @@ class EmojiDataCache {
   }
 
   private async doInitialize(): Promise<void> {
-    const shortcodes: EmojiEntry[] = (window as any).shortcodes || [];
-
-    if (shortcodes.length === 0) {
-      await this.loadShortcodes();
+    if (!this.allEmojis) {
+      await this.loadEmojiData();
     }
-
-    const data: EmojiEntry[] = (window as any).shortcodes || [];
-    this.allEmojis = data.filter((e) => e.emoji && e.label);
 
     this.buildCategories();
     this.buildSearchIndex();
@@ -122,14 +119,37 @@ class EmojiDataCache {
     this.initialized = true;
   }
 
-  private async loadShortcodes(): Promise<void> {
+  async loadEmojiData(): Promise<void> {
+    if (this.allEmojis) return;
+
     try {
       const response = await fetch("/shortcodes.json");
       if (!response.ok) return;
       const data = await response.json();
-      (window as any).shortcodes = data;
-    } catch {
-      (window as any).shortcodes = [];
+      this.allEmojis = data.filter((e: EmojiEntry) => e.emoji && e.label);
+      this.shortcodeMap = new Map();
+
+      for (const item of data) {
+        this.shortcodeMap.set(item.emoji, item.emoji);
+
+        if (item.label) {
+          this.shortcodeMap.set(`:${item.label}:`, item.emoji);
+          const underscoreKey = `:${item.label.replace(/ /g, "_")}:`;
+          if (underscoreKey !== `:${item.label}:`) {
+            this.shortcodeMap.set(underscoreKey, item.emoji);
+          }
+        }
+
+        if (item.shortcodes) {
+          for (const shortcode of item.shortcodes) {
+            this.shortcodeMap.set(shortcode, item.emoji);
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Failed to load emoji data:", error);
+      this.allEmojis = [];
+      this.shortcodeMap = new Map();
     }
   }
 
@@ -331,7 +351,19 @@ class EmojiDataCache {
     return this.allEmojis || [];
   }
 
+  getShortcodeMap(): Map<string, string> {
+    return this.shortcodeMap || new Map();
+  }
+
+  lookupShortcode(key: string): string | undefined {
+    return this.shortcodeMap?.get(key);
+  }
+
   getCustomEmojisByServer(): Map<string, CustomEmojiItem[]> {
+    if (this.customEmojiCache) {
+      return this.customEmojiCache;
+    }
+
     const currentCustomEmojis = customEmojisByServer.value;
     const currentServers = servers.value;
 
@@ -357,10 +389,20 @@ class EmojiDataCache {
       }
     }
 
+    this.customEmojiCache = result;
     return result;
   }
 
+  invalidateCustomEmojiCache(): void {
+    this.customEmojiCache = null;
+    this.customEmojiFlatCache = null;
+  }
+
   getCustomEmojisFlat(): CustomEmojiItem[] {
+    if (this.customEmojiFlatCache) {
+      return this.customEmojiFlatCache;
+    }
+
     const byServer = this.getCustomEmojisByServer();
     const currentSUrl = serverUrl.value;
     const currentServers = servers.value;
@@ -373,7 +415,10 @@ class EmojiDataCache {
       return (serverA?.name || a).localeCompare(serverB?.name || b);
     });
 
-    return sortedUrls.flatMap((url) => byServer.get(url) || []);
+    this.customEmojiFlatCache = sortedUrls.flatMap(
+      (url) => byServer.get(url) || [],
+    );
+    return this.customEmojiFlatCache;
   }
 
   getSections(): Array<{

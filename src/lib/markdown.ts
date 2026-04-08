@@ -1,5 +1,6 @@
 import hljs from "highlight.js/lib/core";
 import { servers, threadsByServer, customEmojisByServer } from "../state";
+import { lookupShortcode } from "./shortcodes";
 import type { CustomEmoji } from "../types";
 
 async function fetchEmojiFromServer(
@@ -83,10 +84,28 @@ const TRUSTED_DOMAINS = [
   "cdn.discordapp.com",
 ];
 
-let shortcodeMap: Record<string, string> = {};
+let customEmojiNameIndex: Map<
+  string,
+  { sUrl: string; emoji: CustomEmoji }
+> | null = null;
 
-export function setShortcodeMap(map: Record<string, string>) {
-  shortcodeMap = map;
+function getCustomEmojiIndex(): Map<
+  string,
+  { sUrl: string; emoji: CustomEmoji }
+> {
+  if (!customEmojiNameIndex) {
+    customEmojiNameIndex = new Map();
+    for (const [sUrl, emojis] of Object.entries(customEmojisByServer.value)) {
+      for (const emoji of Object.values(emojis)) {
+        customEmojiNameIndex.set(emoji.name.toLowerCase(), { sUrl, emoji });
+      }
+    }
+  }
+  return customEmojiNameIndex;
+}
+
+export function invalidateCustomEmojiIndex(): void {
+  customEmojiNameIndex = null;
 }
 
 function escapeHtml(text: string): string {
@@ -126,24 +145,24 @@ function proxyImageUrl(url: string): string {
 }
 
 export function replaceShortcodes(text: string): string {
-  if (shortcodeMap) {
-    text = text.replace(/:[\w][^:\n]*?:/g, (match) => {
-      if (shortcodeMap[match]) return shortcodeMap[match];
-      const trimmed = `:${match.slice(1, -1).trim()}:`;
-      return shortcodeMap[trimmed] || match;
-    });
-  }
+  text = text.replace(/:[\w][^:\n]*?:/g, (match) => {
+    const result = lookupShortcode(match);
+    if (result) return result;
+    const trimmed = `:${match.slice(1, -1).trim()}:`;
+    const trimmedResult = lookupShortcode(trimmed);
+    return trimmedResult || match;
+  });
 
   text = text.replace(/:[\w][\w-]*:/g, (match) => {
-    const name = match.slice(1, -1);
-    for (const [sUrl, emojis] of Object.entries(customEmojisByServer.value)) {
-      for (const emoji of Object.values(emojis)) {
-        if (emoji.name === name) {
-          const baseUrl = sUrl.startsWith("http") ? sUrl : `https://${sUrl}`;
-          const url = `${baseUrl}/emojis/${emoji.fileName}`;
-          return `<img class="custom-emoji" src="${url}" alt=":${emoji.name}:" title="${emoji.name}" loading="lazy" />`;
-        }
-      }
+    const name = match.slice(1, -1).toLowerCase();
+    const index = getCustomEmojiIndex();
+    const found = index.get(name);
+    if (found) {
+      const baseUrl = found.sUrl.startsWith("http")
+        ? found.sUrl
+        : `https://${found.sUrl}`;
+      const url = `${baseUrl}/emojis/${found.emoji.fileName}`;
+      return `<img class="custom-emoji" src="${url}" alt=":${found.emoji.name}:" title="${found.emoji.name}" loading="lazy" />`;
     }
     return match;
   });

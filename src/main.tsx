@@ -28,6 +28,7 @@ import {
   serverNotifSettings,
   channelNotifSettings,
   notificationPromptDismissed,
+  clearServersAttempted,
 } from "./state";
 
 import {
@@ -43,6 +44,7 @@ import {
   showNotificationPrompt,
   showUIError,
 } from "./lib/ui-signals";
+import { startMemoryCleanup, stopMemoryCleanup } from "./lib/memory-cleanup";
 import {
   loadServers,
   loadReadTimes,
@@ -321,11 +323,14 @@ function App() {
     }
 
     setupVisibilityHandler();
+    startMemoryCleanup();
 
     window.addEventListener("beforeunload", () => {
       cleanupVisibilityHandler();
       cleanupAudioContext();
       cleanupWsSenderAudio();
+      stopMemoryCleanup();
+      clearServersAttempted();
     });
 
     const pendingServer = sessionStorage.getItem("pendingServerJoin") ?? null;

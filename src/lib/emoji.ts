@@ -21,6 +21,7 @@ const TWEMOJI_CDN_BASE =
 
 const dataUriCache = new Map<string, string>();
 const inflightRequests = new Map<string, Promise<void>>();
+const MAX_EMOJI_CACHE_SIZE = 200;
 
 const MAX_CONCURRENT_FETCHES = 6;
 let activeFetches = 0;
@@ -53,6 +54,14 @@ function processQueue(): void {
 
 function ensureCached(hexcode: string): void {
   if (dataUriCache.has(hexcode) || inflightRequests.has(hexcode)) return;
+
+  if (dataUriCache.size >= MAX_EMOJI_CACHE_SIZE) {
+    const keysToDelete = [...dataUriCache.keys()].slice(
+      0,
+      dataUriCache.size - MAX_EMOJI_CACHE_SIZE + 1,
+    );
+    keysToDelete.forEach((k) => dataUriCache.delete(k));
+  }
 
   const promise = new Promise<void>((resolve) => {
     fetchQueue.push({ hexcode, resolve: () => resolve() });
