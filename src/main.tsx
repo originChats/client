@@ -280,15 +280,9 @@ function App() {
       });
     }
 
-    readTimesByServer.value = localReadTimes;
+  readTimesByServer.value = localReadTimes;
 
-    try {
-      await unreadState.mergeFromCloud();
-    } catch (e) {
-      console.error("Failed to merge pings from cloud:", e);
-    }
-
-    // Load notification settings from OriginFS and merge with IDB values.
+  // Load notification settings from OriginFS and merge with IDB values.
     // Cloud entries win for keys not already set locally (same strategy as read times).
     try {
       const cloudNotif = await loadNotifSettings();

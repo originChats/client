@@ -1,11 +1,9 @@
 import { signal, computed } from "@preact/signals";
 import { pings as pingsDb } from "../db";
-import { loadPings, savePings } from "../persistence";
 
 type ChannelKey = `${string}:${string}`;
 
 let persistenceEnabled = false;
-let cloudPersistenceEnabled = false;
 
 async function persistToDb(
   pings: Record<ChannelKey, number>,
@@ -14,11 +12,6 @@ async function persistToDb(
   if (!persistenceEnabled) return;
   try {
     await pingsDb.set({ pings, unreads });
-    if (cloudPersistenceEnabled) {
-      savePings().catch((e) =>
-        console.error("Failed to persist pings to cloud:", e),
-      );
-    }
   } catch (e) {
     console.error("Failed to persist pings to IndexedDB:", e);
   }
@@ -50,19 +43,7 @@ class UnreadState {
     }
   }
 
-  async mergeFromCloud() {
-    try {
-      const cloudData = await loadPings();
-      const mergedPings = { ...cloudData.pings, ...this._pings.value };
-      const mergedUnreads = { ...cloudData.unreads, ...this._unreads.value };
-      this._pings.value = mergedPings as Record<ChannelKey, number>;
-      this._unreads.value = mergedUnreads as Record<ChannelKey, number>;
-      cloudPersistenceEnabled = true;
-      this.schedulePersist();
-    } catch (e) {
-      console.error("Failed to merge pings from cloud:", e);
-    }
-  }
+
 
   private schedulePersist() {
     if (this.persistTimeout) clearTimeout(this.persistTimeout);

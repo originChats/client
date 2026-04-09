@@ -2,6 +2,26 @@
 
 This document describes the server-side unreads tracking implementation for OriginChats client.
 
+## Recent Changes (2026-04-09)
+
+### Removed Old Cloud Persistence System
+- Removed `cloudPersistenceEnabled` flag from `unread.ts`
+- Removed `mergeFromCloud()` method - unreads are now fully server-driven
+- Removed cloud sync calls from persistence logic
+- Removed `mergeFromCloud()` call from `main.tsx`
+
+### Added Server-Driven Unread Methods
+- Added `setChannelUnread(channelId, count)` to `UnreadState` - sets unread count from server
+- Added `setAllUnreads(unreads)` to `UnreadState` - bulk replace all unreads from server
+
+### Enhanced markChannelAsRead
+- Updated `markChannelAsRead()` in `actions.ts` to send `unreads_ack` command to server
+- Checks server capabilities before sending command
+
+### WebSocket Routing
+- Added unreads command handlers to websocket imports
+- Added routing cases for `unreads_get`, `unreads_count`, `unreads_ack`, `unreads_update`
+
 ## Overview
 
 The client now supports server-side unreads tracking using the following commands:
