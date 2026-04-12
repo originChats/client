@@ -8,28 +8,46 @@ export function handleMessageReact(
   sUrl: string,
 ): void {
   const messageKey = getMessageKey(msg);
-  if (!messagesByServer.value[sUrl]?.[messageKey]) return;
-  const reactMsg = messagesByServer.value[sUrl][messageKey].find(
-    (m) => m.id === msg.id,
-  );
-  if (reactMsg) {
-    const reactUser: string = typeof msg.from === "string" ? msg.from : "";
-    if (!reactMsg.reactions) reactMsg.reactions = {};
-    if (msg.cmd === "message_react_add") {
-      if (!reactMsg.reactions[msg.emoji]) reactMsg.reactions[msg.emoji] = [];
-      if (!reactMsg.reactions[msg.emoji].includes(reactUser)) {
-        reactMsg.reactions[msg.emoji].push(reactUser);
-      }
-    } else {
-      if (reactMsg.reactions[msg.emoji]) {
-        reactMsg.reactions[msg.emoji] = reactMsg.reactions[msg.emoji].filter(
-          (u: string) => u !== reactUser,
-        );
-        if (reactMsg.reactions[msg.emoji].length === 0) {
-          delete reactMsg.reactions[msg.emoji];
-        }
+  const channelMessages = messagesByServer.value[sUrl]?.[messageKey];
+  if (!channelMessages) return;
+
+  const msgIndex = channelMessages.findIndex((m) => m.id === msg.id);
+  if (msgIndex === -1) return;
+
+  const reactUser: string = typeof msg.from === "string" ? msg.from : "";
+  const reactMsg = channelMessages[msgIndex];
+
+  const updatedReactions = reactMsg.reactions ? { ...reactMsg.reactions } : {};
+
+  if (msg.cmd === "message_react_add") {
+    if (!updatedReactions[msg.emoji]) {
+      updatedReactions[msg.emoji] = [];
+    }
+    if (!updatedReactions[msg.emoji].includes(reactUser)) {
+      updatedReactions[msg.emoji] = [...updatedReactions[msg.emoji], reactUser];
+    }
+  } else {
+    if (updatedReactions[msg.emoji]) {
+      updatedReactions[msg.emoji] = updatedReactions[msg.emoji].filter(
+        (u: string) => u !== reactUser,
+      );
+      if (updatedReactions[msg.emoji].length === 0) {
+        delete updatedReactions[msg.emoji];
       }
     }
   }
+
+  const updatedMsg = { ...reactMsg, reactions: updatedReactions };
+  const updatedChannelMessages = [...channelMessages];
+  updatedChannelMessages[msgIndex] = updatedMsg;
+
+  messagesByServer.value = {
+    ...messagesByServer.value,
+    [sUrl]: {
+      ...messagesByServer.value[sUrl],
+      [messageKey]: updatedChannelMessages,
+    },
+  };
+
   renderMessagesSignal.value++;
 }
