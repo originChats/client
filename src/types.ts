@@ -42,17 +42,6 @@ export interface Thread {
   participants?: string[];
 }
 
-export interface ThreadUpdate {
-  id?: string;
-  name?: string;
-  parent_channel?: string;
-  created_by?: string;
-  created_at?: number;
-  locked?: boolean;
-  archived?: boolean;
-  participants?: string[];
-}
-
 export interface VoiceUser {
   username: string;
   muted?: boolean;
@@ -87,24 +76,24 @@ export interface ServerUser {
   cracked?: boolean;
 }
 
-export interface MessageEmbedField {
+interface MessageEmbedField {
   name: string;
   value: string;
   inline?: boolean;
 }
 
-export interface MessageEmbedAuthor {
+interface MessageEmbedAuthor {
   name: string;
   url?: string;
   icon_url?: string;
 }
 
-export interface MessageEmbedFooter {
+interface MessageEmbedFooter {
   text: string;
   icon_url?: string;
 }
 
-export interface PollOption {
+interface PollOption {
   id: string;
   text: string;
   emoji?: string;
@@ -113,7 +102,7 @@ export interface PollOption {
   voters?: string[];
 }
 
-export interface PollData {
+interface PollData {
   id?: string;
   question: string;
   options: PollOption[];
@@ -141,7 +130,7 @@ export interface MessageEmbed {
   poll?: PollData;
 }
 
-export interface WebhookInfo {
+interface WebhookInfo {
   id: string;
   name: string;
   avatar?: string;
@@ -235,9 +224,9 @@ export interface SelfAssignableRole {
   assigned: boolean;
 }
 
-export type SlashOptionType = "str" | "int" | "float" | "bool" | "enum";
+type SlashOptionType = "str" | "int" | "float" | "bool" | "enum";
 
-export interface SlashCommandOption {
+interface SlashCommandOption {
   name: string;
   description: string;
   type: SlashOptionType;
@@ -274,7 +263,7 @@ export interface RoturProfile extends RoturAccount {
   customStatus?: RoturStatusUpdate;
 }
 
-export interface RoturPost {
+interface RoturPost {
   id: string;
   user: string;
   content: string;
@@ -303,7 +292,7 @@ export interface RoturGroupDetails extends RoturGroup {
   created?: number;
 }
 
-export interface RoturAnnouncement {
+interface RoturAnnouncement {
   id: string;
   content: string;
   author: string;

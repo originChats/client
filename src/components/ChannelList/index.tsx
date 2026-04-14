@@ -6,6 +6,7 @@ import {
   useEffect,
 } from "preact/hooks";
 import { useSignalEffect, useSignal } from "@preact/signals";
+import { signal } from "@preact/signals";
 
 import {
   serverUrl,
@@ -37,10 +38,10 @@ import {
   selectHomeChannel,
   selectRelationshipsChannel,
   selectRolesChannel,
-  markChannelAsRead,
   selectThread,
   createThread,
 } from "../../lib/actions";
+import { markChannelAsRead } from "../../lib/ws-sender";
 import {
   renderChannelsSignal,
   showSettingsModal,
@@ -68,6 +69,8 @@ import { StatusSelector } from "../StatusSelector";
 import styles from "./ChannelList.module.css";
 
 import type { Channel } from "../../types";
+
+const collapsedForumChannels = signal<Set<string>>(new Set());
 
 export function ChannelList() {
   const [, forceUpdate] = useReducer((n) => n + 1, 0);
@@ -392,7 +395,10 @@ export function ChannelList() {
               {hasToken && (
                 <div
                   className={`${styles.channelItem}${currentChannel.value?.name === "relationships" ? ` ${styles.active}` : ""}`}
-                  onClick={selectRelationshipsChannel}
+                  onClick={() => {
+                    selectRelationshipsChannel();
+                    closeMobileNav();
+                  }}
                 >
                   <Icon name="Users" size={18} />
                   <span>Friends</span>
@@ -400,25 +406,28 @@ export function ChannelList() {
               )}
               <div
                 className={`${styles.channelItem}${currentChannel.value?.name === "notes" ? ` ${styles.active}` : ""}`}
-                onClick={() =>
+                onClick={() => {
                   selectChannel({
                     name: "notes",
                     type: "text",
                     display_name: "Notes",
-                  })
-                }
+                  });
+                  closeMobileNav();
+                }}
               >
                 <Icon name="FileText" size={18} />
                 <span>Notes</span>
               </div>
               <div
                 className={`${styles.channelItem}${currentChannel.value?.name === "new_message" ? ` ${styles.active}` : ""}`}
-                onClick={() =>
-                  selectChannel({
-                    name: "new_message",
-                    type: "new_message",
-                    display_name: "New Message",
-                  })
+onClick={() => {
+selectChannel({
+name: "new_message",
+type: "new_message",
+display_name: "New Message",
+});
+closeMobileNav();
+}}
                 }
               >
                 <Icon name="PenSquare" size={16} />
@@ -440,7 +449,10 @@ export function ChannelList() {
                 <div className={styles.specialChannelsSection}>
                   <div
                     className={`${styles.channelItem}${currentChannel.value?.name === "roles" ? ` ${styles.active}` : ""}`}
-                    onClick={selectRolesChannel}
+                    onClick={() => {
+selectRolesChannel();
+closeMobileNav();
+}}
                   >
                     <Icon name="Shield" size={18} />
                     <span>Roles</span>
@@ -559,6 +571,21 @@ export function ChannelList() {
               const newThreadCount =
                 newThreadCounts.value[serverUrl.value]?.[channel.name] || 0;
 
+              const channelKey = `${serverUrl.value}:${channel.name}`;
+              const isCollapsed = collapsedForumChannels.value.has(channelKey);
+              const threadCount = visibleThreads.length;
+
+              const toggleCollapse = (e: MouseEvent) => {
+                e.stopPropagation();
+                const newSet = new Set(collapsedForumChannels.value);
+                if (newSet.has(channelKey)) {
+                  newSet.delete(channelKey);
+                } else {
+                  newSet.add(channelKey);
+                }
+                collapsedForumChannels.value = newSet;
+              };
+
               return (
                 <div key={channel.name}>
                   <div
@@ -572,55 +599,74 @@ export function ChannelList() {
                       handleChannelContextMenu(e, channel)
                     }
                   >
+                    <button
+                      className={styles.collapseToggle}
+                      onClick={toggleCollapse}
+                      title={
+                        isCollapsed ? "Expand threads" : "Collapse threads"
+                      }
+                    >
+                      <Icon
+                        name={isCollapsed ? "ChevronRight" : "ChevronDown"}
+                        size={14}
+                      />
+                    </button>
                     <Icon name="MessageCircle" size={18} />
                     <span>{displayName}</span>
+                    {threadCount > 0 && isCollapsed && (
+                      <span className={styles.threadCount}>{threadCount}</span>
+                    )}
                     {newThreadCount > 0 && (
                       <span className={styles.newThreadBadge}>
                         +{newThreadCount}
                       </span>
                     )}
                   </div>
-                  {visibleThreads.map((thread: any) => {
-                    const threadPingCount = getChannelPingCount(
-                      serverUrl.value,
-                      `thread:${thread.id}`,
-                    );
-                    const threadUnreadCount = getChannelUnreadCount(
-                      serverUrl.value,
-                      `thread:${thread.id}`,
-                    );
-                    const threadHasPing = threadPingCount > 0;
-                    const threadHasUnread =
-                      !threadHasPing && threadUnreadCount > 0;
+                  {!isCollapsed &&
+                    visibleThreads.map((thread: any) => {
+                      const threadPingCount = getChannelPingCount(
+                        serverUrl.value,
+                        `thread:${thread.id}`,
+                      );
+                      const threadUnreadCount = getChannelUnreadCount(
+                        serverUrl.value,
+                        `thread:${thread.id}`,
+                      );
+                      const threadHasPing = threadPingCount > 0;
+                      const threadHasUnread =
+                        !threadHasPing && threadUnreadCount > 0;
 
-                    return (
-                      <div
-                        key={thread.id}
-                        className={`${styles.channelItem} ${styles.threadItem}${!voiceChannelActive && currentThread.value?.id === thread.id ? ` ${styles.active}` : ""}${threadHasUnread ? ` ${styles.hasUnread}` : ""}`}
-                        onClick={(e: any) => {
-                          e.stopPropagation();
-                          selectThread(thread);
-                        }}
-                        onContextMenu={(e: any) => showThreadMenu(e, thread)}
-                      >
-                        <Icon name="CornerDownRight" size={15} />
-                        <span className={styles.threadName}>{thread.name}</span>
-                        {thread.locked && (
-                          <span className={styles.threadLockedIcon}>
-                            <Icon name="Lock" size={12} />
+                      return (
+                        <div
+                          key={thread.id}
+                          className={`${styles.channelItem} ${styles.threadItem}${!voiceChannelActive && currentThread.value?.id === thread.id ? ` ${styles.active}` : ""}${threadHasUnread ? ` ${styles.hasUnread}` : ""}`}
+                          onClick={(e: any) => {
+                            e.stopPropagation();
+                            selectThread(thread);
+                            closeMobileNav();
+                          }}
+                          onContextMenu={(e: any) => showThreadMenu(e, thread)}
+                        >
+                          <Icon name="CornerDownRight" size={15} />
+                          <span className={styles.threadName}>
+                            {thread.name}
                           </span>
-                        )}
-                        {threadHasPing && (
-                          <span className={styles.pingBadge}>
-                            {threadPingCount}
-                          </span>
-                        )}
-                        {threadHasUnread && (
-                          <span className={styles.unreadIndicator}></span>
-                        )}
-                      </div>
-                    );
-                  })}
+                          {thread.locked && (
+                            <span className={styles.threadLockedIcon}>
+                              <Icon name="Lock" size={12} />
+                            </span>
+                          )}
+                          {threadHasPing && (
+                            <span className={styles.pingBadge}>
+                              {threadPingCount}
+                            </span>
+                          )}
+                          {threadHasUnread && (
+                            <span className={styles.unreadIndicator}></span>
+                          )}
+                        </div>
+                      );
+                    })}
                 </div>
               );
             }

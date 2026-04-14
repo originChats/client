@@ -8,7 +8,7 @@ interface ImageResult {
   savedAt: number;
 }
 
-export interface ImageViewerProps {
+interface ImageViewerProps {
   isOpen: boolean;
   imageUrl: string;
   expiresAt?: number | null;

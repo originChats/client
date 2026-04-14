@@ -1,300 +1,223 @@
 import { signal, computed } from "@preact/signals";
-import { pings as pingsDb } from "../db";
+import { pings as db } from "../db";
 
-type ChannelKey = `${string}:${string}`;
+type Key = string;
 
-let persistenceEnabled = false;
+let loaded = false;
 
-async function persistToDb(
-  pings: Record<ChannelKey, number>,
-  unreads: Record<ChannelKey, number>,
-) {
-  if (!persistenceEnabled) return;
-  try {
-    await pingsDb.set({ pings, unreads });
-  } catch (e) {
-    console.error("Failed to persist pings to IndexedDB:", e);
-  }
+function persist(pings: Record<Key, number>, unreads: Record<Key, number>) {
+  if (!loaded) return;
+  db.set({ pings, unreads }).catch((e) => console.error("Persist failed:", e));
 }
 
-class UnreadState {
-  private readonly _pings = signal<Record<ChannelKey, number>>({});
-  private readonly _unreads = signal<Record<ChannelKey, number>>({});
-  private readonly _lastRead = signal<Record<ChannelKey, string | null>>({});
-  private persistTimeout: ReturnType<typeof setTimeout> | null = null;
+class UnreadStore {
+  private _pings = signal<Record<Key, number>>({});
+  private _unreads = signal<Record<Key, number>>({});
+  private _lastRead = signal<Record<Key, string>>({});
+  private _timer: ReturnType<typeof setTimeout> | null = null;
 
   readonly pings = this._pings;
   readonly unreads = this._unreads;
-  readonly lastRead = this._lastRead;
 
   constructor() {
-    this.loadFromDb();
+    db.get()
+      .then((data) => {
+        if (data) {
+          this._pings.value = data.pings || {};
+          this._unreads.value = data.unreads || {};
+        }
+        loaded = true;
+      })
+      .catch((e) => console.error("Load failed:", e));
   }
 
-  private async loadFromDb() {
-    try {
-      const data = await pingsDb.get();
-      if (data) {
-        this._pings.value = (data.pings as Record<ChannelKey, number>) || {};
-        this._unreads.value =
-          (data.unreads as Record<ChannelKey, number>) || {};
-      }
-      persistenceEnabled = true;
-    } catch (e) {
-      console.error("Failed to load pings from IndexedDB:", e);
-    }
+  private key(url: string, channel: string): Key {
+    return `${url}:${channel}`;
   }
 
-  getLastRead(serverUrl: string, channel: string): string | null {
-    const k = this.key(serverUrl, channel);
-    return this._lastRead.value[k] || null;
+  private save() {
+    if (this._timer) clearTimeout(this._timer);
+    this._timer = setTimeout(
+      () => persist(this._pings.value, this._unreads.value),
+      500,
+    );
   }
 
-  setLastRead(
-    serverUrl: string,
-    channel: string,
-    lastRead: string | null,
-  ): void {
-    const k = this.key(serverUrl, channel);
-    if (lastRead) {
-      this._lastRead.value = { ...this._lastRead.value, [k]: lastRead };
-    } else {
-      const next = { ...this._lastRead.value };
-      delete next[k];
-      this._lastRead.value = next;
-    }
-    this.schedulePersist();
-  }
-
-  isChannelUnreadByLastMessage(
-    serverUrl: string,
-    channel: string,
-    lastMessageId?: string,
-  ): boolean {
-    if (!lastMessageId) return false;
-    const lastRead = this.getLastRead(serverUrl, channel);
-    if (!lastRead) return false;
-    return lastMessageId !== lastRead;
-  }
-
-  private schedulePersist() {
-    if (this.persistTimeout) clearTimeout(this.persistTimeout);
-    this.persistTimeout = setTimeout(() => {
-      persistToDb(this._pings.value, this._unreads.value);
-    }, 500);
-  }
-
-  private key(serverUrl: string, channel: string): ChannelKey {
-    return `${serverUrl}:${channel}`;
-  }
-
-  private threadKey(serverUrl: string, threadId: string): ChannelKey {
-    return `${serverUrl}:thread:${threadId}`;
-  }
-
-  private matchesPrefix(key: ChannelKey, prefix: string): boolean {
-    return key.startsWith(prefix);
-  }
-
-  getChannel(
-    serverUrl: string,
-    channel: string,
-  ): { pings: number; unreads: number } {
-    const k = this.key(serverUrl, channel);
+  get(url: string, channel: string) {
+    const k = this.key(url, channel);
     return {
       pings: this._pings.value[k] || 0,
       unreads: this._unreads.value[k] || 0,
     };
   }
 
-  getChannelPing(serverUrl: string, channel: string): number {
-    return this._pings.value[this.key(serverUrl, channel)] || 0;
+  getPing(url: string, channel: string) {
+    return this._pings.value[this.key(url, channel)] || 0;
+  }
+  getUnread(url: string, channel: string) {
+    return this._unreads.value[this.key(url, channel)] || 0;
+  }
+  getChannelPing(url: string, channel: string) {
+    return this.getPing(url, channel);
+  }
+  getChannelUnread(url: string, channel: string) {
+    return this.getUnread(url, channel);
   }
 
-  getChannelUnread(serverUrl: string, channel: string): number {
-    return this._unreads.value[this.key(serverUrl, channel)] || 0;
-  }
-
-  getServerPing(serverUrl: string): number {
-    const prefix = `${serverUrl}:`;
+  getServerPing(url: string) {
+    const prefix = `${url}:`;
     return Object.entries(this._pings.value)
-      .filter(([key]) => this.matchesPrefix(key as ChannelKey, prefix))
-      .reduce((sum, [, count]) => sum + count, 0);
+      .filter(([k]) => k.startsWith(prefix))
+      .reduce((sum, [, n]) => sum + n, 0);
   }
 
-  getServerUnread(serverUrl: string): number {
-    const prefix = `${serverUrl}:`;
+  getServerUnread(url: string) {
+    const prefix = `${url}:`;
     return Object.entries(this._unreads.value)
-      .filter(([key]) => this.matchesPrefix(key as ChannelKey, prefix))
-      .reduce((sum, [, count]) => sum + count, 0);
+      .filter(([k]) => k.startsWith(prefix))
+      .reduce((sum, [, n]) => sum + n, 0);
   }
 
-  getServerTotals(serverUrl: string): { pings: number; unreads: number } {
+  getServerTotals(url: string) {
     return {
-      pings: this.getServerPing(serverUrl),
-      unreads: this.getServerUnread(serverUrl),
+      pings: this.getServerPing(url),
+      unreads: this.getServerUnread(url),
     };
   }
-
-  getTotalPings(): number {
-    return Object.values(this._pings.value).reduce((sum, n) => sum + n, 0);
+  getTotalPings() {
+    return Object.values(this._pings.value).reduce((s, n) => s + n, 0);
+  }
+  getTotalUnreads() {
+    return Object.values(this._unreads.value).reduce((s, n) => s + n, 0);
   }
 
-  getTotalUnreads(): number {
-    return Object.values(this._unreads.value).reduce((sum, n) => sum + n, 0);
-  }
-
-  hasUnreads(serverUrl: string, channel: string): boolean {
-    const k = this.key(serverUrl, channel);
+  has(url: string, channel: string) {
+    const k = this.key(url, channel);
     return (this._pings.value[k] || 0) > 0 || (this._unreads.value[k] || 0) > 0;
   }
-
-  hasServerUnreads(serverUrl: string): boolean {
-    const prefix = `${serverUrl}:`;
-    for (const key of Object.keys(this._pings.value)) {
-      if (
-        this.matchesPrefix(key as ChannelKey, prefix) &&
-        this._pings.value[key as ChannelKey] > 0
-      )
-        return true;
-    }
-    for (const key of Object.keys(this._unreads.value)) {
-      if (
-        this.matchesPrefix(key as ChannelKey, prefix) &&
-        this._unreads.value[key as ChannelKey] > 0
-      )
-        return true;
-    }
-    return false;
+  hasUnreads(url: string, channel: string) {
+    return this.has(url, channel);
   }
 
-  increment(serverUrl: string, channel: string, isPing: boolean): void {
-    const k = this.key(serverUrl, channel);
+  hasServer(url: string) {
+    const prefix = `${url}:`;
+    return (
+      Object.keys(this._pings.value).some(
+        (k) => k.startsWith(prefix) && this._pings.value[k] > 0,
+      ) ||
+      Object.keys(this._unreads.value).some(
+        (k) => k.startsWith(prefix) && this._unreads.value[k] > 0,
+      )
+    );
+  }
+
+  inc(url: string, channel: string, isPing: boolean) {
+    const k = this.key(url, channel);
     const target = isPing ? this._pings : this._unreads;
     target.value = { ...target.value, [k]: (target.value[k] || 0) + 1 };
-    this.schedulePersist();
+    this.save();
+  }
+  incPing(url: string, channel: string) {
+    this.inc(url, channel, true);
+  }
+  incUnread(url: string, channel: string) {
+    this.inc(url, channel, false);
   }
 
-  incrementPing(serverUrl: string, channel: string): void {
-    this.increment(serverUrl, channel, true);
-  }
-
-  incrementUnread(serverUrl: string, channel: string): void {
-    this.increment(serverUrl, channel, false);
-  }
-
-  setPing(serverUrl: string, channel: string, count: number): void {
-    const k = this.key(serverUrl, channel);
+  set(url: string, channel: string, count: number, isPing: boolean) {
+    const k = this.key(url, channel);
+    const target = isPing ? this._pings : this._unreads;
     if (count > 0) {
-      this._pings.value = { ...this._pings.value, [k]: count };
+      target.value = { ...target.value, [k]: count };
     } else {
-      this._clearKeyValue(k);
+      const next = { ...target.value };
+      delete next[k];
+      target.value = next;
     }
-    this.schedulePersist();
+    this.save();
   }
 
-  setUnread(serverUrl: string, channel: string, count: number): void {
-    const k = this.key(serverUrl, channel);
-    if (count > 0) {
-      this._unreads.value = { ...this._unreads.value, [k]: count };
-    } else {
-      this._clearKeyValue(k);
-    }
-    this.schedulePersist();
+  clear(url: string, channel: string) {
+    const k = this.key(url, channel);
+    const pings = { ...this._pings.value };
+    const unreads = { ...this._unreads.value };
+    delete pings[k];
+    delete unreads[k];
+    this._pings.value = pings;
+    this._unreads.value = unreads;
+    this.save();
+  }
+  clearChannel(url: string, channel: string) {
+    this.clear(url, channel);
   }
 
-  addPing(serverUrl: string, channel: string, delta: number): void {
-    const k = this.key(serverUrl, channel);
-    const current = this._pings.value[k] || 0;
-    const newCount = current + delta;
-    if (newCount > 0) {
-      this._pings.value = { ...this._pings.value, [k]: newCount };
-    } else {
-      this._clearKeyValue(k);
-    }
-    this.schedulePersist();
-  }
-
-  clearChannel(serverUrl: string, channel: string): void {
-    const k = this.key(serverUrl, channel);
-    this._clearKeyValue(k);
-    this.schedulePersist();
-  }
-
-  clearThread(serverUrl: string, threadId: string): void {
-    const k = this.threadKey(serverUrl, threadId);
-    this._clearKeyValue(k);
-    this.schedulePersist();
-  }
-
-  clearServer(serverUrl: string): void {
-    const prefix = `${serverUrl}:`;
-    this._pings.value = this._filterByPrefix(this._pings.value, prefix, true);
-    this._unreads.value = this._filterByPrefix(
-      this._unreads.value,
-      prefix,
-      true,
+  clearServer(url: string) {
+    const prefix = `${url}:`;
+    this._pings.value = Object.fromEntries(
+      Object.entries(this._pings.value).filter(([k]) => !k.startsWith(prefix)),
     );
-    this.schedulePersist();
+    this._unreads.value = Object.fromEntries(
+      Object.entries(this._unreads.value).filter(
+        ([k]) => !k.startsWith(prefix),
+      ),
+    );
+    this.save();
   }
 
-  clearAll(): void {
+  clearAll() {
     this._pings.value = {};
     this._unreads.value = {};
-    this.schedulePersist();
+    this.save();
   }
 
-  // New methods for server-driven unreads
-  setChannelUnread(channelId: string, count: number): void {
-    // channelId is already in the format "serverUrl:channelName"
-    const k = channelId as ChannelKey;
-    if (count > 0) {
-      this._unreads.value = { ...this._unreads.value, [k]: count };
+  clearThread(url: string, threadId: string) {
+    const k = `${url}:thread:${threadId}`;
+    const pings = { ...this._pings.value };
+    const unreads = { ...this._unreads.value };
+    delete pings[k];
+    delete unreads[k];
+    this._pings.value = pings;
+    this._unreads.value = unreads;
+    this.save();
+  }
+
+  setPing(url: string, channel: string, count: number) {
+    this.set(url, channel, count, true);
+  }
+  setUnread(url: string, channel: string, count: number) {
+    this.set(url, channel, count, false);
+  }
+
+  incrementPing(url: string, channel: string) {
+    this.inc(url, channel, true);
+  }
+  incrementUnread(url: string, channel: string) {
+    this.inc(url, channel, false);
+  }
+
+  setLastRead(url: string, channel: string, id: string | null) {
+    const k = this.key(url, channel);
+    if (id) {
+      this._lastRead.value = { ...this._lastRead.value, [k]: id };
     } else {
-      const next = { ...this._unreads.value };
+      const next = { ...this._lastRead.value };
       delete next[k];
-      this._unreads.value = next;
-    }
-    this.schedulePersist();
-  }
-
-  setAllUnreads(unreads: Record<string, number>): void {
-    // Replace all unreads with server-provided data
-    this._unreads.value = unreads as Record<ChannelKey, number>;
-    this.schedulePersist();
-  }
-
-  private _clearKeyValue(k: ChannelKey): void {
-    if (this._pings.value[k] !== undefined) {
-      const next = { ...this._pings.value };
-      delete next[k];
-      this._pings.value = next;
-    }
-    if (this._unreads.value[k] !== undefined) {
-      const next = { ...this._unreads.value };
-      delete next[k];
-      this._unreads.value = next;
+      this._lastRead.value = next;
     }
   }
 
-  private _filterByPrefix(
-    obj: Record<ChannelKey, number>,
-    prefix: string,
-    exclude: boolean,
-  ): Record<ChannelKey, number> {
-    return Object.fromEntries(
-      Object.entries(obj).filter(([key]) =>
-        exclude
-          ? !this.matchesPrefix(key as ChannelKey, prefix)
-          : this.matchesPrefix(key as ChannelKey, prefix),
-      ),
-    ) as Record<ChannelKey, number>;
+  getLastRead(url: string, channel: string) {
+    return this._lastRead.value[this.key(url, channel)] || null;
+  }
+
+  isUnreadByLastMessage(url: string, channel: string, lastId?: string) {
+    if (!lastId) return false;
+    const lastRead = this.getLastRead(url, channel);
+    return lastRead ? lastId !== lastRead : false;
+  }
+  isChannelUnreadByLastMessage(url: string, channel: string, lastId?: string) {
+    return this.isUnreadByLastMessage(url, channel, lastId);
   }
 }
 
-const unreadState = new UnreadState();
-
-const totalPings = computed(() => unreadState.getTotalPings());
-const totalUnreads = computed(() => unreadState.getTotalUnreads());
-
-export { unreadState };
+export const unreadState = new UnreadStore();

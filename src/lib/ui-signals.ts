@@ -3,7 +3,7 @@ import type { Message } from "../types";
 import type { ContextMenuItem } from "../components/ContextMenu";
 import type { Webhook } from "../types";
 
-export type BannerKind = "error" | "warning" | "info";
+type BannerKind = "error" | "warning" | "info";
 
 export interface Banner {
   id: string;
@@ -154,7 +154,7 @@ export function closeMobileNav() {
 }
 
 /** Global context menu — set this to show a menu, null to close. */
-export interface GlobalContextMenuState {
+interface GlobalContextMenuState {
   x: number;
   y: number;
   items: ContextMenuItem[];
@@ -185,7 +185,7 @@ export const pendingCrackedCredentials = signal<{
 export const crackedAuthLoading = signal<boolean>(false);
 export const crackedAuthMode = signal<"choice" | "login">("choice");
 
-export interface ImageViewerState {
+interface ImageViewerState {
   url: string;
   expiresAt?: number | null;
   images?: Array<{ url: string; expiresAt?: number | null }>;

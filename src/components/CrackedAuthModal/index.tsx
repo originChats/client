@@ -10,7 +10,7 @@ import {
 } from "../../lib/ui-signals";
 import { servers, token } from "../../state";
 import { wsSend } from "../../lib/websocket";
-import { authenticateServer } from "../../lib/websocket";
+import { authenticateServer } from "../../lib/auth";
 
 export function CrackedAuthModal() {
   const [mode, setMode] = useState<"login" | "register">("login");

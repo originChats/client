@@ -24,7 +24,7 @@ import { useDisplayName } from "../../lib/useDisplayName";
 import { saveFriendNicknames } from "../../lib/persistence";
 import styles from "./UserContextMenu.module.css";
 
-export interface UserContextMenuProps {
+interface UserContextMenuProps {
   username: string;
   x: number;
   y: number;
@@ -170,7 +170,7 @@ export function UserContextMenu({
   );
 }
 
-export type UseUserContextMenuResult = ReturnType<typeof useUserContextMenu>;
+type UseUserContextMenuResult = ReturnType<typeof useUserContextMenu>;
 
 export function useUserContextMenu() {
   const { show, close, state } = useContextMenu<string>();

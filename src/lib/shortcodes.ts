@@ -4,7 +4,7 @@ export async function loadShortcodes(): Promise<void> {
   await emojiCache.loadEmojiData();
 }
 
-export function getShortcodeMap(): Map<string, string> {
+function getShortcodeMap(): Map<string, string> {
   return emojiCache.getShortcodeMap();
 }
 

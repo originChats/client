@@ -83,7 +83,7 @@ export function markThreadAsRead(
   return wsSend(payload, sUrl);
 }
 
-export function getUnreadCount(channelName: string, sUrl?: string): boolean {
+function getUnreadCount(channelName: string, sUrl?: string): boolean {
   const url = sUrl || serverUrl.value;
   const caps = serverCapabilitiesByServer.value[url] || [];
 
@@ -94,7 +94,7 @@ export function getUnreadCount(channelName: string, sUrl?: string): boolean {
   return wsSend({ cmd: "unreads_count", channel: channelName }, sUrl);
 }
 
-export function getThreadUnreadCount(threadId: string, sUrl?: string): boolean {
+function getThreadUnreadCount(threadId: string, sUrl?: string): boolean {
   const url = sUrl || serverUrl.value;
   const caps = serverCapabilitiesByServer.value[url] || [];
 
@@ -105,7 +105,7 @@ export function getThreadUnreadCount(threadId: string, sUrl?: string): boolean {
   return wsSend({ cmd: "unreads_count", thread_id: threadId }, sUrl);
 }
 
-export function getAllUnreads(sUrl?: string): boolean {
+function getAllUnreads(sUrl?: string): boolean {
   const url = sUrl || serverUrl.value;
   const caps = serverCapabilitiesByServer.value[url] || [];
 

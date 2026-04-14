@@ -1,29 +1,17 @@
 import { signal } from "@preact/signals";
-
-const IMAGE_EXTENSIONS = [
-  "jpg",
-  "jpeg",
-  "png",
-  "gif",
-  "webp",
-  "svg",
-  "bmp",
-  "ico",
-  "avif",
-];
-const VIDEO_EXTENSIONS = ["mp4", "webm", "mov", "ogg", "avi", "mkv"];
+import {
+  TRUSTED_DOMAINS,
+  IMAGE_EXTENSIONS,
+  VIDEO_EXTENSIONS,
+  hasExtension as hasExtensionUtil,
+  proxyImageUrl as proxyImageUrlUtil,
+} from "./lib/media-utils";
 
 const YOUTUBE_REGEX =
   /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/shorts\/)([a-zA-Z0-9_-]+)/;
 
-function hasExtension(url: string, extensions: string[]): boolean {
-  const urlLower = url.toLowerCase();
-  return extensions.some(
-    (ext) =>
-      urlLower.endsWith(`.${ext}`) ||
-      urlLower.includes(`.${ext}?`) ||
-      urlLower.includes(`.${ext}#`),
-  );
+function hasExtension(url: string, extensions: readonly string[]): boolean {
+  return hasExtensionUtil(url, extensions);
 }
 
 function escapeHtml(text: string): string {
@@ -40,25 +28,8 @@ function blobToDataURL(blob: Blob): Promise<string> {
   });
 }
 
-const TRUSTED_DOMAINS = [
-  "avatars.rotur.dev",
-  "photos.rotur.dev",
-  "roturcdn.milosantos.com",
-  "img.youtube.com",
-  "media.tenor.com",
-  "media.discordapp.net",
-  "cdn.discordapp.com",
-];
-
 function proxyImageUrl(url: string): string {
-  if (!url || url.startsWith("data:") || url.startsWith("blob:")) return url;
-  try {
-    const urlObj = new URL(url);
-    if (TRUSTED_DOMAINS.includes(urlObj.hostname)) return url;
-  } catch {
-    console.debug("URL parsing failed for proxy:", url);
-  }
-  return `https://wsrv.nl/?url=${encodeURIComponent(url)}`;
+  return proxyImageUrlUtil(url);
 }
 
 const avatarBust = signal<Record<string, number>>({});
@@ -103,10 +74,3 @@ function getUserAvatar(
   return avatarUrl(username);
 }
 
-export function formatJoinDate(timestamp: number | string): string {
-  return new Date(timestamp).toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
-}

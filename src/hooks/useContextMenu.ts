@@ -1,12 +1,12 @@
 import { useState } from "preact/hooks";
 
-export interface ContextMenuState<T> {
+interface ContextMenuState<T> {
   data: T;
   x: number;
   y: number;
 }
 
-export interface UseContextMenuResult<T> {
+interface UseContextMenuResult<T> {
   show: (event: MouseEvent, data: T) => void;
   close: () => void;
   state: ContextMenuState<T> | null;

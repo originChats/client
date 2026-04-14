@@ -16,6 +16,7 @@
   overscroll-behavior-y: contain;
   padding: 0;
   position: relative;
+  margin-bottom: var(--space-2);
 }
 
 .overscrollArea {
@@ -26,11 +27,6 @@
 
 .skeletonMessagesTop {
   padding: 12px 20px;
-}
-
-.messages::before {
-  content: "";
-  min-height: 0;
 }
 
 .translation-loading {
@@ -55,25 +51,27 @@
 .scrollToBottomBtn {
   align-items: center;
   background: var(--surface-light);
-  border: none;
-  border-radius: 50%;
-  bottom: 90px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  bottom: 8px;
   box-shadow: var(--shadow-1);
   color: var(--text);
   cursor: pointer;
   display: flex;
-  height: 40px;
+  min-height: 40px;
   justify-content: center;
-  position: absolute;
-  right: 16px;
+  position: sticky;
+  margin-right: 8px;
+  margin-bottom: 8px;
   transition: all var(--anim-fast) var(--ease-standard);
   width: 40px;
   z-index: 10;
+  align-self: self-end;
 }
 
 .scrollToBottomBtn:hover {
-  background: var(--primary);
-  transform: scale(1.05);
+  background: var(--surface-hover);
+  color: var(--mention);
 }
 
 .scrollToBottomBtn svg {
@@ -88,34 +86,25 @@
   padding: var(--space-3);
   padding-bottom: max(5px, env(safe-area-inset-bottom));
   position: relative;
+  border-top: 1px solid var(--border);
 }
 
 .inputWrapper {
   position: relative;
   align-items: center;
   background: var(--surface-light);
-  border: none;
-  border-radius: 25px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
   display: flex;
   gap: var(--space-2);
   padding: var(--space-1) var(--space-2);
-  transition:
-    background-color var(--anim-normal) var(--ease-standard),
-    box-shadow var(--anim-normal) var(--ease-standard);
   width: 100%;
-}
-
-.inputWrapper:focus-within {
-  background: var(--surface-hover);
-  box-shadow: 0 0 0 2px rgba(78, 80, 88, 0.15);
 }
 
 .sendBtn {
   align-items: center;
-  background: none;
-  border: none;
-  border-radius: 50%;
-  color: white;
+  background: var(--surface-light);
+  color: var(--text);
   cursor: pointer;
   display: flex;
   flex-shrink: 0;
@@ -123,17 +112,17 @@
   justify-content: center;
   padding: 0;
   width: 36px;
+  transition: all var(--anim-fast) ease;
 }
 
 .sendBtn svg {
   height: 18px;
-  transform: translateXY(-2px, -2px);
   width: 18px;
 }
 
 .sendBtn:hover {
-  background: var(--primary-hover);
-  transform: scale(1.05);
+  background: var(--surface-hover);
+  color: var(--mention);
 }
 
 .sendBtn:active {
@@ -146,8 +135,8 @@
 
 .plusDropdown {
   background: var(--surface);
-  border: none;
-  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
   bottom: calc(100% + 8px);
   box-shadow: var(--shadow-2);
   left: 0;
@@ -179,7 +168,8 @@
 .replyBar {
   align-items: center;
   background: var(--surface-light);
-  border-radius: var(--radius-pill);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
   box-sizing: border-box;
   display: none;
   font-size: 14px;
@@ -191,8 +181,8 @@
   transition:
     background var(--anim-fast) var(--ease-out),
     border-color var(--anim-fast) var(--ease-out);
-  margin-left: var(--space-3);
-  margin-right: var(--space-3);
+  margin: var(--space-3);
+  margin-bottom: var(--space-1);
 }
 
 .replyBar.active {
@@ -222,6 +212,7 @@
   flex-shrink: 0;
   height: 28px;
   justify-content: center;
+  transition: color var(--anim-fast) var(--ease-out);
   width: 28px;
 }
 
@@ -269,24 +260,64 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
+
+.replyBarText {
+  color: var(--text-dim);
+  font-size: var(--font-sm);
+  line-height: 1.35;
+  max-width: 100%;
+  opacity: 0.75;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
+
+.replyBarText img.emoji {
+  height: 1em;
+  width: 1em;
+  vertical-align: middle;
 }
 
 .replyBarPing {
+  align-items: center;
+  background: transparent;
+  border: none;
   border-radius: var(--radius-sm);
   color: var(--text-dim);
+  cursor: pointer;
+  display: flex;
   flex-shrink: 0;
+  height: var(--size-icon-lg);
+  justify-content: center;
   opacity: 0.5;
-  padding: 4px;
+  padding: var(--space-1);
   transition:
+    background-color var(--anim-fast) var(--ease-standard),
     color var(--anim-fast) var(--ease-out),
     opacity var(--anim-fast) var(--ease-out),
-    background var(--anim-fast) var(--ease-out);
+    transform var(--anim-fast) var(--ease-standard);
+  width: var(--size-icon-lg);
 }
 
 .replyBarPing:hover {
-  background: var(--interactive-hover-bg);
+  background-color: var(--interactive-hover-bg);
   color: var(--text);
   opacity: 1;
+  transform: scale(1.05);
+}
+
+.replyBarPing:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.replyBarPing:active {
+  transform: scale(0.95);
 }
 
 .replyBarPing.active {
@@ -301,29 +332,44 @@
 
 .replyBarClose {
   align-items: center;
+  background: transparent;
+  border: none;
   border-radius: var(--radius-sm);
   color: var(--text-dim);
   cursor: pointer;
   display: flex;
   flex-shrink: 0;
+  height: var(--size-icon-lg);
   justify-content: center;
   opacity: 0.5;
-  padding: 4px;
+  padding: var(--space-1);
   transition:
+    background-color var(--anim-fast) var(--ease-standard),
     color var(--anim-fast) var(--ease-out),
     opacity var(--anim-fast) var(--ease-out),
-    background var(--anim-fast) var(--ease-out);
+    transform var(--anim-fast) var(--ease-standard);
+  width: var(--size-icon-lg);
 }
 
 .replyBarClose:hover {
-  background: var(--interactive-hover-bg);
+  background-color: var(--interactive-hover-bg);
   color: var(--text);
   opacity: 1;
+  transform: scale(1.05);
+}
+
+.replyBarClose:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.replyBarClose:active {
+  transform: scale(0.95);
 }
 
 .replyBarClose svg {
-  height: 14px;
-  width: 14px;
+  height: var(--size-icon-md);
+  width: var(--size-icon-md);
 }
 
 .typing {
@@ -369,7 +415,7 @@
 
 .messageGroup {
   align-items: flex-start;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-sm);
   display: flex;
   padding: var(--space-1) var(--space-0) var(--space-1) var(--space-2);
   position: relative;
@@ -391,6 +437,16 @@
 .messageSingle:hover {
   background-color: var(--interactive-hover-bg);
   cursor: default;
+}
+
+.messageGroup.pending,
+.messageSingle.pending {
+  color: var(--text-muted);
+}
+
+.messageGroup.pending .messageGroupContent,
+.messageSingle.pending .messageGroupContent {
+  color: var(--text-muted);
 }
 
 .messageGroup::before {
@@ -452,9 +508,20 @@
   text-decoration: underline;
 }
 
+:global(.edited-indicator) {
+  color: var(--text-dim);
+  font-size: var(--font-xs);
+  margin-left: 4px;
+  opacity: 0.6;
+}
+
+.messageGroup:hover :global(.edited-indicator) {
+  opacity: 1;
+}
+
 .messageSingle {
   align-items: flex-start;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-sm);
   display: flex;
   padding-left: 60px;
   position: relative;
@@ -462,7 +529,7 @@
 }
 
 .messageSingle::before {
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-sm);
   content: "";
   height: 100%;
   left: -60px;
@@ -667,8 +734,8 @@
 .reactionModal {
   animation: scaleIn var(--anim-normal) var(--ease-standard);
   background: var(--surface-light);
-  border: none;
-  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
   box-shadow: var(--shadow-3);
   display: flex;
   flex-direction: column;
@@ -750,9 +817,9 @@
 .reactionModalAvatar {
   border-radius: 50%;
   flex-shrink: 0;
-  height: var(--size-avatar-md);
+  height: var(--avatar-md);
   object-fit: cover;
-  width: var(--size-avatar-md);
+  width: var(--avatar-md);
 }
 
 .reactionModalUsername {
@@ -1015,7 +1082,7 @@
 
 .rightPanelHeader {
   align-items: center;
-  border-bottom: none;
+  border-bottom: 1px solid var(--border);
   color: var(--text);
   display: flex;
   font-size: 14px;
@@ -1029,7 +1096,7 @@
   align-items: center;
   background: none;
   border: none;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   color: var(--text-dim);
   cursor: pointer;
   display: none;
@@ -1056,8 +1123,8 @@
 
 .rightPanelSearchInput input {
   background: var(--surface);
-  border: none;
-  border-radius: 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
   color: var(--text);
   flex: 1;
   font-size: 13px;
@@ -1072,8 +1139,8 @@
 .searchSubmitBtn {
   align-items: center;
   background: var(--surface-hover);
-  border: none;
-  border-radius: 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
   color: var(--text-dim);
   cursor: pointer;
   display: flex;
@@ -1092,6 +1159,143 @@
   flex: 1;
   overflow-y: auto;
   padding: 8px;
+}
+
+.rightPanelContentMessages {
+  padding: 8px 12px;
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  max-width: 350px;
+  max-height: 100%;
+}
+
+.rightPanelContentMessages :global(.messageGroup) {
+  padding: var(--space-2);
+  margin-bottom: 6px;
+  border-radius: var(--radius-md);
+  background: var(--surface-light);
+  transition: background var(--anim-fast) ease;
+}
+
+.rightPanelContentMessages :global(.messageGroup):hover {
+  background: var(--surface-hover);
+}
+
+.rightPanelContentMessages :global(.messageGroup) :global(.avatar) {
+  width: var(--size-avatar-md);
+  height: var(--size-avatar-md);
+  margin-right: var(--space-2);
+  margin-top: 2px;
+  border-radius: var(--avatar-radius, 50%);
+}
+
+.rightPanelContentMessages :global(.messageHeader) {
+  margin-top: 2px;
+  margin-bottom: 4px;
+  gap: var(--space-2);
+}
+
+.rightPanelContentMessages :global(.username) {
+  font-size: var(--font-md);
+  font-weight: 600;
+}
+
+.rightPanelContentMessages :global(.timestamp) {
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+.rightPanelContentMessages :global(.messageBody) {
+  font-size: var(--font-md);
+  line-height: 1.45;
+  color: var(--text);
+}
+
+.rightPanelContentMessages :global(.messageSingle) {
+  padding-left: 40px;
+}
+
+.rightPanelContentMessages :global(.messageSingle)::before {
+  left: -40px;
+  width: calc(100% + 56px);
+}
+
+.inboxMessageRow {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 8px;
+}
+
+.inboxMessageContext {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  font-size: 12px;
+  color: var(--text-dim);
+  background: var(--surface);
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+}
+
+.inboxMessageContext svg {
+  opacity: 0.6;
+}
+
+.inboxContextChannel {
+  font-weight: 500;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.inboxContextTime {
+  margin-left: auto;
+  font-size: 11px;
+  opacity: 0.7;
+}
+
+.inboxMessageRow :global(.messageGroup) {
+  border-radius: 0 0 var(--radius-md) var(--radius-md);
+  margin-bottom: 0;
+}
+
+.inboxPanelTotal {
+  background: var(--primary);
+  border-radius: 10px;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  margin-left: 6px;
+  min-width: 20px;
+  padding: 3px 7px;
+  text-align: center;
+}
+
+.inboxPanelLoadMore {
+  background: var(--surface-light);
+  border: none;
+  border-radius: var(--radius-md);
+  color: var(--text);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  margin: 8px 12px;
+  padding: 10px 16px;
+  transition: all var(--anim-fast) ease;
+  width: calc(100% - 24px);
+}
+
+.inboxPanelLoadMore:hover:not(:disabled) {
+  background: var(--surface-hover);
+}
+
+.inboxPanelLoadMore:disabled {
+  opacity: 0.6;
+  cursor: default;
 }
 
 .rightPanelEmpty {
@@ -1187,196 +1391,6 @@
   gap: 8px;
 }
 
-.inboxPanelTotal {
-  background: var(--primary);
-  border-radius: 10px;
-  color: #fff;
-  font-size: 11px;
-  font-weight: 600;
-  line-height: 1;
-  margin-left: 4px;
-  min-width: 18px;
-  padding: 3px 6px;
-  text-align: center;
-}
-
-.inboxPingGroupHeader {
-  align-items: center;
-  background: color-mix(in srgb, var(--surface-light) 60%, var(--surface));
-  border-radius: var(--radius-md, 8px) var(--radius-md, 8px) 0 0;
-  color: var(--text-dim);
-  display: flex;
-  font-size: 11px;
-  font-weight: 600;
-  gap: 4px;
-  letter-spacing: 0.03em;
-  margin-top: 6px;
-  padding: 6px 10px 5px;
-  text-transform: uppercase;
-}
-
-.inboxPingCard {
-  background: color-mix(in srgb, var(--surface-light) 60%, var(--surface));
-  border-radius: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 6px 10px 8px;
-  transition: background var(--anim-fast);
-}
-
-.inboxPingCard--last {
-  border-radius: 0 0 var(--radius-md, 8px) var(--radius-md, 8px);
-  margin-bottom: 4px;
-}
-
-.inboxPingCard:hover {
-  background: color-mix(
-    in srgb,
-    var(--surface-hover) 80%,
-    var(--surface-light)
-  );
-}
-
-.inboxPingCardChannel {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.inboxPingCardTime {
-  color: var(--text-dim);
-  flex-shrink: 0;
-  font-size: 11px;
-  font-weight: 400;
-  letter-spacing: 0;
-  text-transform: none;
-}
-
-.inboxPingCardReply {
-  align-items: center;
-  color: var(--text-dim);
-  display: flex;
-  font-size: 12px;
-  gap: 5px;
-  margin-bottom: 2px;
-  overflow: hidden;
-  padding: 2px 0;
-}
-
-.inboxPingCardReplyAvatar {
-  border-radius: 50%;
-  flex-shrink: 0;
-  height: 14px;
-  object-fit: cover;
-  width: 14px;
-}
-
-.inboxPingCardReplyUser {
-  color: var(--text);
-  flex-shrink: 0;
-  font-weight: 600;
-}
-
-.inboxPingCardReplyText {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.inboxPingCardBody {
-  align-items: flex-start;
-  display: flex;
-  gap: 8px;
-}
-
-.inboxPingCardAvatar {
-  border-radius: var(--avatar-radius, 50%);
-  flex-shrink: 0;
-  height: 30px;
-  object-fit: cover;
-  width: 30px;
-}
-
-.inboxPingCardContent {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-}
-
-.inboxPingCardHeader {
-  align-items: baseline;
-  display: flex;
-  gap: 6px;
-}
-
-.inboxPingCardUsername {
-  color: var(--text);
-  font-size: 13px;
-  font-weight: 600;
-  line-height: 1.2;
-}
-
-.inboxPingCardText {
-  color: var(--text-dim);
-  font-size: 13px;
-  line-height: 1.4;
-  overflow: hidden;
-  word-break: break-word;
-}
-
-.inboxPingCardAction {
-  align-items: center;
-  color: var(--text-dim);
-  display: flex;
-  height: 100%;
-  justify-content: center;
-  opacity: 0;
-  position: absolute;
-  right: 12px;
-  top: 0;
-  transition: opacity 0.15s ease;
-}
-
-.inboxPingCard:hover .inboxPingCardAction,
-.inboxPingCard:active .inboxPingCardAction {
-  opacity: 0.6;
-}
-
-.inboxPingCardWrapper {
-  display: contents;
-}
-
-.inboxPanelLoadMore {
-  background: transparent;
-  border: none;
-  border-radius: var(--radius-sm, 6px);
-  color: var(--text-dim);
-  cursor: pointer;
-  font-size: 12px;
-  margin: 8px 10px 4px;
-  padding: 8px 14px;
-  transition:
-    background var(--anim-fast),
-    color var(--anim-fast);
-  width: calc(100% - 20px);
-}
-
-.inboxPanelLoadMore:hover:not(:disabled) {
-  background: var(--surface-hover);
-  color: var(--text);
-}
-
-.inboxPanelLoadMore:disabled {
-  cursor: default;
-  opacity: 0.5;
-}
-
 .modalOverlay {
   align-items: center;
   backdrop-filter: blur(8px);
@@ -1401,8 +1415,8 @@
 .modal {
   animation: scaleIn var(--anim-normal) var(--ease-standard);
   background: var(--surface);
-  border: none;
-  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
   box-shadow: var(--shadow-3);
   max-height: 90vh;
   max-width: 480px;

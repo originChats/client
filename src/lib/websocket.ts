@@ -19,9 +19,6 @@ import {
   serversAttempted,
   rolesByServer,
   slashCommandsByServer,
-  pingSound,
-  pingVolume,
-  customPingSound,
   servers,
   readTimesByServer,
   serverCapabilitiesByServer,
@@ -30,6 +27,7 @@ import {
   myStatus,
   autoIdleOnUnfocus,
   savedStatusText,
+  isSpecialChannel,
 } from "../state";
 import {
   renderGuildSidebarSignal,
@@ -43,7 +41,6 @@ import {
 } from "./ui-signals";
 import { wsSend, startMessageFetch } from "./ws-sender";
 
-// ── Reconnect config ──────────────────────────────────────────────────────────
 const RECONNECT_BASE_DELAY_MS = 2000;
 const RECONNECT_MAX_DELAY_MS = 30000;
 const RECONNECT_MAX_ATTEMPTS = 5;
@@ -143,92 +140,6 @@ export function cleanupAudioContext(): void {
   }
 }
 
-export function playPingSound(): void {
-  if (document.hidden) return;
-  const type = pingSound.value;
-  if (type === "none") return;
-  const volume = pingVolume.value;
-
-  // Play custom MP3 if selected and one is uploaded
-  if (type === "custom") {
-    const dataUri = customPingSound.value;
-    if (!dataUri) return;
-    try {
-      const audio = new Audio(dataUri);
-      audio.volume = volume;
-      audio.play().catch(() => {});
-    } catch (e) {
-      console.warn("[Notification] Failed to play custom ping:", e);
-    }
-    return;
-  }
-
-  try {
-    const ctx = getAudioContext();
-    const osc = ctx.createOscillator();
-    const gainNode = ctx.createGain();
-    osc.connect(gainNode);
-    gainNode.connect(ctx.destination);
-    gainNode.gain.setValueAtTime(volume, ctx.currentTime);
-
-    if (type === "default") {
-      osc.frequency.value = 800;
-      osc.type = "sine";
-      gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
-      osc.start(ctx.currentTime);
-      osc.stop(ctx.currentTime + 0.3);
-    } else if (type === "soft") {
-      osc.frequency.value = 520;
-      osc.type = "sine";
-      gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
-      osc.start(ctx.currentTime);
-      osc.stop(ctx.currentTime + 0.4);
-    } else if (type === "bell") {
-      osc.frequency.value = 1200;
-      osc.type = "triangle";
-      gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.6);
-      osc.start(ctx.currentTime);
-      osc.stop(ctx.currentTime + 0.6);
-    } else if (type === "pop") {
-      osc.frequency.value = 600;
-      osc.type = "square";
-      gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.08);
-      osc.start(ctx.currentTime);
-      osc.stop(ctx.currentTime + 0.08);
-    }
-  } catch (e) {
-    console.warn("[Notification] Failed to play ping sound:", e);
-  }
-}
-
-export async function enablePushForServer(sUrl: string): Promise<void> {
-  if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
-    console.warn("[Push] Web Push not supported in this browser.");
-    return;
-  }
-
-  if (Notification.permission === "default") {
-    const perm = await Notification.requestPermission();
-    if (perm !== "granted") {
-      console.warn("[Push] Notification permission denied.");
-      return;
-    }
-  }
-
-  if (Notification.permission !== "granted") {
-    console.warn("[Push] Notification permission not granted.");
-    return;
-  }
-
-  const caps = serverCapabilitiesByServer.value[sUrl] ?? [];
-  if (!caps.includes("push_get_vapid")) {
-    console.warn(`[Push] ${sUrl} does not support push notifications.`);
-    return;
-  }
-
-  wsSend({ cmd: "push_get_vapid" }, sUrl);
-}
-
 const CONNECTION_TIMEOUT = 5000;
 
 const pendingReplyFetchesByServer: Record<string, Set<string>> = {};
@@ -288,22 +199,7 @@ export function jumpToMessageAround(
   return wsSend(payload, sUrl);
 }
 
-async function generateValidator(validatorKey: string): Promise<string> {
-  return generateValidatorApi(validatorKey);
-}
-
-async function authenticateServer(sUrl: string): Promise<void> {
-  const validatorKey = serverValidatorKeys[sUrl];
-  if (!validatorKey) return;
-  try {
-    const validator = await generateValidator(validatorKey);
-    wsSend({ cmd: "auth", validator }, sUrl);
-  } catch (error) {
-    console.error(`Authentication failed for ${sUrl}:`, error);
-  }
-}
-
-export function closeWebSocket(url: string): void {
+function closeWebSocketInternal(url: string): void {
   clearServerState(url);
 
   if (reconnectTimeouts[url]) {
@@ -395,8 +291,6 @@ function clearServerState(sUrl: string): void {
   renderMessagesSignal.value++;
   renderMembersSignal.value++;
 }
-
-export { authenticateServer };
 
 export async function reconnectServer(sUrl: string): Promise<boolean> {
   if (reconnectTimeouts[sUrl]) {
@@ -889,7 +783,7 @@ function handleMessage(msg: any, sUrl: string): void {
 function refreshCurrentChannel(): void {
   const sUrl = serverUrl.value;
   const channel = currentChannel.value;
-  if (!sUrl || !channel || SPECIAL_CHANNELS.has(channel.name)) return;
+  if (!sUrl || !channel || isSpecialChannel(channel.name, sUrl)) return;
 
   const conn = wsConnections[sUrl];
   if (conn?.status !== "connected") return;

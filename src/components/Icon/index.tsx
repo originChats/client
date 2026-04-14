@@ -29,7 +29,7 @@ export function Icon({
 export function ServerIcon({
   server,
   className,
-  size,
+  size = 48,
 }: {
   server: { name: string; url?: string; icon?: string | null };
   className?: string;
@@ -41,7 +41,7 @@ export function ServerIcon({
 
   const initials = server.name.substring(0, 2).toUpperCase();
   const style = size
-    ? { fontSize: `${size}px`, width: `${size}px`, height: `${size}px` }
+    ? { fontSize: `${size * 0.4}px`, width: `${size}px`, height: `${size}px` }
     : {};
 
   if (!server.icon || failed) {

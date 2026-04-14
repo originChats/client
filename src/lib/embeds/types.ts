@@ -1,4 +1,4 @@
-export type EmbedType =
+type EmbedType =
   | "youtube"
   | "tenor"
   | "github_user"

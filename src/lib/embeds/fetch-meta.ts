@@ -5,7 +5,7 @@ const META_CACHE = new Map<
 const CACHE_TTL = 5 * 60 * 1000;
 const MAX_META_CACHE_SIZE = 100;
 
-export interface LinkMetadata {
+interface LinkMetadata {
   title: string;
   description?: string;
   image?: string;

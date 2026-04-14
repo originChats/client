@@ -11,7 +11,7 @@ import { unreadState } from "../../state";
 import { statusState } from "../state";
 import { renderMembersSignal } from "../ui-signals";
 import { wsSend } from "../ws-sender";
-import { enablePushForServer } from "../websocket";
+import { enablePushForServer } from "../auth";
 
 export function handleReady(msg: Ready, sUrl: string): void {
   currentUserByServer.value = {

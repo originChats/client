@@ -8,7 +8,7 @@ const SWIPE_MAX = 72;
 const SPRING_TENSION = 320;
 const SPRING_FRICTION = 1000;
 
-export interface SwipeableMessageProps {
+interface SwipeableMessageProps {
   children: ComponentChildren;
   canEdit: boolean;
   canReply: boolean;

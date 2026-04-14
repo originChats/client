@@ -177,4 +177,3 @@ export function FloatingActionButtons() {
   );
 }
 
-export { actionButtonsState };

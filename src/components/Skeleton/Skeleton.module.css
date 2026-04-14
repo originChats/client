@@ -20,6 +20,7 @@
 }
 
 .skeletonAvatar {
+  composes: skeleton;
   border-radius: 50%;
   height: 36px;
   width: 36px;
@@ -27,6 +28,7 @@
 }
 
 .skeletonText {
+  composes: skeleton;
   height: 14px;
   width: 100%;
   border-radius: 4px;
@@ -68,6 +70,7 @@
 }
 
 .skeletonMessageAvatar {
+  composes: skeleton;
   width: 40px;
   height: 40px;
   border-radius: 50%;
@@ -113,6 +116,7 @@
 }
 
 .skeletonCardAvatar {
+  composes: skeleton;
   width: 28px;
   height: 28px;
   border-radius: 50%;

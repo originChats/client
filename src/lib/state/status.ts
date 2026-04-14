@@ -10,7 +10,7 @@ interface UserStatus {
 
 type StatusMap = Record<ServerUrl, Record<Username, UserStatus>>;
 
-export class StatusState {
+class StatusState {
   readonly byServer = signal<StatusMap>({});
 
   getStatus(serverUrl: ServerUrl, username: Username): UserStatus | undefined {

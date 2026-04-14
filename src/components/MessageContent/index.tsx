@@ -236,6 +236,13 @@ function MessageContentInner({
       "div.image-placeholder",
     );
 
+    if (isReply) {
+      placeholders.forEach((placeholder) => {
+        placeholder.remove();
+      });
+      return;
+    }
+
     placeholders.forEach((placeholder) => {
       const url = placeholder.dataset.imageUrl;
       if (!url) return;

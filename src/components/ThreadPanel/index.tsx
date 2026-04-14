@@ -18,6 +18,7 @@ import {
   leaveThread,
 } from "../../lib/actions";
 import { Header } from "../Header";
+import { formatThreadTime } from "../../lib/date-utils";
 import { showThreadPanel, renderChannelsSignal } from "../../lib/ui-signals";
 import { Icon } from "../Icon";
 import { wsSend } from "../../lib/websocket";
@@ -126,25 +127,8 @@ export function ThreadPanel() {
 
   const myUsername = currentUserByServer.value[serverUrl.value]?.username;
 
-  const formatTimestamp = (timestamp: number): string => {
-    const date = new Date(timestamp * 1000);
-    const now = new Date();
-    const diff = now.getTime() - date.getTime();
-    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-
-    if (days === 0) {
-      return date.toLocaleTimeString([], {
-        hour: "numeric",
-        minute: "2-digit",
-      });
-    } else if (days === 1) {
-      return "Yesterday";
-    } else if (days < 7) {
-      return `${days} days ago`;
-    } else {
-      return date.toLocaleDateString([], { month: "short", day: "numeric" });
-    }
-  };
+  const formatTimestamp = (timestamp: number): string =>
+    formatThreadTime(timestamp);
 
   return (
     <div className={styles.mainContentWrapper}>

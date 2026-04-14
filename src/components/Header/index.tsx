@@ -1,4 +1,4 @@
-import { useReducer } from "preact/hooks";
+import { useReducer, useState } from "preact/hooks";
 import { useSignalEffect } from "@preact/signals";
 import {
   currentServer,
@@ -27,6 +27,8 @@ import {
   showVoiceCallView,
   pinnedLoading,
   pinnedMessages,
+  searchResults,
+  searchLoading,
 } from "../../lib/ui-signals";
 import { CallButton } from "../buttons/CallButton";
 import { wsSend } from "../../lib/websocket";
@@ -37,6 +39,8 @@ const SPECIAL_CHANNELS = new Set(["friends", "requests", "blocked", "groups"]);
 
 export function Header() {
   const [, forceUpdate] = useReducer((n) => n + 1, 0);
+  const [searchFocused, setSearchFocused] = useState(false);
+  const [searchInput, setSearchInput] = useState("");
   useSignalEffect(() => {
     currentChannel.value;
     serverUrl.value;
@@ -131,12 +135,12 @@ export function Header() {
           </span>
         )}
       </button>
-      <div className={styles["server-info"]}>
-        <div className={styles["header-text"]}>
-          <div className={styles["server-name"]}>
+      <div className={styles.serverInfo}>
+        <div className={styles.headerText}>
+          <div className={styles.serverName}>
             <span>{currentServer.value?.name || "Direct Messages"}</span>
           </div>
-          <div className={styles["channel-name"]}>
+          <div className={styles.channelName}>
             #{" "}
             {currentChannel.value?.display_name ||
               currentChannel.value?.name ||
@@ -262,15 +266,6 @@ export function Header() {
             <Icon name="Pin" size={20} />
           </button>
         )}
-        {canSearch && (
-          <button
-            className={`${styles.headerIconBtn} ${rightPanelView.value === "search" ? styles.active : ""}`}
-            onClick={() => togglePanel("search")}
-            title="Search"
-          >
-            <Icon name="Search" size={20} />
-          </button>
-        )}
         {!isDM && (
           <button
             className={`${styles.headerIconBtn} ${rightPanelView.value === "members" ? styles.active : ""}`}
@@ -298,6 +293,44 @@ export function Header() {
               </button>
             );
           })()}
+        {canSearch && (
+          <div
+            className={`${styles.searchInputContainer} ${searchFocused ? styles.focused : ""}`}
+          >
+            <Icon name="Search" size={16} />
+            <input
+              type="text"
+              className={styles.searchInput}
+              placeholder="Search"
+              value={searchInput}
+              onInput={(e) =>
+                setSearchInput((e.target as HTMLInputElement).value)
+              }
+              onFocus={() => {
+                setSearchFocused(true);
+                rightPanelView.value = "search";
+              }}
+              onBlur={() => setSearchFocused(false)}
+              onKeyDown={(e) => {
+                if (
+                  e.key === "Enter" &&
+                  searchInput.trim() &&
+                  currentChannel.value
+                ) {
+                  searchLoading.value = true;
+                  searchResults.value = [];
+                  wsSend({
+                    cmd: "messages_search",
+                    channel: currentChannel.value.name,
+                    query: searchInput.trim(),
+                  });
+                  rightPanelView.value = "search";
+                  mobilePanelOpen.value = true;
+                }
+              }}
+            />
+          </div>
+        )}
       </div>
     </div>
   );

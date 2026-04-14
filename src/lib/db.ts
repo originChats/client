@@ -26,7 +26,7 @@ const STORES = [
   "pings",
 ] as const;
 
-export type StoreName = (typeof STORES)[number];
+type StoreName = (typeof STORES)[number];
 
 // ── Open ──────────────────────────────────────────────────────────────────────
 

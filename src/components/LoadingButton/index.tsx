@@ -1,7 +1,7 @@
 import { h } from "preact";
 import styles from "./LoadingButton.module.css";
 
-export interface LoadingButtonProps {
+interface LoadingButtonProps {
   isLoading?: boolean;
   onClick?: () => void | Promise<void>;
   children: any;

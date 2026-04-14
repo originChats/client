@@ -28,6 +28,7 @@ import {
   type EmojiSection,
   type EmojiItem,
 } from "./VirtualizedEmojiGrid";
+import styles from "./UnifiedPicker.module.css";
 
 interface GifResult {
   id: string;
@@ -46,7 +47,7 @@ interface SavedGif {
   savedAt: number;
 }
 
-export interface UnifiedPickerProps {
+interface UnifiedPickerProps {
   isOpen: boolean;
   onClose: () => void;
   onEmojiSelect: (emoji: string) => void;
@@ -76,14 +77,18 @@ function TwemojiImg({
       <img
         src={url}
         alt={alt}
-        className="twemoji-picker-img"
+        className={styles.twemojiPickerImg}
         draggable={false}
       />
     );
   }
   const char = emoji ?? hexcodeToEmoji(hexcode);
   return (
-    <span className="twemoji-picker-img twemoji-picker-system">{char}</span>
+    <span
+      className={`${styles.twemojiPickerImg} ${styles.twemojiPickerSystem}`}
+    >
+      {char}
+    </span>
   );
 }
 
@@ -210,11 +215,11 @@ export function UnifiedPicker({
   if (!isOpen) return null;
 
   return (
-    <div ref={pickerRef} className="unified-picker">
-      <div className="unified-picker-header">
-        <div className="unified-picker-tabs">
+    <div ref={pickerRef} className={styles.unifiedPicker}>
+      <div className={styles.unifiedPickerHeader}>
+        <div className={styles.unifiedPickerTabs}>
           <button
-            className={`unified-tab ${activeTab === "emoji" ? "active" : ""}`}
+            className={`${styles.unifiedTab} ${activeTab === "emoji" ? styles.active : ""}`}
             onClick={() => {
               setActiveTab("emoji");
               setSearchTerm("");
@@ -224,7 +229,7 @@ export function UnifiedPicker({
             Emoji
           </button>
           <button
-            className={`unified-tab ${activeTab === "gif" ? "active" : ""}`}
+            className={`${styles.unifiedTab} ${activeTab === "gif" ? styles.active : ""}`}
             onClick={() => {
               setActiveTab("gif");
               setSearchTerm("");
@@ -234,11 +239,11 @@ export function UnifiedPicker({
             GIFs
           </button>
         </div>
-        <button className="unified-picker-close" onClick={onClose}>
+        <button className={styles.unifiedPickerClose} onClick={onClose}>
           <Icon name="X" size={16} />
         </button>
       </div>
-      <div className="unified-picker-search">
+      <div className={styles.unifiedPickerSearch}>
         <Icon name="Search" size={14} />
         <input
           type="text"
@@ -613,10 +618,10 @@ function EmojiPanel({
     searchTerm.trim() && displaySections.every((s) => s.items.length === 0);
 
   return (
-    <div className="unified-picker-body">
-      <div className="emoji-sidebar">
+    <div className={styles.unifiedPickerBody}>
+      <div className={styles.emojiSidebar}>
         <button
-          className={`emoji-sidebar-btn ${activeCategory === null ? "active" : ""}`}
+          className={`${styles.emojiSidebarBtn} ${activeCategory === null ? styles.active : ""}`}
           onClick={() => setActiveCategory(null)}
           title="All"
           type="button"
@@ -629,7 +634,7 @@ function EmojiPanel({
           return (
             <button
               key={sUrl}
-              className={`emoji-sidebar-btn ${isActive ? "active" : ""}`}
+              className={`${styles.emojiSidebarBtn} ${isActive ? styles.active : ""}`}
               onClick={() => setActiveCategory(`server:${sUrl}`)}
               title={server?.name || sUrl}
               type="button"
@@ -638,21 +643,21 @@ function EmojiPanel({
                 <img
                   src={server.icon}
                   alt={server.name || sUrl}
-                  className="emoji-sidebar-server-icon"
+                  className={styles.emojiSidebarServerIcon}
                 />
               ) : (
-                <span className="emoji-sidebar-server-letter">
+                <span className={styles.emojiSidebarServerLetter}>
                   {(server?.name || sUrl).charAt(0).toUpperCase()}
                 </span>
               )}
             </button>
           );
         })}
-        <div className="emoji-sidebar-divider" />
+        <div className={styles.emojiSidebarDivider} />
         {DISPLAY_GROUPS.map((groupId) => (
           <button
             key={groupId}
-            className={`emoji-sidebar-btn ${activeCategory === String(groupId) ? "active" : ""}`}
+            className={`${styles.emojiSidebarBtn} ${activeCategory === String(groupId) ? styles.active : ""}`}
             onClick={() => setActiveCategory(String(groupId))}
             title={EMOJI_GROUP_NAMES[groupId]}
             type="button"
@@ -664,9 +669,9 @@ function EmojiPanel({
           </button>
         ))}
       </div>
-      <div ref={contentRef} className="emoji-content">
+      <div ref={contentRef} className={styles.emojiContent}>
         {showSearchEmpty ? (
-          <div className="picker-empty">
+          <div className={styles.pickerEmpty}>
             <Icon name="Search" size={32} />
             <p>No emoji found</p>
           </div>
@@ -779,28 +784,28 @@ function GifPanel({
       });
 
   return (
-    <div className="unified-picker-body">
+    <div className={styles.unifiedPickerBody}>
       {showFavorites && (
-        <div className="gif-section-label">
+        <div className={styles.gifSectionLabel}>
           <Icon name="Star" size={14} />
           Favorites
         </div>
       )}
       {loading ? (
-        <div className="picker-loading">
+        <div className={styles.gifLoading}>
           <div
-            className="account-loading-spinner"
+            className={styles.accountLoadingSpinner}
             style={{ width: 32, height: 32 }}
           ></div>
           <span>Searching...</span>
         </div>
       ) : displayGifs.length === 0 ? (
-        <div className="picker-empty">
+        <div className={styles.pickerEmpty}>
           {showFavorites ? (
             <>
               <Icon name="Star" size={32} />
               <p>No favorite GIFs yet</p>
-              <p className="picker-empty-hint">
+              <p className={styles.pickerEmptyHint}>
                 Search for GIFs and star them to save
               </p>
             </>
@@ -812,16 +817,16 @@ function GifPanel({
           )}
         </div>
       ) : (
-        <div className="gif-grid">
+        <div className={styles.gifGrid}>
           {displayGifs.slice(0, 50).map((gif) => (
             <div
               key={gif.id || gif.fullUrl}
-              className="gif-item"
+              className={styles.gifItem}
               onClick={() => handleSelect(gif.fullUrl)}
             >
               <img src={gif.previewUrl} alt={gif.title} loading="lazy" />
               <button
-                className={`gif-fav-btn ${isFavorite(gif.fullUrl) ? "active" : ""}`}
+                className={`${styles.gifFavoriteBtn} ${isFavorite(gif.fullUrl) ? styles.favorited : ""}`}
                 onClick={(e: any) => toggleFavorite(gif.fullUrl, e)}
               >
                 <Icon

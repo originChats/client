@@ -15,7 +15,7 @@ export interface ContextMenuItem {
   children?: ContextMenuItem[];
 }
 
-export interface ContextMenuProps {
+interface ContextMenuProps {
   x: number;
   y: number;
   items: ContextMenuItem[];

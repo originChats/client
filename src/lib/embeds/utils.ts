@@ -1,47 +1,24 @@
 import { fetchLinkMetadata } from "./fetch-meta";
+import {
+  TRUSTED_DOMAINS,
+  IMAGE_EXTENSIONS,
+  VIDEO_EXTENSIONS,
+  hasExtension as hasExtensionUtil,
+  proxyImageUrl as proxyImageUrlUtil,
+} from "../media-utils";
 
 const YOUTUBE_REGEX =
   /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/shorts\/)([a-zA-Z0-9_-]+)/;
-const IMAGE_EXTENSIONS = [
-  "jpg",
-  "jpeg",
-  "png",
-  "gif",
-  "webp",
-  "svg",
-  "bmp",
-  "ico",
-  "avif",
-];
-const VIDEO_EXTENSIONS = ["mp4", "webm", "mov", "ogg", "avi", "mkv"];
-const TRUSTED_DOMAINS = [
-  "avatars.rotur.dev",
-  "photos.rotur.dev",
-  "roturcdn.milosantos.com",
-  "img.youtube.com",
-  "media.tenor.com",
-  "media.discordapp.net",
-  "cdn.discordapp.com",
-];
 
-function hasExtension(url: string, extensions: string[]): boolean {
-  const urlLower = url.toLowerCase();
-  return extensions.some(
-    (ext) =>
-      urlLower.endsWith(`.${ext}`) ||
-      urlLower.includes(`.${ext}?`) ||
-      urlLower.includes(`.${ext}#`),
-  );
+function hasExtension(url: string, extensions: readonly string[]): boolean {
+  return hasExtensionUtil(url, extensions);
 }
 
-export function proxyImageUrl(url: string): string {
-  if (!url || url.startsWith("data:") || url.startsWith("blob:")) return url;
-  try {
-    const urlObj = new URL(url);
-    if (TRUSTED_DOMAINS.includes(urlObj.hostname)) return url;
-  } catch {}
-  return `https://wsrv.nl/?url=${encodeURIComponent(url)}`;
+function proxyImageUrl(url: string): string {
+  return proxyImageUrlUtil(url);
 }
+
+export { proxyImageUrl };
 
 export async function detectEmbedType(url: string) {
   const ytMatch = url.match(YOUTUBE_REGEX);

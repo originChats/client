@@ -4,7 +4,7 @@ import { useFocusTrap } from "../../lib/useFocusTrap";
 import type { VNode } from "preact";
 import type { ComponentChildren } from "preact";
 
-export interface ModalProps {
+interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
   title?: string;
@@ -73,7 +73,7 @@ export function Modal({
   );
 }
 
-export interface ConfirmDialogProps {
+interface ConfirmDialogProps {
   isOpen: boolean;
   onClose: () => void;
   onConfirm: () => void;
@@ -123,7 +123,7 @@ export function ConfirmDialog({
   );
 }
 
-export interface PromptDialogProps {
+interface PromptDialogProps {
   isOpen: boolean;
   onClose: () => void;
   onConfirm: (value: string) => void;

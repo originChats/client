@@ -81,6 +81,7 @@ import {
 } from "./lib/rotur-api";
 import { showLoginChoiceModal } from "./lib/ui-signals";
 
+import { LandingPage } from "./components/LandingPage/LandingPage";
 import { GuildSidebar } from "./components/GuildSidebar";
 import { ChannelList } from "./components/ChannelList";
 import { MessageArea } from "./components/MessageArea";
@@ -116,6 +117,42 @@ registerSW({
     updateAvailable.value = true;
   },
 });
+
+function RootRouter() {
+  const [showLanding, setShowLanding] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    const checkPath = () => {
+      const path = window.location.pathname;
+      const isRoot = path === "/" || path === "";
+      setShowLanding(isRoot);
+    };
+
+    checkPath();
+
+    const handlePopState = () => {
+      checkPath();
+    };
+
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
+
+  const handleOpenApp = () => {
+    window.history.pushState({}, "", "/app");
+    setShowLanding(false);
+  };
+
+  if (showLanding === null) {
+    return null;
+  }
+
+  if (showLanding) {
+    return <LandingPage onOpenApp={handleOpenApp} />;
+  }
+
+  return <App />;
+}
 
 function App() {
   const [isLoading, setIsLoading] = useState(true);
@@ -467,4 +504,4 @@ function App() {
   );
 }
 
-render(<App />, document.getElementById("app")!);
+render(<RootRouter />, document.getElementById("app")!);

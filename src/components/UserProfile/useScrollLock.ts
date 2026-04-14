@@ -3,8 +3,6 @@ import { useEffect, useRef, useState, useCallback } from "preact/hooks";
 const NEAR_BOTTOM_THRESHOLD = 80;
 const NEAR_TOP_THRESHOLD = 150;
 const OVERSCROLL_PADDING = 500;
-const MAX_MESSAGES = 500;
-const UNLOAD_BUFFER = 50;
 
 interface UseScrollLockOptions {
   /** Called when the user scrolls to near the top and older messages should load. */
@@ -38,13 +36,13 @@ interface UseScrollLockResult {
   beginLoadOlder: () => void;
   beginLoadNewer: () => void;
   overscrollPadding: number;
+  topSentinelRef: (el: HTMLDivElement | null) => void;
 }
 
 export function useScrollLock({
   onLoadOlder,
   isLoadingOlder,
   onOlderLoaded,
-  onUnloadMessages,
   onLoadNewer,
   isLoadingNewer,
   onNewerLoaded,
@@ -60,6 +58,8 @@ export function useScrollLock({
   const scrollRAF = useRef<number | null>(null);
   const prevScrollTop = useRef(0);
   const lastScrollDirection = useRef<"up" | "down" | null>(null);
+  const lastContainerHeight = useRef(0);
+  const topSentinelEl = useRef<HTMLDivElement | null>(null);
 
   const stableOnLoadOlder = useStableCallback(onLoadOlder);
   const stableOnOlderLoaded = useStableCallback(onOlderLoaded);
@@ -128,6 +128,10 @@ export function useScrollLock({
     pendingNewerLoad.current = true;
   }, []);
 
+  const topSentinelRef = useCallback((el: HTMLDivElement | null) => {
+    topSentinelEl.current = el;
+  }, []);
+
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
@@ -150,26 +154,6 @@ export function useScrollLock({
       autoScroll.current = nearBottom;
       setShowScrollBtn(!nearBottom);
 
-      // Load older messages when near top (with overscroll support)
-      if (
-        el.scrollTop <= NEAR_TOP_THRESHOLD &&
-        !isLoadingOlderRef.current &&
-        !pendingOlderLoad.current
-      ) {
-        if (loadOlderDebounce.current !== null) return;
-        loadOlderDebounce.current = window.setTimeout(() => {
-          loadOlderDebounce.current = null;
-          const container = containerRef.current;
-          if (
-            !container ||
-            container.scrollTop > NEAR_TOP_THRESHOLD ||
-            pendingOlderLoad.current
-          )
-            return;
-          stableOnLoadOlder();
-        }, 50);
-      }
-
       // Load newer messages when near bottom but not at bottom
       if (
         stableOnLoadNewer &&
@@ -191,16 +175,35 @@ export function useScrollLock({
     el.addEventListener("scroll", onScroll, { passive: true });
     return () => {
       el.removeEventListener("scroll", onScroll);
-      if (loadOlderDebounce.current !== null) {
-        clearTimeout(loadOlderDebounce.current);
-        loadOlderDebounce.current = null;
-      }
       if (loadNewerDebounce.current !== null) {
         clearTimeout(loadNewerDebounce.current);
         loadNewerDebounce.current = null;
       }
     };
-  }, [stableOnLoadOlder, stableOnLoadNewer]);
+  }, [stableOnLoadNewer]);
+
+  useEffect(() => {
+    const sentinel = topSentinelEl.current;
+    if (!sentinel) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (
+            entry.isIntersecting &&
+            !isLoadingOlderRef.current &&
+            !pendingOlderLoad.current
+          ) {
+            stableOnLoadOlder();
+          }
+        }
+      },
+      { threshold: 0 },
+    );
+
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [stableOnLoadOlder]);
 
   useEffect(() => {
     const el = containerRef.current;
@@ -220,14 +223,6 @@ export function useScrollLock({
           el.scrollTop += heightAdded;
         });
         pendingOlderLoad.current = false;
-        if (
-          el.scrollTop <= NEAR_TOP_THRESHOLD &&
-          loadOlderDebounce.current === null
-        ) {
-          loadOlderDebounce.current = window.setTimeout(() => {
-            loadOlderDebounce.current = null;
-          }, 50);
-        }
         stableOnOlderLoaded();
         return;
       }
@@ -249,8 +244,21 @@ export function useScrollLock({
     });
 
     observer.observe(el, { childList: true, subtree: true });
+
+    const resizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const newHeight = entry.contentRect.height;
+        const heightDiff = newHeight - lastContainerHeight.current;
+        lastContainerHeight.current = newHeight;
+      }
+    });
+
+    lastContainerHeight.current = el.clientHeight;
+    resizeObserver.observe(el);
+
     return () => {
       observer.disconnect();
+      resizeObserver.disconnect();
       if (rafId !== null) cancelAnimationFrame(rafId);
     };
   }, [stableOnOlderLoaded, stableOnNewerLoaded]);
@@ -270,5 +278,6 @@ export function useScrollLock({
     beginLoadOlder,
     beginLoadNewer,
     overscrollPadding: OVERSCROLL_PADDING,
+    topSentinelRef,
   };
 }

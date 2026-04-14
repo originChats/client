@@ -1,7 +1,6 @@
 import type { MessageNew } from "@/msgTypes";
 import type { Channel, Message, DMServer } from "../../../types";
 import {
-  messagesByServer,
   loadedChannelsByServer,
   channelsByServer,
   currentThread,
@@ -16,278 +15,218 @@ import {
   typingUsersByServer,
   DM_SERVER_URL,
 } from "../../../state";
-import { unreadState } from "../../../state";
+import { unreadState, getChannelNotifLevel } from "../../../state";
+import { messages } from "../../state/messages";
+import { pendingMessages } from "../../state/pending-messages";
 import {
   renderChannelsSignal,
   renderMessagesSignal,
   renderGuildSidebarSignal,
 } from "../../ui-signals";
-import { getChannelNotifLevel } from "../../../state";
 import { wsSend } from "../../ws-sender";
-import { playPingSound } from "../../websocket";
+import { playPingSound } from "../../audio";
 import { readTimes as dbReadTimes } from "../../db";
 import { getMessageKey, truncateForNotification } from "../../message-utils";
 
-const _readTimeFlushTimers: Record<string, ReturnType<typeof setTimeout>> = {};
+const readTimeTimers: Record<string, ReturnType<typeof setTimeout>> = {};
 
-function showNotification(title: string, body: string, channel: string): void {
+function notify(title: string, body: string, tag: string) {
   if ("Notification" in window && Notification.permission === "granted") {
-    const notification = new Notification(title, { body, tag: channel });
-    notification.onclick = () => {
+    const n = new Notification(title, { body, tag });
+    n.onclick = () => {
       window.focus();
-      notification.close();
+      n.close();
     };
   }
 }
 
-function handlePingedMessage(
+function isPinged(
   msg: MessageNew,
-  sUrl: string,
-  targetChannelKey: string,
-  notifTitle: string,
-): void {
-  if (serverUrl.value === sUrl) {
-    unreadState.incrementPing(sUrl, targetChannelKey);
-    renderChannelsSignal.value++;
-  }
-  playPingSound();
-  showNotification(
-    notifTitle,
-    truncateForNotification(msg.message.content),
-    msg.channel,
+  myUsername: string,
+): { user: boolean; role: boolean; reply: boolean } {
+  const pings = msg.message.pings;
+  if (!pings) return { user: false, role: false, reply: false };
+  return {
+    user: (pings.users || []).some(
+      (u: string) => u.toLowerCase() === myUsername.toLowerCase(),
+    ),
+    role: false,
+    reply: (pings.replies || []).some(
+      (r: string) => r.toLowerCase() === myUsername.toLowerCase(),
+    ),
+  };
+}
+
+function getMyRoles(sUrl: string, username: string): string[] {
+  return (
+    usersByServer.value[sUrl]?.[username.toLowerCase()]?.roles?.map((r) =>
+      r.toLowerCase(),
+    ) || []
   );
+}
+
+function updateLastMessage(sUrl: string, channel: string, timestamp: number) {
+  const chList = channelsByServer.value[sUrl];
+  if (!chList) return;
+  const idx = chList.findIndex((c: Channel) => c.name === channel);
+  if (idx === -1 || !timestamp) return;
+  const updated = [...chList];
+  updated[idx] = { ...updated[idx], last_message: timestamp };
+  channelsByServer.value = { ...channelsByServer.value, [sUrl]: updated };
+  if (sUrl === DM_SERVER_URL) renderChannelsSignal.value++;
+}
+
+function ensureDMServer(channel: string, user: string, timestamp: number) {
+  if (!dmServers.value.some((d: DMServer) => d.channel === channel)) {
+    dmServers.value = [
+      ...dmServers.value,
+      { channel, name: user, username: user, last_message: timestamp },
+    ];
+  }
+}
+
+function persistReadTime(sUrl: string, channel: string, timestamp: number) {
+  readTimesByServer.value = {
+    ...readTimesByServer.value,
+    [sUrl]: { ...(readTimesByServer.value[sUrl] ?? {}), [channel]: timestamp },
+  };
+  const key = `${sUrl}:${channel}`;
+  if (readTimeTimers[key]) clearTimeout(readTimeTimers[key]);
+  readTimeTimers[key] = setTimeout(() => {
+    delete readTimeTimers[key];
+    dbReadTimes
+      .set(sUrl, readTimesByServer.value[sUrl] ?? {})
+      .catch((e) =>
+        console.warn("[message_new] Failed to persist read time:", e),
+      );
+  }, 1000);
+}
+
+function doPingNotification(
+  sUrl: string,
+  channel: string,
+  msg: MessageNew,
+  title: string,
+) {
+  unreadState.incrementPing(sUrl, channel);
+  playPingSound();
+  notify(title, truncateForNotification(msg.message.content), msg.channel);
+  if (sUrl === serverUrl.value) renderChannelsSignal.value++;
   renderGuildSidebarSignal.value++;
 }
 
-export function handleMessageNew(msg: MessageNew, sUrl: string): void {
-  const isThreadMessage = !!msg.thread_id;
-  const messageKey = getMessageKey(msg);
-
-  const isCurrentChannel =
-    sUrl === serverUrl.value &&
-    ((isThreadMessage && currentThread.value?.id === msg.thread_id) ||
-      (!isThreadMessage && currentChannel.value?.name === messageKey));
-
-  if (isCurrentChannel) {
-    const channelIsLoaded =
-      loadedChannelsByServer[sUrl]?.has(messageKey) ?? false;
-    if (channelIsLoaded) {
-      const channelMsgs = messagesByServer.value[sUrl]?.[messageKey] || [];
-      const alreadyExists = channelMsgs.some(
-        (m: Message) => m.id === msg.message.id,
-      );
-      if (!alreadyExists) {
-        messagesByServer.value = {
-          ...messagesByServer.value,
-          [sUrl]: {
-            ...messagesByServer.value[sUrl],
-            [messageKey]: [...channelMsgs, msg.message],
-          },
-        };
-      }
-    }
-  }
-
-  const chList = channelsByServer.value[sUrl];
-  const targetChannel = msg.channel;
-  if (chList) {
-    const idx = chList.findIndex((c: Channel) => c.name === targetChannel);
-    if (idx !== -1 && msg.message.timestamp) {
-      const updatedList = [...chList];
-      updatedList[idx] = {
-        ...updatedList[idx],
-        last_message: msg.message.timestamp,
-      };
-      channelsByServer.value = {
-        ...channelsByServer.value,
-        [sUrl]: updatedList,
-      };
-      if (sUrl === DM_SERVER_URL) {
-        renderChannelsSignal.value++;
-      }
-    }
-  }
-
-  const isThreadView =
-    isThreadMessage && currentThread.value?.id === msg.thread_id;
-  const isCurrentView =
-    isThreadView ||
-    (!isThreadMessage &&
-      serverUrl.value === sUrl &&
-      currentChannel.value?.name === messageKey);
-
-  const notifLevel = getChannelNotifLevel(sUrl, targetChannel);
-  const isMuted = notifLevel === "none";
-  const channelKey = `${sUrl}:${targetChannel}`;
-
-  let myUsername = currentUserByServer.value[sUrl]?.username;
-  const isOwnMessage = msg.message.user === myUsername;
-
-  if (!isCurrentView && !isMuted && !isOwnMessage) {
-    const targetChannelKey = isThreadMessage ? msg.thread_id! : msg.channel;
-    unreadState.incrementUnread(sUrl, targetChannelKey);
-    renderChannelsSignal.value++;
-
-    if (sUrl === DM_SERVER_URL && !isOwnMessage && dmMessageSound.value) {
-      playPingSound();
-    }
-
-    if (notifLevel === "all") {
-      myUsername = currentUserByServer.value[sUrl]?.username;
-      if (msg.message.user !== myUsername) {
-        unreadState.incrementPing(sUrl, targetChannelKey);
-        playPingSound();
-        showNotification(
-          `${msg.message.user} in #${msg.channel}`,
-          truncateForNotification(msg.message.content),
-          msg.channel,
-        );
-        if (serverUrl.value === sUrl) renderChannelsSignal.value++;
-        renderGuildSidebarSignal.value++;
-      }
-    }
-
-    if (sUrl === DM_SERVER_URL) {
-      const alreadyListed = dmServers.value.some(
-        (d: DMServer) => d.channel === msg.channel,
-      );
-      if (!alreadyListed) {
-        const senderUsername = msg.message.user as string;
-        dmServers.value = [
-          ...dmServers.value,
-          {
-            channel: msg.channel,
-            name: senderUsername,
-            username: senderUsername,
-            last_message: msg.message.timestamp,
-          },
-        ];
-      }
-    }
-
-    if (serverUrl.value === sUrl) renderChannelsSignal.value++;
-    renderGuildSidebarSignal.value++;
-  } else if (isOwnMessage && !isCurrentView) {
-    const channelToClear = isThreadMessage ? msg.thread_id! : msg.channel;
-    unreadState.clearChannel(sUrl, channelToClear);
-  } else if (isCurrentView) {
-    const msgTimestamp = msg.message.timestamp;
-
-    readTimesByServer.value = {
-      ...readTimesByServer.value,
-      [sUrl]: {
-        ...(readTimesByServer.value[sUrl] ?? {}),
-        [msg.channel]: msgTimestamp,
-      },
-    };
-
-    const channelToClear = isThreadMessage ? msg.thread_id! : msg.channel;
-    unreadState.clearChannel(sUrl, channelToClear);
-
-    if (_readTimeFlushTimers[channelKey]) {
-      clearTimeout(_readTimeFlushTimers[channelKey]);
-    }
-    _readTimeFlushTimers[channelKey] = setTimeout(() => {
-      delete _readTimeFlushTimers[channelKey];
-      dbReadTimes
-        .set(sUrl, readTimesByServer.value[sUrl] ?? {})
-        .catch((e) =>
-          console.warn("[message_new] Failed to persist read time:", e),
-        );
-    }, 1000);
-  } else if (!isCurrentView && isMuted) {
-    if (sUrl === DM_SERVER_URL) {
-      const alreadyListed = dmServers.value.some(
-        (d: DMServer) => d.channel === msg.channel,
-      );
-      if (!alreadyListed) {
-        const senderUsername = msg.message.user;
-        dmServers.value = [
-          ...dmServers.value,
-          {
-            channel: msg.channel,
-            name: senderUsername,
-            username: senderUsername,
-            last_message: msg.message.timestamp,
-          },
-        ];
-      }
-    }
-  }
-
-  myUsername = currentUserByServer.value[sUrl]?.username;
-  const myRoles =
-    usersByServer.value[sUrl]?.[myUsername?.toLowerCase() || ""]?.roles || [];
-  const myRolesLower = myRoles.map((r) => r.toLowerCase());
-  const mentionedRoles = msg.message.pings?.roles || [];
-  const isRolePinged = mentionedRoles.some((r) =>
-    myRolesLower.includes(r.toLowerCase()),
+function handlePingNotifications(
+  msg: MessageNew,
+  sUrl: string,
+  channel: string,
+  myUsername: string,
+) {
+  const pinged = isPinged(msg, myUsername);
+  const myRoles = getMyRoles(sUrl, myUsername);
+  const rolePinged = (msg.message.pings?.roles || []).some((r) =>
+    myRoles.includes(r.toLowerCase()),
   );
 
-  const isUserPinged =
-    msg.message.pings?.users?.some(
-      (u) => u.toLowerCase() === myUsername?.toLowerCase(),
-    ) || false;
-  const isReplyPinged =
-    msg.message.pings?.replies?.some(
-      (r) => r.toLowerCase() === myUsername?.toLowerCase(),
-    ) || false;
+  if (msg.thread_id && (pinged.user || rolePinged || pinged.reply)) {
+    const caps = serverCapabilitiesByServer.value[sUrl] ?? [];
+    if (caps.includes("thread_join"))
+      wsSend({ cmd: "thread_join", thread_id: msg.thread_id }, sUrl);
+  }
+
+  if (pinged.user) {
+    doPingNotification(
+      sUrl,
+      channel,
+      msg,
+      `${msg.message.user} mentioned you in #${msg.channel}`,
+    );
+  } else if (rolePinged) {
+    const role = (msg.message.pings?.roles || []).find((r) =>
+      myRoles.includes(r.toLowerCase()),
+    );
+    doPingNotification(
+      sUrl,
+      channel,
+      msg,
+      `${msg.message.user} mentioned ${role} in #${msg.channel}`,
+    );
+  } else if (pinged.reply) {
+    doPingNotification(
+      sUrl,
+      channel,
+      msg,
+      `${msg.message.user} replied to your message in #${msg.channel}`,
+    );
+  }
+}
+
+export function handleMessageNew(msg: MessageNew, sUrl: string): void {
+  const isThread = !!msg.thread_id;
+  const key = getMessageKey(msg);
+  const myUsername = currentUserByServer.value[sUrl]?.username || "";
+  const isOwn = msg.message.user === myUsername;
+  const isCurrentServer = sUrl === serverUrl.value;
+  const isCurrentChannel =
+    isCurrentServer &&
+    ((isThread && currentThread.value?.id === msg.thread_id) ||
+      (!isThread && currentChannel.value?.name === key));
+
+  // Handle pending message confirmation for own messages
+  if (isOwn) {
+    pendingMessages.removeByKey(sUrl, key, msg.message.content, myUsername);
+  }
+
+  if (isCurrentChannel && loadedChannelsByServer[sUrl]?.has(key)) {
+    messages.append(sUrl, key, msg.message as Message);
+  }
+
+  updateLastMessage(sUrl, msg.channel, msg.message.timestamp);
+
+  const notifLevel = getChannelNotifLevel(sUrl, msg.channel);
+  const isMuted = notifLevel === "none";
+  const channelToClear = isThread ? msg.thread_id! : msg.channel;
+
+  if (!isCurrentChannel && !isMuted && !isOwn) {
+    unreadState.incrementUnread(sUrl, channelToClear);
+    renderChannelsSignal.value++;
+
+    if (sUrl === DM_SERVER_URL && dmMessageSound.value) playPingSound();
+
+    if (notifLevel === "all") {
+      doPingNotification(
+        sUrl,
+        channelToClear,
+        msg,
+        `${msg.message.user} in #${msg.channel}`,
+      );
+    }
+
+    if (sUrl === DM_SERVER_URL)
+      ensureDMServer(msg.channel, msg.message.user, msg.message.timestamp);
+
+    if (isCurrentServer) renderChannelsSignal.value++;
+    renderGuildSidebarSignal.value++;
+  } else if (isOwn && !isCurrentChannel) {
+    unreadState.clearChannel(sUrl, channelToClear);
+  } else if (isCurrentChannel) {
+    persistReadTime(sUrl, msg.channel, msg.message.timestamp);
+    unreadState.clearChannel(sUrl, channelToClear);
+  } else if (isMuted && sUrl === DM_SERVER_URL) {
+    ensureDMServer(msg.channel, msg.message.user, msg.message.timestamp);
+  }
 
   if (
-    myUsername &&
-    msg.message.user !== myUsername &&
+    !isOwn &&
     !isMuted &&
-    !isCurrentView &&
-    notifLevel !== "all"
+    !isCurrentChannel &&
+    notifLevel !== "all" &&
+    myUsername
   ) {
-    if (
-      isThreadMessage &&
-      msg.thread_id &&
-      (isUserPinged || isRolePinged || isReplyPinged)
-    ) {
-      const caps = serverCapabilitiesByServer.value[sUrl] ?? [];
-      if (caps.includes("thread_join")) {
-        wsSend({ cmd: "thread_join", thread_id: msg.thread_id }, sUrl);
-      }
-    }
-
-    if (isUserPinged) {
-      const targetChannelKey = isThreadMessage ? msg.thread_id! : msg.channel;
-      handlePingedMessage(
-        msg,
-        sUrl,
-        targetChannelKey,
-        `${msg.message.user} mentioned you in #${msg.channel}`,
-      );
-    } else if (isRolePinged) {
-      const pingedRole = mentionedRoles.find((r) =>
-        myRolesLower.includes(r.toLowerCase()),
-      );
-      const targetChannelKey = isThreadMessage ? msg.thread_id! : msg.channel;
-      handlePingedMessage(
-        msg,
-        sUrl,
-        targetChannelKey,
-        `${msg.message.user} mentioned ${pingedRole} in #${msg.channel}`,
-      );
-    } else if (isReplyPinged) {
-      const targetChannelKey = isThreadMessage ? msg.thread_id! : msg.channel;
-      handlePingedMessage(
-        msg,
-        sUrl,
-        targetChannelKey,
-        `${msg.message.user} replied to your message in #${msg.channel}`,
-      );
-    }
+    handlePingNotifications(msg, sUrl, channelToClear, myUsername);
   }
 
-  const typingServer = typingUsersByServer.value[sUrl];
-  if (typingServer && typingServer[msg.channel]) {
-    const typing = typingServer[msg.channel] as Map<string, number>;
-    if (typing.has(msg.message.user)) {
-      typing.delete(msg.message.user);
-    }
-  }
+  const typing = typingUsersByServer.value[sUrl]?.[msg.channel];
+  if (typing) (typing as Map<string, number>).delete(msg.message.user);
 
   renderMessagesSignal.value++;
 }

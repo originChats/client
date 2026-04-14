@@ -2,8 +2,8 @@
 
 .profileCard {
   background: var(--surface);
-  border: none;
-  border-radius: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
   overflow: hidden;
   width: 300px;
@@ -59,14 +59,14 @@
   align-items: flex-end;
   display: flex;
   justify-content: space-between;
-  margin-top: -32px;
+  margin-top: -40px;
   padding: 0 16px;
 }
 
 .profileCardSystemPill {
   align-items: center;
   background: var(--surface-light);
-  border: none;
+  border: 1px solid var(--border);
   border-radius: 99px;
   color: var(--text-dim);
   display: flex;
@@ -76,6 +76,10 @@
   overflow: hidden;
   padding: 3px 8px 3px 6px;
   white-space: nowrap;
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  z-index: 1;
 }
 
 .profileCardSystemPill span {
@@ -87,10 +91,10 @@
   background: var(--surface);
   border: 4px solid var(--surface);
   border-radius: 50%;
-  height: 64px;
+  height: 80px;
   overflow: visible;
   position: relative;
-  width: 64px;
+  width: 80px;
 }
 
 .profileCardAvatar img {
@@ -176,8 +180,10 @@
 
 .profileCardPronouns {
   color: var(--text-dim);
-  font-size: 13px;
+  font-size: 12px;
   margin-top: 2px;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
 .profileCardCustomStatus {
@@ -202,7 +208,7 @@
 }
 
 .profileCardFriendState {
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   display: inline-block;
   font-size: 11px;
   font-weight: 600;
@@ -233,7 +239,6 @@
 }
 
 .profileCardSection {
-  
   margin-top: 10px;
   padding-top: 10px;
 }
@@ -265,8 +270,8 @@
 
 .profileCardRole {
   background: var(--surface-light);
-  border: none;
-  border-radius: 4px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
   color: var(--text);
   font-size: 11px;
   font-weight: 500;
@@ -298,7 +303,7 @@
 /* ============= PROFILE ACTIONS ============= */
 
 .profileActions {
-  border-top: none;
+  border-top: 1px solid var(--border);
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -315,8 +320,8 @@
 .profileActionBtn {
   align-items: center;
   background: var(--surface-light);
-  border: none;
-  border-radius: 50%;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
   color: var(--text);
   cursor: pointer;
   display: flex;
@@ -338,8 +343,8 @@
 .profileActionBtnWide {
   align-items: center;
   background: var(--surface-light);
-  border: none;
-  border-radius: 6px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
   color: var(--text);
   cursor: pointer;
   display: flex;
@@ -366,18 +371,21 @@
 /* ============= PROFILE PANEL (full, for DM sidebar) ============= */
 
 .profilePanel {
-  border-radius: 20px;
+  border-radius: 0;
+  border: none;
+  border-left: 1px solid var(--border);
   background: var(--surface);
   display: flex;
   flex-direction: column;
   height: 100%;
   overflow: hidden;
   width: 100%;
+  flex: 1;
 }
 
 .profilePanelHeader {
   align-items: center;
-  
+
   color: var(--text);
   display: flex;
   font-size: 14px;
@@ -428,17 +436,17 @@
 .profilePanelAvatarRow {
   display: flex;
   justify-content: center;
-  margin-top: -40px;
+  margin-top: -50px;
 }
 
 .profilePanelAvatar {
   background: var(--surface);
   border: 5px solid var(--surface);
   border-radius: 50%;
-  height: 80px;
+  height: 100px;
   overflow: visible;
   position: relative;
-  width: 80px;
+  width: 100px;
 }
 
 .profilePanelAvatar img {
@@ -476,6 +484,9 @@
   color: var(--text-dim);
   font-size: 13px;
   margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .profilePanelInfo .profileCardFriendState {
@@ -513,7 +524,6 @@
 }
 
 .profilePanelSection {
-  
   margin-top: 12px;
   padding: 12px 16px;
 }
@@ -546,11 +556,18 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
+  overflow-y: auto;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.profileMutualServers::-webkit-scrollbar {
+  display: none;
 }
 
 .profileMutualServer {
   align-items: center;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   display: flex;
   gap: 10px;
   padding: 6px 8px;
@@ -565,17 +582,18 @@
 .profileMutualServerIcon {
   align-items: center;
   background: var(--surface-light);
-  border-radius: 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
   display: flex;
   flex-shrink: 0;
-  height: 32px;
+  height: 40px;
   justify-content: center;
   overflow: hidden;
-  width: 32px;
+  width: 40px;
 }
 
 .profileMutualServerIcon img {
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   height: 100%;
   object-fit: cover;
   width: 100%;
@@ -583,7 +601,7 @@
 
 .profileMutualServerIcon span {
   color: var(--text-dim);
-  font-size: 11px;
+  font-size: 16px;
   font-weight: 600;
 }
 

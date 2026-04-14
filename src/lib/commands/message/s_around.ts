@@ -16,6 +16,8 @@ const pendingJumpByServer: Record<
   { messageId: string; channel: string } | null
 > = {};
 
+const olderLoadPendingByServer: Record<string, Set<string>> = {};
+
 export function setPendingJump(
   sUrl: string,
   messageId: string,
@@ -24,8 +26,15 @@ export function setPendingJump(
   pendingJumpByServer[sUrl] = { messageId, channel };
 }
 
-export function clearPendingJump(sUrl: string): void {
+function clearPendingJump(sUrl: string): void {
   pendingJumpByServer[sUrl] = null;
+}
+
+export function setPendingOlderLoad(sUrl: string, channel: string): void {
+  if (!olderLoadPendingByServer[sUrl]) {
+    olderLoadPendingByServer[sUrl] = new Set();
+  }
+  olderLoadPendingByServer[sUrl].add(channel);
 }
 
 export function handleMessagesAround(msg: MessagesAround, sUrl: string): void {
@@ -36,6 +45,10 @@ export function handleMessagesAround(msg: MessagesAround, sUrl: string): void {
   loadedChannelsByServer[sUrl].add(messageKey);
 
   const existingMsgs = messagesByServer.value[sUrl]?.[messageKey] || [];
+  const isOlderLoad = olderLoadPendingByServer[sUrl]?.has(messageKey);
+  if (isOlderLoad) {
+    olderLoadPendingByServer[sUrl].delete(messageKey);
+  }
 
   const newMessages = (msg.messages || []).map((m) => {
     const normalised: Record<string, string[]> = {};
@@ -64,7 +77,20 @@ export function handleMessagesAround(msg: MessagesAround, sUrl: string): void {
     }
   }
 
-  setMessages(sUrl, messageKey, sortedMsgs);
+  if (isOlderLoad) {
+    if (!messagesByServer.value[sUrl]) {
+      messagesByServer.value = { ...messagesByServer.value, [sUrl]: {} };
+    }
+    messagesByServer.value = {
+      ...messagesByServer.value,
+      [sUrl]: {
+        ...messagesByServer.value[sUrl],
+        [messageKey]: sortedMsgs,
+      },
+    };
+  } else {
+    setMessages(sUrl, messageKey, sortedMsgs);
+  }
 
   const pendingJump = pendingJumpByServer[sUrl];
   if (pendingJump && pendingJump.channel === messageKey) {

@@ -8,6 +8,8 @@ import { MessageContent } from "../MessageContent";
 import { UserAvatar } from "../UserAvatar";
 import { useScrollLock } from "../UserProfile/useScrollLock";
 import { Header } from "../Header";
+import { formatMessageTime } from "../../lib/date-utils";
+import styles from "../MessageArea/MessageArea.module.css";
 
 interface NoteMessage {
   key: string;
@@ -51,22 +53,8 @@ function groupNotes(notes: NoteMessage[]): NoteGroup[] {
   return groups;
 }
 
-function formatTimestamp(timestamp: number): string {
-  const date = new Date(timestamp * 1000);
-  const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const msgDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-
-  const time = date.toLocaleTimeString([], {
-    hour: "numeric",
-    minute: "2-digit",
-  });
-
-  if (msgDate < today) {
-    return `${date.toLocaleDateString([], { month: "short", day: "numeric" })} ${time}`;
-  }
-  return time;
-}
+const formatTimestamp = (timestamp: number): string =>
+  formatMessageTime(timestamp);
 
 function resetInputHeight() {
   const input = document.getElementById(
@@ -271,7 +259,7 @@ export function NotesTab() {
           </div>
           {showScrollBtn && (
             <button
-              className="scroll-to-bottom-btn"
+              className={styles.scrollToBottomBtn}
               onClick={scrollToBottom}
               title="Jump to bottom"
             >
@@ -279,13 +267,15 @@ export function NotesTab() {
             </button>
           )}
           {editingNote && (
-            <div className="reply-bar editing-mode active">
-              <div className="reply-bar-icon">
+            <div
+              className={`${styles.replyBar} ${styles.active} ${styles.editingMode}`}
+            >
+              <div className={styles.replyBarIcon}>
                 <Icon name="Pencil" size={16} />
               </div>
-              <div className="reply-bar-body">
-                <div className="reply-bar-label">Editing note</div>
-                <div className="reply-bar-preview">
+              <div className={styles.replyBarBody}>
+                <div className={styles.replyBarLabel}>Editing note</div>
+                <div className={styles.replyBarPreview}>
                   <MessageContent
                     content={editingNote.content}
                     currentUsername={currentUser.value?.username}
@@ -294,11 +284,11 @@ export function NotesTab() {
                 </div>
               </div>
               <button
-                className="reply-bar-close icon-btn"
+                className={styles.replyBarClose}
                 onClick={cancelEdit}
                 title="Cancel"
               >
-                <Icon name="X" size={14} />
+                <Icon name="X" size={20} />
               </button>
             </div>
           )}

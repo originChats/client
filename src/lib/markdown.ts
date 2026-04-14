@@ -1,6 +1,13 @@
 import hljs from "highlight.js/lib/core";
 import { servers, threadsByServer, customEmojisByServer } from "../state";
 import { lookupShortcode } from "./shortcodes";
+import {
+  TRUSTED_DOMAINS,
+  IMAGE_EXTENSIONS,
+  VIDEO_EXTENSIONS,
+  hasExtension as hasExtensionUtil,
+  proxyImageUrl as proxyImageUrlUtil,
+} from "./media-utils";
 import type { CustomEmoji } from "../types";
 
 async function fetchEmojiFromServer(
@@ -62,28 +69,6 @@ const MAX_CACHE_SIZE = 500;
 const YOUTUBE_REGEX =
   /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/shorts\/)([a-zA-Z0-9_-]+)/;
 
-const IMAGE_EXTENSIONS = [
-  "jpg",
-  "jpeg",
-  "png",
-  "gif",
-  "webp",
-  "svg",
-  "bmp",
-  "ico",
-  "avif",
-];
-const VIDEO_EXTENSIONS = ["mp4", "webm", "mov", "ogg", "avi", "mkv"];
-const TRUSTED_DOMAINS = [
-  "avatars.rotur.dev",
-  "photos.rotur.dev",
-  "roturcdn.milosantos.com",
-  "img.youtube.com",
-  "media.tenor.com",
-  "media.discordapp.net",
-  "cdn.discordapp.com",
-];
-
 let customEmojiNameIndex: Map<
   string,
   { sUrl: string; emoji: CustomEmoji }
@@ -120,28 +105,15 @@ function escapeAttribute(text: string): string {
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#x27;");
+    .replace(/\'/g, "&#x27;");
 }
 
-function hasExtension(url: string, extensions: string[]): boolean {
-  const urlLower = url.toLowerCase();
-  return extensions.some(
-    (ext) =>
-      urlLower.endsWith(`.${ext}`) ||
-      urlLower.includes(`.${ext}?`) ||
-      urlLower.includes(`.${ext}#`),
-  );
+function hasExtension(url: string, extensions: readonly string[]): boolean {
+  return hasExtensionUtil(url, extensions);
 }
 
 function proxyImageUrl(url: string): string {
-  if (!url || url.startsWith("data:") || url.startsWith("blob:")) return url;
-  try {
-    const urlObj = new URL(url);
-    if (TRUSTED_DOMAINS.includes(urlObj.hostname)) return url;
-  } catch {
-    // ignore
-  }
-  return `https://wsrv.nl/?url=${encodeURIComponent(url)}`;
+  return proxyImageUrlUtil(url);
 }
 
 export function replaceShortcodes(text: string): string {

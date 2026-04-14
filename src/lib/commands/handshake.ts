@@ -18,7 +18,7 @@ import {
 } from "../ui-signals";
 import { reloadServerIcon } from "../../utils";
 import { saveServers } from "../persistence";
-import { authenticateServer } from "../websocket";
+import { authenticateServer } from "../auth";
 import { wsSend } from "../ws-sender";
 import { DEFAULT_PERMISSIONS } from "../../state";
 

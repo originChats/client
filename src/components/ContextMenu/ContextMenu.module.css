@@ -2,8 +2,8 @@
   animation: fadeScaleIn var(--anim-fast) var(--ease-out);
   backdrop-filter: blur(8px);
   background: var(--surface);
-  border: none;
-  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
   box-shadow: var(--shadow-3);
   display: none;
   min-width: 200px;
@@ -28,7 +28,7 @@
 
 .contextMenuItem {
   align-items: center;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-sm);
   color: var(--text);
   cursor: pointer;
   display: flex;
@@ -154,7 +154,6 @@
   }
 
   .contextMenuItem {
-    
     font-size: 16px;
     justify-content: center;
     padding: 16px 20px;

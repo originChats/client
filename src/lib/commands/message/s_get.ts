@@ -13,7 +13,7 @@ import {
   markChannelAsRead,
   markThreadAsRead,
 } from "../../ws-sender";
-import { selectChannel } from "../../actions";
+import { selectChannel } from "../../selectors";
 import {
   getMessageKey,
   setMessages,

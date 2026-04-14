@@ -12,7 +12,7 @@ import { showVoiceCallView } from "./lib/ui-signals";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-export interface VoiceParticipant {
+interface VoiceParticipant {
   username: string;
   peer_id: string;
   muted: boolean;
@@ -22,7 +22,7 @@ export interface VoiceParticipant {
 /** The type of a video stream — used to label inbound calls via metadata. */
 type VideoKind = "screen" | "camera";
 
-export interface VoiceState {
+interface VoiceState {
   currentChannel: string | null;
   participants: VoiceParticipant[];
   isMuted: boolean;

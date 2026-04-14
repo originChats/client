@@ -24,7 +24,8 @@ import {
 import { showAccountModal } from "../../lib/ui-signals";
 import { Icon, ServerIcon } from "../Icon";
 import type { RoturAccount, RoturProfile, Server } from "../../types";
-import { formatJoinDate, isCrackedAccount } from "../../utils";
+import { formatJoinDate } from "../../lib/date-utils";
+import { isCrackedAccount } from "../../utils";
 import { UserAvatar } from "../UserAvatar";
 import { useDisplayName } from "../../lib/useDisplayName";
 import {
@@ -505,6 +506,12 @@ export function UserProfileCard({
       <div className={styles.profilePanelContent}>
         <div className={styles.profilePanelBanner}>
           {profile.banner && <img src={profile.banner} alt="" />}
+          {profile.system && (
+            <div className={styles.profileCardSystemPill}>
+              <Icon name="Monitor" size={11} />
+              <span>{profile.system}</span>
+            </div>
+          )}
         </div>
         <div className={styles.profilePanelAvatarRow}>
           <div className={styles.profilePanelAvatar}>
@@ -609,16 +616,6 @@ export function UserProfileCard({
                   @{tag}
                 </span>
               ))}
-            </div>
-          </div>
-        )}
-
-        {profile.system && (
-          <div className={styles.profilePanelSection}>
-            <div className={styles.profilePanelSectionTitle}>System</div>
-            <div className={styles.profileCardMeta}>
-              <Icon name="Monitor" size={14} />
-              <span>{profile.system}</span>
             </div>
           </div>
         )}

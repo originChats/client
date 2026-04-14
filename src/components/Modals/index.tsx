@@ -7,7 +7,8 @@ import {
   showNotificationPrompt,
 } from "../../lib/ui-signals";
 import { notificationPromptDismissed, servers } from "../../state";
-import { connectToServer, enablePushForServer } from "../../lib/websocket";
+import { connectToServer } from "../../lib/websocket";
+import { enablePushForServer } from "../../lib/auth";
 import { UserAvatar } from "../UserAvatar";
 import {
   serverUrl,
@@ -62,7 +63,8 @@ import {
   selectDiscoveryChannel,
 } from "../../lib/actions";
 import type { RoturAccount, RoturProfile } from "../../types";
-import { avatarUrl, formatJoinDate, isCrackedAccount } from "../../utils";
+import { avatarUrl, isCrackedAccount } from "../../utils";
+import { formatJoinDate } from "../../lib/date-utils";
 import { wsSend } from "../../lib/ws-sender";
 import { getUserStatus, getUserRoles } from "../UserProfile";
 import {
@@ -71,8 +73,8 @@ import {
   deleteMediaServer,
   setMediaServerEnabled,
   generateServerId,
-  type MediaServer,
 } from "../../lib/media-uploader";
+import type { MediaServer } from "../../types";
 import {
   getProfile,
   updateProfile,

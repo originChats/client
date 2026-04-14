@@ -781,25 +781,6 @@ input[type="range"]::-moz-range-thumb:hover {
   box-shadow: 0 4px 12px rgba(78, 80, 88, 0.4);
 }
 
-/* Messages Container Wallpaper Support */
-.messages-container {
-  transition: background-image 0.3s ease;
-}
-
-.messages-container.has-wallpaper .messages::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  pointer-events: none;
-  z-index: 0;
-  background: inherit;
-  filter: blur(10px);
-  opacity: 0.3;
-}
-
 /* Scrollbar visibility */
 body.hide-scrollbars::-webkit-scrollbar,
 body.hide-scrollbars *::-webkit-scrollbar {
@@ -3165,7 +3146,12 @@ body.font-serif {
 }
 
 .user-settings-banner {
-  background: linear-gradient(135deg, var(--primary, #4e5058), #8b5cf6, #6366f1);
+  background: linear-gradient(
+    135deg,
+    var(--primary, #4e5058),
+    #8b5cf6,
+    #6366f1
+  );
   background-size: 200% 200%;
   cursor: pointer;
   height: 160px;
@@ -3221,7 +3207,9 @@ body.font-serif {
   position: relative;
   width: 96px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .user-settings-avatar:hover {
@@ -4115,30 +4103,30 @@ img.tenor-gif {
   width: 360px;
   max-height: 420px;
   background: var(--surface);
-  border: none;
-  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
   box-shadow: var(--shadow-3);
   overflow: hidden;
 }
 
 .emoji-picker-search {
   padding: var(--space-2);
-  border-bottom: none;
+  border-bottom: 1px solid var(--border);
 }
 
 .emoji-picker-search input {
   width: 100%;
   padding: var(--space-2) var(--space-3);
   background: var(--surface-light);
-  border: none;
-  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
   color: var(--text);
   font-size: var(--font-sm);
   outline: none;
 }
 
 .emoji-picker-search input:focus {
-  box-shadow: 0 0 0 2px rgba(78, 80, 88, 0.3);
+  border-color: var(--mention);
 }
 
 .emoji-picker-body {
@@ -4150,7 +4138,7 @@ img.tenor-gif {
 .emoji-picker-sidebar {
   width: 48px;
   background: var(--surface-light);
-  border-right: none;
+  border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
@@ -4167,7 +4155,7 @@ img.tenor-gif {
   justify-content: center;
   background: transparent;
   border: none;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-sm);
   cursor: pointer;
   transition: background 0.15s ease;
   flex-shrink: 0;
@@ -5076,7 +5064,9 @@ img.tenor-gif {
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s ease, border-radius 0.2s ease;
+  transition:
+    all 0.2s ease,
+    border-radius 0.2s ease;
 }
 
 .settings-action-btn:hover {
@@ -5101,7 +5091,9 @@ img.tenor-gif {
   border-radius: var(--border-radius, 12px);
   padding: 10px 12px;
   border: none;
-  transition: border-radius 0.2s ease, background 0.2s ease;
+  transition:
+    border-radius 0.2s ease,
+    background 0.2s ease;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -5164,7 +5156,9 @@ img.tenor-gif {
   cursor: pointer;
   padding: 4px;
   border-radius: calc(var(--border-radius, 12px) - 4px);
-  transition: all 0.2s ease, border-radius 0.2s ease;
+  transition:
+    all 0.2s ease,
+    border-radius 0.2s ease;
   display: flex;
   align-items: center;
   justify-content: center;

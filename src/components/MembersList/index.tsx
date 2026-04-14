@@ -146,7 +146,7 @@ function MembersListInner() {
       <div className={styles.membersListContent}>
         <>
           {hoistedSections.map(({ roleName, color, members }) => (
-            <div key={roleName}>
+            <div key={roleName} className={styles.roleSection}>
               <h2 style={color ? { color } : undefined}>
                 {roleName} — {members.length}
               </h2>

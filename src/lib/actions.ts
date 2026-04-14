@@ -24,6 +24,7 @@ import {
   serverCapabilitiesByServer,
   savedStatusText,
   unreadState,
+  isSpecialChannel,
 } from "../state";
 import {
   renderGuildSidebarSignal,
@@ -75,9 +76,9 @@ export function selectChannel(channel: {
 
   const sUrl = serverUrl.value;
 
-  markChannelAsRead(channel.name);
+  markChannelAsReadInternal(channel.name);
 
-  if (SPECIAL_CHANNELS.has(channel.name)) {
+  if (isSpecialChannel(channel.name, sUrl)) {
     messageState.setCurrentChannel(null, null);
     renderChannelsSignal.value++;
     return;
@@ -221,7 +222,7 @@ export async function switchServer(url: string): Promise<boolean> {
   }
 }
 
-export function markChannelAsRead(channelName: string): void {
+function markChannelAsReadInternal(channelName: string): void {
   const sUrl = serverUrl.value;
   if (!readTimesByServer.value[sUrl]) {
     readTimesByServer.value = { ...readTimesByServer.value, [sUrl]: {} };
@@ -451,6 +452,8 @@ export function navigateFromUrl(): void {
     } else {
       selectChannelFromUrl(targetChannel, targetThread);
     }
+  } else if (parts[0] === "app") {
+    selectHomeChannel();
   } else {
     selectHomeChannel();
   }

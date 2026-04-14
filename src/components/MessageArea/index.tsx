@@ -110,6 +110,7 @@ import {
 import type { PendingAttachment } from "../../lib/attachment-uploader";
 import { MessageContent } from "../MessageContent";
 import { MessageGroupRow } from "../MessageGroupRow";
+import { pendingMessages } from "../../lib/state/pending-messages";
 import {
   FloatingActionButtons,
   showActionButtons,
@@ -218,6 +219,39 @@ function resetInputHeight() {
 let activeSlashCmdRef: SlashCommand | null = null;
 let slashArgsRef: SlashCommandArgs = {};
 let dismissSlashCmdRef: (() => void) | null = null;
+let editingMessageRef: Message | null = null;
+
+function commitEditOrSend() {
+  if (editingMessageRef) {
+    const input = document.getElementById(
+      "message-input",
+    ) as HTMLTextAreaElement;
+    if (input && input.value.trim()) {
+      const isThread =
+        currentChannel.value?.type === "thread" && currentThread.value;
+      wsSend({
+        cmd: "message_edit",
+        id: editingMessageRef.id,
+        channel: currentChannel.value?.name,
+        ...(isThread && { thread_id: currentThread.value?.id }),
+        content: convertChannelMentionsToLinks(
+          replaceShortcodes(input.value.trim()),
+          serverUrl.value,
+          new Set(
+            channels.value
+              .filter((c) => c.name)
+              .map((c) => c.name.toLowerCase()),
+          ),
+        ),
+      });
+      editingMessageRef = null;
+      input.value = "";
+      resetInputHeight();
+    }
+  } else {
+    sendMessage();
+  }
+}
 
 async function sendMessage() {
   // ── Slash command mode ────────────────────────────────────────────────────
@@ -319,6 +353,25 @@ async function sendMessage() {
     replyTo.value = null;
     replyPing.value = true;
   }
+
+  // Add pending message for optimistic UI
+  if (myUsername) {
+    const channelKey = isThread
+      ? currentThread.value?.id
+      : currentChannel.value?.name;
+    if (channelKey) {
+      pendingMessages.add(serverUrl.value, channelKey, {
+        user: myUsername,
+        content: msg.content,
+        timestamp: Date.now(),
+        reply_to: msg.reply_to ? { id: msg.reply_to, user: "" } : undefined,
+        attachments:
+          attachmentsToSend.length > 0 ? attachmentsToSend : undefined,
+      });
+      renderMessagesSignal.value++;
+    }
+  }
+
   wsSend(msg);
 }
 
@@ -554,7 +607,9 @@ function RightPanel() {
             <Icon name="X" size={18} />
           </button>
         </div>
-        <div className="right-panel-content messages">
+        <div
+          className={`right-panel-content ${styles.rightPanelContentMessages}`}
+        >
           {!canPin ? (
             <div className="right-panel-unsupported">
               <Icon name="Pin" size={32} />
@@ -650,7 +705,9 @@ function RightPanel() {
             <Icon name="Search" size={16} />
           </button>
         </div>
-        <div className="right-panel-content">
+        <div
+          className={`right-panel-content ${styles.rightPanelContentMessages}`}
+        >
           {!canSearch ? (
             <div className="right-panel-unsupported">
               <Icon name="Search" size={32} />
@@ -741,7 +798,7 @@ function RightPanel() {
       if (hasAround && targetChannel) {
         jumpToMessageAround(sUrl, msg.channel, msg.id);
       } else {
-        setTimeout(() => {
+        const scrollToMsg = () => {
           const el = document.querySelector(`[data-msg-id="${msg.id}"]`);
           if (el) {
             el.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -751,8 +808,19 @@ function RightPanel() {
               highlightTimeouts.delete(timeoutId);
             }, 2000);
             highlightTimeouts.add(timeoutId);
+            return true;
           }
-        }, 100);
+          return false;
+        };
+
+        if (!scrollToMsg()) {
+          const checkInterval = setInterval(() => {
+            if (scrollToMsg()) {
+              clearInterval(checkInterval);
+            }
+          }, 100);
+          setTimeout(() => clearInterval(checkInterval), 5000);
+        }
       }
     };
 
@@ -765,15 +833,11 @@ function RightPanel() {
         ? users.value[msg.reply_to.user?.toLowerCase()]?.color || undefined
         : undefined;
       return (
-        <div className="inbox-message-row">
-          <div className="inbox-message-context">
-            <span className="inbox-context-server">{serverName}</span>
-            <Icon name="ChevronRight" size={10} />
-            <span className="inbox-context-channel">
-              <Icon name="Hash" size={10} />
-              {msg.channel}
-            </span>
-            <span className="inbox-context-time">
+        <div className={styles.inboxMessageRow}>
+          <div className={styles.inboxMessageContext}>
+            <Icon name="Hash" size={12} />
+            <span className={styles.inboxContextChannel}>{msg.channel}</span>
+            <span className={styles.inboxContextTime}>
               {formatFullDateTime(msg.timestamp)}
             </span>
           </div>
@@ -794,7 +858,7 @@ function RightPanel() {
         <div className="right-panel-header">
           <Icon name="Bell" size={18} />
           <span>Inbox</span>
-          {total > 0 && <span className="inbox-panel-total">{total}</span>}
+          {total > 0 && <span className={styles.inboxPanelTotal}>{total}</span>}
           <button
             className="right-panel-close"
             onClick={() => {
@@ -805,7 +869,9 @@ function RightPanel() {
             <Icon name="X" size={18} />
           </button>
         </div>
-        <div className="right-panel-content">
+        <div
+          className={`right-panel-content ${styles.rightPanelContentMessages}`}
+        >
           {!canInbox ? (
             <div className="right-panel-unsupported">
               <Icon name="Bell" size={32} />
@@ -832,7 +898,7 @@ function RightPanel() {
               ))}
               {hasMore && (
                 <button
-                  className="inbox-panel-load-more"
+                  className={styles.inboxPanelLoadMore}
                   onClick={loadMore}
                   disabled={loading}
                 >
@@ -1008,7 +1074,13 @@ export function MessageArea() {
     isLoadingNewer: loadingNewer,
     onNewerLoaded: () => setLoadingNewer(false),
   });
-  const [editingMessage, setEditingMessage] = useState<Message | null>(null);
+  const [editingMessageState, setEditingMessageState] =
+    useState<Message | null>(null);
+  const setEditingMessage = (msg: Message | null) => {
+    setEditingMessageState(msg);
+    editingMessageRef = msg;
+  };
+  const editingMessage = editingMessageState;
   const [confirmDialog, setConfirmDialog] = useState<{
     isOpen: boolean;
     title: string;
@@ -1255,6 +1327,7 @@ export function MessageArea() {
     currentChannel.value;
     blockedUsers.value;
     blockedMessageDisplay.value;
+    pendingMessages.versionSignal.value;
 
     // Schedule after the current paint so the new channel's DOM is in place.
     requestAnimationFrame(() => {
@@ -1278,7 +1351,23 @@ export function MessageArea() {
     currentChannel.value?.type === "thread" && currentThread.value
       ? currentThread.value.id
       : currentChannel.value?.name || "";
-  const messageGroups = groupMessages(currentMessages);
+
+  // Merge pending messages with current messages
+  const pendingForChannel = pendingMessages.get(serverUrl.value, messageKey);
+  const messagesWithPending = [...currentMessages];
+  for (const pm of pendingForChannel) {
+    if (
+      !messagesWithPending.some(
+        (m) => m.content === pm.content && m.user === pm.user && !m.id,
+      )
+    ) {
+      messagesWithPending.push(pm);
+    }
+  }
+  // Sort by timestamp
+  messagesWithPending.sort((a, b) => a.timestamp - b.timestamp);
+
+  const messageGroups = groupMessages(messagesWithPending);
 
   const handleKeyDown = (
     e: h.JSX.TargetedKeyboardEvent<HTMLTextAreaElement>,
@@ -1320,35 +1409,9 @@ export function MessageArea() {
 
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      if (editingMessage) {
-        const input = document.getElementById(
-          "message-input",
-        ) as HTMLTextAreaElement;
-        if (input && input.value.trim()) {
-          const isThread =
-            currentChannel.value?.type === "thread" && currentThread.value;
-          wsSend({
-            cmd: "message_edit",
-            id: editingMessage.id,
-            channel: currentChannel.value?.name,
-            ...(isThread && { thread_id: currentThread.value?.id }),
-            content: convertChannelMentionsToLinks(
-              replaceShortcodes(input.value.trim()),
-              serverUrl.value,
-              new Set(
-                channels.value
-                  .filter((c) => c.name)
-                  .map((c) => c.name.toLowerCase()),
-              ),
-            ),
-          });
-          setEditingMessage(null);
-          input.value = "";
-          resetInputHeight();
-        }
-      } else {
-        sendMessage();
-      }
+      const wasEditing = editingMessage;
+      commitEditOrSend();
+      if (wasEditing) setEditingMessage(null);
     } else if (e.key === "Escape") {
       if (editingMessage) {
         setEditingMessage(null);
@@ -1617,6 +1680,12 @@ export function MessageArea() {
     emojiData?: { name: string; serverUrl: string },
   ) => {
     if (reactingToMessage) {
+      // Don't allow custom emoji reactions
+      if (isCustom) {
+        setReactingToMessage(null);
+        setShowPicker(false);
+        return;
+      }
       wsSend(
         {
           cmd: "message_react_add",
@@ -1975,6 +2044,15 @@ export function MessageArea() {
   };
 
   const handleReaction = (msg: Message, emoji: string) => {
+    // Don't allow custom emoji reactions (they contain colons or are URLs)
+    if (
+      emoji.includes(":") ||
+      emoji.startsWith("http") ||
+      emoji.startsWith("originChats:")
+    ) {
+      return;
+    }
+
     // Read live state so the toggle is always accurate, even after rapid clicks
     const channelMsgs = messages.value[messageKey] || [];
     const liveMsg = channelMsgs.find((m) => m.id === msg.id);
@@ -2456,7 +2534,7 @@ export function MessageArea() {
       {inCallHere && !showVoiceCallView.value && <VoiceCallView embedded />}
       <div className="main-content-area">
         <div
-          className="messages-container"
+          className={styles.messagesContainer}
           onDragOver={handleDragOver as any}
           onDragLeave={handleDragLeave as any}
           onDrop={handleDrop as any}
@@ -2478,7 +2556,7 @@ export function MessageArea() {
           <div
             id="messages"
             ref={messagesContainerRef}
-            className="messages"
+            className={styles.messages}
             onClick={handleMessagesClick as any}
           >
             <div
@@ -2541,16 +2619,16 @@ export function MessageArea() {
                 return renderGroupedMessages(group);
               })
             )}
+            {showScrollBtn && (
+              <button
+                className={styles.scrollToBottomBtn}
+                onClick={scrollToBottom}
+                title="Jump to bottom"
+              >
+                <Icon name="ArrowDown" size={20} />
+              </button>
+            )}
           </div>
-          {showScrollBtn && (
-            <button
-              className="scroll-to-bottom-btn"
-              onClick={scrollToBottom}
-              title="Jump to bottom"
-            >
-              <Icon name="ArrowDown" size={20} />
-            </button>
-          )}
           {(replyTo.value || editingMessage) && (
             <ReplyBar
               replyMessage={replyTo.value || undefined}
@@ -2685,7 +2763,7 @@ export function MessageArea() {
             </div>
           )}
           <div
-            className="input-area"
+            className={styles.inputArea}
             onDragOver={handleDragOver as any}
             onDrop={handleDrop as any}
           >
@@ -2731,8 +2809,8 @@ export function MessageArea() {
                 onDismiss={dismissSlashCmd}
               />
             ) : (
-              <div className="input-wrapper">
-                <div className="plus-btn-wrapper" ref={plusMenuRef}>
+              <div className={styles.inputWrapper}>
+                <div className={styles.plusBtnWrapper} ref={plusMenuRef}>
                   <button
                     className="icon-btn"
                     title="More options"
@@ -2741,9 +2819,9 @@ export function MessageArea() {
                     <Icon name="Plus" />
                   </button>
                   {showPlusMenu && (
-                    <div className="plus-dropdown">
+                    <div className={styles.plusDropdown}>
                       <div
-                        className="plus-dropdown-item"
+                        className={styles.plusDropdownItem}
                         onClick={() => {
                           setShowPlusMenu(false);
                           fileInputRef.current?.click();
@@ -2764,7 +2842,7 @@ export function MessageArea() {
                         </span>
                       </div>
                       <div
-                        className="plus-dropdown-item"
+                        className={styles.plusDropdownItem}
                         onClick={() => {
                           setShowPlusMenu(false);
                           setShowPollModal(true);
@@ -2786,7 +2864,7 @@ export function MessageArea() {
                         <span>Create Poll</span>
                       </div>
                       <div
-                        className="plus-dropdown-item"
+                        className={styles.plusDropdownItem}
                         onClick={() => {
                           setShowPlusMenu(false);
                           setShowGiftModal(true);
@@ -2860,7 +2938,10 @@ export function MessageArea() {
                 >
                   <Icon name="Smile" />
                 </button>
-                <button className="send-btn" onClick={sendMessage}>
+                <button
+                  className={`${styles.sendBtn} icon-btn`}
+                  onClick={sendMessage}
+                >
                   <Icon name="Send" />
                 </button>
               </div>
@@ -3052,21 +3133,23 @@ function ReplyBar({ replyMessage, editMessage, onClose }: ReplyBarProps) {
   const pingOn = replyPing.value;
 
   return (
-    <div className={`reply-bar ${isEdit ? "editing-mode" : ""} active`}>
-      <div className="reply-bar-icon">
+    <div
+      className={`${styles.replyBar} ${isEdit ? styles.editingMode : ""} ${styles.active}`}
+    >
+      <div className={styles.replyBarIcon}>
         {isEdit ? (
           <Icon name="Pencil" size={16} />
         ) : (
           <Icon name="CornerUpLeft" size={16} />
         )}
       </div>
-      <div className="reply-bar-body">
-        <div className="reply-bar-label">
+      <div className={styles.replyBarBody}>
+        <div className={styles.replyBarLabel}>
           {isEdit
             ? "Editing message"
             : `Replying to ${getDisplayName(msg.user)}`}
         </div>
-        <div className="reply-bar-preview">
+        <div className={styles.replyBarPreview}>
           <MessageContent
             content={msg.content}
             currentUsername={currentUser.value?.username}
@@ -3077,7 +3160,7 @@ function ReplyBar({ replyMessage, editMessage, onClose }: ReplyBarProps) {
       </div>
       {!isEdit && (
         <button
-          className={`reply-bar-ping icon-btn${pingOn ? " active" : ""}`}
+          className={`${styles.replyBarPing} ${pingOn ? styles.active : ""}`}
           onClick={() => {
             replyPing.value = !replyPing.value;
           }}
@@ -3090,11 +3173,7 @@ function ReplyBar({ replyMessage, editMessage, onClose }: ReplyBarProps) {
           <Icon name={pingOn ? "Bell" : "BellOff"} size={14} />
         </button>
       )}
-      <button
-        className="reply-bar-close icon-btn"
-        onClick={onClose}
-        title="Cancel"
-      >
+      <button className={styles.replyBarClose} onClick={onClose} title="Cancel">
         <Icon name="X" size={14} />
       </button>
     </div>

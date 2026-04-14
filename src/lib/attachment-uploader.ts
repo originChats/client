@@ -14,7 +14,7 @@ export interface PendingAttachment {
   permanent?: boolean;
 }
 
-export interface UploadedAttachment {
+interface UploadedAttachment {
   id: string;
   name: string;
   mime_type: string;

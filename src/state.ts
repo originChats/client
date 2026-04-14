@@ -16,9 +16,7 @@ import type {
   CustomEmoji,
 } from "./types";
 import { settings as dbSettings } from "./lib/db";
-export { unreadState, messageState } from "./lib/state";
-export { statusState } from "./lib/state";
-export type { StatusState } from "./lib/state";
+export { unreadState } from "./lib/state";
 
 export const token = signal<string | null>(null);
 export const DM_SERVER_URL = "dms.mistium.com";
@@ -31,6 +29,10 @@ export const SPECIAL_CHANNELS = new Set([
   "discovery",
   "roles",
 ]);
+
+export function isSpecialChannel(name: string, url: string): boolean {
+  return SPECIAL_CHANNELS.has(name) && url === DM_SERVER_URL;
+}
 export const serverUrl = signal(DM_SERVER_URL);
 const priorityServer = signal<string | null>(null);
 export const currentChannel = signal<Channel | null>(null);
@@ -56,9 +58,9 @@ export const threadMessagesByServer = signal<
 export const newThreadCounts = signal<Record<string, Record<string, number>>>(
   {},
 );
-export const messagesByServer = signal<
-  Record<string, Record<string, Message[]>>
->({});
+
+export { messagesByServer } from "./lib/state/messages";
+import { messagesByServer } from "./lib/state/messages";
 
 export const loadedChannelsByServer: Record<string, Set<string>> = {};
 export const reachedOldestByServer: Record<string, Set<string>> = {};
@@ -114,7 +116,7 @@ export function hasChannelUnreads(sUrl: string, channelName: string): boolean {
   return unreadState.hasUnreads(sUrl, channelName);
 }
 
-export function isChannelUnreadByLastMessage(
+function isChannelUnreadByLastMessage(
   sUrl: string,
   channelName: string,
   lastMessageId?: string,
@@ -126,7 +128,7 @@ export function isChannelUnreadByLastMessage(
   );
 }
 
-export interface PingMessage {
+interface PingMessage {
   id: string;
   user: string;
   content: string;
@@ -143,7 +145,7 @@ export const pingsInboxLoading = signal<boolean>(false);
 export const pingsInboxOffset = signal<number>(0);
 export const PINGS_INBOX_LIMIT = 50;
 
-export interface WSConnection {
+interface WSConnection {
   socket: WebSocket | null;
   status: "connecting" | "connected" | "disconnected" | "error";
   closeHandler?: () => void;
@@ -157,7 +159,7 @@ export const wsStatus: Record<
 > = {};
 export const serverValidatorKeys: Record<string, string> = {};
 
-export type AuthMode = "rotur" | "cracked" | "cracked-only";
+type AuthMode = "rotur" | "cracked" | "cracked-only";
 
 export const serverAuthModeByServer = signal<Record<string, AuthMode>>({});
 
@@ -168,7 +170,7 @@ export const serverAuthModeByServer = signal<Record<string, AuthMode>>({});
  */
 export const serverCapabilitiesByServer = signal<Record<string, string[]>>({});
 
-export interface ServerPermission {
+interface ServerPermission {
   id: string;
   name: string;
   description: string;
@@ -362,7 +364,7 @@ export const DEFAULT_PERMISSIONS: ServerPermission[] = [
   },
 ];
 
-export interface AttachmentConfig {
+interface AttachmentConfig {
   enabled: boolean;
   max_size: number;
   allowed_types: string[];
@@ -630,7 +632,7 @@ export const sendTypingIndicators = signal<boolean>(true);
 export const dmMessageSound = signal<boolean>(true);
 
 export type UserStatus = "online" | "idle" | "dnd" | "offline";
-export interface MyStatus {
+interface MyStatus {
   status: UserStatus;
   text?: string;
 }

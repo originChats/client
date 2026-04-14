@@ -1,21 +1,6 @@
+import type { MediaServer } from "@/types";
 import { mediaServersDb } from "./db";
 import { generateValidator } from "./rotur-api";
-
-export interface MediaServer {
-  id: string;
-  name: string;
-  enabled: boolean;
-  uploadUrl: string;
-  method: string;
-  fileParamName?: string;
-  headers: Array<{ key: string; value: string }>;
-  bodyParams: Array<{ key: string; value: string }>;
-  responseUrlPath: string;
-  urlTemplate: string;
-  requiresAuth: boolean;
-  authType: "session" | "token" | "apiKey";
-  apiKey?: string;
-}
 
 const DEFAULT_ROTUR_PHOTOS_CONFIG: MediaServer = {
   id: "roturphotos",

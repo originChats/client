@@ -1,3 +1,3 @@
 export { unreadState } from "./unread";
-export { messageState } from "./messages";
-export { StatusState, statusState } from "./status";
+export { messages as messageState } from "./messages";
+export { statusState } from "./status";

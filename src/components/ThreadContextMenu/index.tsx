@@ -17,7 +17,7 @@ import { Icon } from "../Icon";
 import { useContextMenu } from "../../hooks/useContextMenu";
 import type { Thread } from "../../types";
 
-export interface ThreadContextMenuProps {
+interface ThreadContextMenuProps {
   thread: Thread;
   x: number;
   y: number;
@@ -162,9 +162,7 @@ export function ThreadContextMenu({
   );
 }
 
-export type UseThreadContextMenuResult = ReturnType<
-  typeof useThreadContextMenu
->;
+type UseThreadContextMenuResult = ReturnType<typeof useThreadContextMenu>;
 
 export function useThreadContextMenu() {
   const { show, close, state } = useContextMenu<Thread>();

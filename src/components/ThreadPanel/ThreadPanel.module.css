@@ -3,20 +3,23 @@
   flex: 1;
   flex-direction: column;
   min-width: 0;
+  min-height: 0;
   overflow: hidden;
 }
 
 .threadPanel {
   flex: 1;
+  min-height: 0;
   background: var(--surface);
-  
+
   display: flex;
   flex-direction: column;
-  height: 100%;
+  overflow: hidden;
 }
 
 .threadList {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
   padding: var(--space-2);
 }
@@ -54,7 +57,7 @@
 
 .threadCard {
   background: var(--surface);
-  border: none;
+  border: 1px solid var(--border);
   border-radius: var(--radius-md);
   padding: var(--space-4);
   cursor: pointer;
@@ -245,7 +248,7 @@
   padding: var(--space-3) var(--space-4);
   background: transparent;
   border: none;
-  
+
   color: var(--text);
   font-size: 1rem;
   font-weight: 600;
@@ -265,7 +268,7 @@
   padding: var(--space-3) var(--space-4);
   background: transparent;
   border: none;
-  
+
   color: var(--text);
   font-size: 0.875rem;
   font-family: inherit;
@@ -345,7 +348,7 @@
   align-items: center;
   gap: var(--space-3);
   padding: var(--space-3) var(--space-4);
-  
+
   background: var(--surface);
 }
 

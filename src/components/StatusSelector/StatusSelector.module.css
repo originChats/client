@@ -65,19 +65,19 @@
 
 .statusInput {
   background: var(--input-bg, #1e1e1e);
-  border: none;
-  border-radius: 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
   padding: 12px 14px;
   color: var(--text);
   font-size: 14px;
   outline: none;
   width: 100%;
   box-sizing: border-box;
-  transition: box-shadow 0.15s ease;
+  transition: border-color 0.15s ease;
 }
 
 .statusInput:focus {
-  box-shadow: 0 0 0 2px var(--primary, #5865f2);
+  border-color: var(--mention);
 }
 
 .statusInput::placeholder {
@@ -103,7 +103,7 @@
 .saveBtn {
   background: var(--primary, #5865f2);
   border: none;
-  border-radius: var(--radius-df);
+  border-radius: var(--radius-sm);
   color: #fff;
   cursor: pointer;
   font-size: 14px;

@@ -15,6 +15,9 @@ import { getOriginFS, DEFAULT_SERVERS } from "../state";
 import type { NotificationLevel } from "../state";
 import type { Server, ServerFolder } from "../types";
 import { getFriends } from "./rotur-api";
+import { loadJsonFile, saveJsonFile } from "./persistence-utils";
+
+const APP_DATA = "/application data/chats@mistium";
 
 export async function loadServers(): Promise<Server[]> {
   const originFS = getOriginFS();
@@ -33,89 +36,36 @@ export async function loadServers(): Promise<Server[]> {
 }
 
 export async function saveServers(): Promise<void> {
-  const originFS = getOriginFS();
-  if (!originFS) return;
-  const path = "/application data/chats@mistium/servers.json";
-  try {
-    await originFS.createFolders("/application data/chats@mistium");
-    if (await originFS.exists(path))
-      await originFS.writeFile(path, JSON.stringify(servers.value));
-    else await originFS.createFile(path, JSON.stringify(servers.value));
-    await originFS.commit();
-  } catch (error) {
-    console.error("Failed to save servers:", error);
-  }
+  await saveJsonFile("servers.json", servers.value);
 }
 
 export async function loadReadTimes(): Promise<
   Record<string, Record<string, number>>
 > {
-  const originFS = getOriginFS();
-  if (!originFS) return {};
-  try {
-    await originFS.loadIndex();
-    const content = await originFS.readFileContent(
-      "/application data/chats@mistium/read_times.json",
-    );
-    return JSON.parse(content);
-  } catch {
-    return {};
-  }
+  return loadJsonFile("read_times.json", {});
 }
 
 export async function saveReadTimes(): Promise<void> {
-  const originFS = getOriginFS();
-  if (!originFS) return;
-  const path = "/application data/chats@mistium/read_times.json";
-  try {
-    await originFS.createFolders("/application data/chats@mistium");
-    if (await originFS.exists(path))
-      await originFS.writeFile(path, JSON.stringify(readTimesByServer.value));
-    else
-      await originFS.createFile(path, JSON.stringify(readTimesByServer.value));
-    await originFS.commit();
-  } catch (error) {
-    console.error("Failed to save read times:", error);
-  }
+  await saveJsonFile("read_times.json", readTimesByServer.value);
 }
 
 export async function loadNotifSettings(): Promise<{
   serverNotif: Record<string, NotificationLevel>;
   channelNotif: Record<string, NotificationLevel>;
 }> {
-  const originFS = getOriginFS();
-  if (!originFS) return { serverNotif: {}, channelNotif: {} };
-  try {
-    await originFS.loadIndex();
-    const content = await originFS.readFileContent(
-      "/application data/chats@mistium/notif_settings.json",
-    );
-    const parsed = JSON.parse(content);
-    return {
-      serverNotif: parsed.serverNotif ?? {},
-      channelNotif: parsed.channelNotif ?? {},
-    };
-  } catch {
-    return { serverNotif: {}, channelNotif: {} };
-  }
+  const defaults = { serverNotif: {}, channelNotif: {} };
+  const loaded = await loadJsonFile("notif_settings.json", defaults);
+  return {
+    serverNotif: loaded.serverNotif ?? {},
+    channelNotif: loaded.channelNotif ?? {},
+  };
 }
 
 export async function saveNotifSettings(): Promise<void> {
-  const originFS = getOriginFS();
-  if (!originFS) return;
-  const path = "/application data/chats@mistium/notif_settings.json";
-  const data = JSON.stringify({
+  await saveJsonFile("notif_settings.json", {
     serverNotif: serverNotifSettings.value,
     channelNotif: channelNotifSettings.value,
   });
-  try {
-    await originFS.createFolders("/application data/chats@mistium");
-    if (await originFS.exists(path)) await originFS.writeFile(path, data);
-    else await originFS.createFile(path, data);
-    await originFS.commit();
-  } catch (error) {
-    console.error("Failed to save notif settings:", error);
-  }
 }
 
 async function fetchMyAccountData(): Promise<void> {
@@ -131,98 +81,36 @@ async function fetchMyAccountData(): Promise<void> {
 }
 
 export async function loadFolders(): Promise<ServerFolder[]> {
-  const originFS = getOriginFS();
-  if (!originFS) return [];
-  try {
-    await originFS.loadIndex();
-    const content = await originFS.readFileContent(
-      "/application data/chats@mistium/folders.json",
-    );
-    return JSON.parse(content) as ServerFolder[];
-  } catch {
-    return [];
-  }
+  return loadJsonFile("folders.json", []);
 }
 
 export async function saveFolders(): Promise<void> {
-  const originFS = getOriginFS();
-  if (!originFS) return;
-  const path = "/application data/chats@mistium/folders.json";
-  try {
-    await originFS.createFolders("/application data/chats@mistium");
-    if (await originFS.exists(path))
-      await originFS.writeFile(path, JSON.stringify(serverFolders.value));
-    else await originFS.createFile(path, JSON.stringify(serverFolders.value));
-    await originFS.commit();
-  } catch (error) {
-    console.error("Failed to save folders:", error);
-  }
+  await saveJsonFile("folders.json", serverFolders.value);
 }
 
 export async function loadFriendNicknames(): Promise<Record<string, string>> {
-  const originFS = getOriginFS();
-  if (!originFS) return {};
-  try {
-    await originFS.loadIndex();
-    const content = await originFS.readFileContent(
-      "/application data/chats@mistium/friend_nicknames.json",
-    );
-    return JSON.parse(content);
-  } catch {
-    return {};
-  }
+  return loadJsonFile("friend_nicknames.json", {});
 }
 
 export async function saveFriendNicknames(): Promise<void> {
-  const originFS = getOriginFS();
-  if (!originFS) return;
-  const path = "/application data/chats@mistium/friend_nicknames.json";
-  try {
-    await originFS.createFolders("/application data/chats@mistium");
-    if (await originFS.exists(path))
-      await originFS.writeFile(path, JSON.stringify(friendNicknames.value));
-    else await originFS.createFile(path, JSON.stringify(friendNicknames.value));
-    await originFS.commit();
-  } catch (error) {
-    console.error("Failed to save friend nicknames:", error);
-  }
+  await saveJsonFile("friend_nicknames.json", friendNicknames.value);
 }
 
-export async function loadPings(): Promise<{
+async function loadPings(): Promise<{
   pings: Record<string, number>;
   unreads: Record<string, number>;
 }> {
-  const originFS = getOriginFS();
-  if (!originFS) return { pings: {}, unreads: {} };
-  try {
-    await originFS.loadIndex();
-    const content = await originFS.readFileContent(
-      "/application data/chats@mistium/pings.json",
-    );
-    const parsed = JSON.parse(content);
-    return {
-      pings: parsed.pings ?? {},
-      unreads: parsed.unreads ?? {},
-    };
-  } catch {
-    return { pings: {}, unreads: {} };
-  }
+  const defaults = { pings: {}, unreads: {} };
+  const loaded = await loadJsonFile("pings.json", defaults);
+  return {
+    pings: loaded.pings ?? {},
+    unreads: loaded.unreads ?? {},
+  };
 }
 
-export async function savePings(): Promise<void> {
-  const originFS = getOriginFS();
-  if (!originFS) return;
-  const path = "/application data/chats@mistium/pings.json";
-  const data = JSON.stringify({
+async function savePings(): Promise<void> {
+  await saveJsonFile("pings.json", {
     pings: unreadState.pings.value,
     unreads: unreadState.unreads.value,
   });
-  try {
-    await originFS.createFolders("/application data/chats@mistium");
-    if (await originFS.exists(path)) await originFS.writeFile(path, data);
-    else await originFS.createFile(path, data);
-    await originFS.commit();
-  } catch (error) {
-    console.error("Failed to save pings:", error);
-  }
 }

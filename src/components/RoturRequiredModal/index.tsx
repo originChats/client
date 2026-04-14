@@ -4,7 +4,7 @@ import { showRoturRequiredModal } from "../../lib/ui-signals";
 import { servers } from "../../state";
 import { getAuthRedirectUrl } from "../../lib/rotur-api";
 import { session as dbSession } from "../../lib/db";
-import { closeWebSocket } from "../../lib/websocket";
+import { closeWebSocket } from "../../lib/ws-connection";
 
 export function RoturRequiredModal() {
   const isOpen = showRoturRequiredModal.value !== null;

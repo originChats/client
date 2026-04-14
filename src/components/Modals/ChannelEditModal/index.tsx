@@ -20,6 +20,7 @@ import {
 import { wsSend } from "../../../lib/websocket";
 import { Icon } from "../../Icon";
 import { ConfirmDialog } from "../../Modal";
+import { formatDateShort } from "../../../lib/date-utils";
 import type { Role, Channel, Webhook } from "../../../types";
 import "./ChannelEditModal.css";
 
@@ -72,14 +73,14 @@ export function ChannelEditModal() {
   const webhooks =
     sUrl && channelName
       ? (webhooksByServer.value[sUrl] || []).filter(
-        (w) => w.channel === channelName,
-      )
+          (w) => w.channel === channelName,
+        )
       : [];
   const webhookToken =
     sUrl && channelName
       ? (webhooksByServer.value[sUrl] || []).find(
-        (w: Webhook) => w.channel === channelName && w.token,
-      )?.token
+          (w: Webhook) => w.channel === channelName && w.token,
+        )?.token
       : null;
 
   useEffect(() => {
@@ -215,9 +216,7 @@ export function ChannelEditModal() {
     }),
   );
 
-  const formatDate = (timestamp: number) => {
-    return new Date(timestamp * 1000).toLocaleDateString();
-  };
+  const formatDate = (timestamp: number) => formatDateShort(timestamp * 1000);
 
   return (
     <div

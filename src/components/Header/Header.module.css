@@ -1,7 +1,7 @@
 .header {
   align-items: center;
   background: var(--surface);
-
+  border-bottom: 1px solid var(--border);
   display: flex;
   gap: 10px;
   padding: 7px;
@@ -157,6 +157,7 @@
   justify-content: space-between;
   min-height: 48px;
   padding: 0 16px;
+  border-bottom: 1px solid var(--border);
 }
 
 .mainMessagesHeader,
@@ -287,4 +288,37 @@
   .mainMessagesHeader {
     display: none;
   }
+}
+
+.searchInputContainer {
+  align-items: center;
+  background: var(--surface-light);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  display: flex;
+  gap: 6px;
+  height: 32px;
+  padding: 0 8px;
+  transition: all var(--anim-fast) ease;
+  width: 180px;
+}
+
+.searchInputContainer.focused {
+  background: var(--surface);
+  border-color: var(--accent);
+  width: 240px;
+}
+
+.searchInput {
+  background: transparent;
+  border: none;
+  color: var(--text);
+  flex: 1;
+  font-size: 13px;
+  outline: none;
+  width: 100%;
+}
+
+.searchInput::placeholder {
+  color: var(--text-dim);
 }
