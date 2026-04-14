@@ -37,7 +37,7 @@ export function showActionButtons(
 ) {
   const element = state.element;
   const rect = element.getBoundingClientRect();
-  const container = element.closest(".messages-container");
+  const container = document.getElementById("messages");
   const containerRect = container?.getBoundingClientRect();
 
   if (containerRect) {
@@ -118,7 +118,6 @@ export function FloatingActionButtons() {
         top: `${state.position.top}px`,
         right: `${state.position.right}px`,
         zIndex: 100,
-        opacity: 1,
       }}
       onMouseEnter={(e) => e.stopPropagation()}
       onMouseLeave={(e) => e.stopPropagation()}

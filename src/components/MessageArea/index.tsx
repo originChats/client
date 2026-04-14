@@ -1489,7 +1489,7 @@ export function MessageArea() {
   const pendingForChannel = pendingMessages.get(serverUrl.value, messageKey);
   const messagesWithPending = [...currentMessages];
   for (const pm of pendingForChannel) {
-    if (!messagesWithPending.some((m) => m.content === pm.content && m.user === pm.user && !m.id)) {
+    if (!messagesWithPending.some((m) => m.content === pm.content && m.user === pm.user)) {
       messagesWithPending.push(pm);
     }
   }

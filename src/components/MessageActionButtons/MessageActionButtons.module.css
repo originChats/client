@@ -1,15 +1,14 @@
 .messageActionButtons {
   align-items: center;
   background: var(--surface, #0a0a0c);
+  border: 1px solid var(--border);
   border-radius: 12px;
   display: flex;
   gap: 2px;
-  opacity: 0;
   padding: 4px;
   position: absolute;
   right: 8px;
   top: -12px;
-  transition: opacity var(--anim-fast) var(--ease-standard);
   z-index: 5;
   box-shadow: var(--shadow-1);
 }
