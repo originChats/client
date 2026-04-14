@@ -209,6 +209,7 @@ function MemberItemInner({
   const displayName = useDisplayName(user.username);
   const statusClass = user.status?.status || "offline";
   const statusText = user.status?.text;
+  const isOwner = user.roles?.includes("owner");
   return (
     <div
       className={`${styles.member}${offline ? ` ${styles.offline}` : ""}`}
@@ -229,7 +230,7 @@ function MemberItemInner({
       </div>
       <div className={styles.memberInfo}>
         <span className={styles.name} style={user.color ? { color: user.color } : undefined}>
-          {displayName}
+          {displayName} {isOwner && <Icon name="Crown" size={14} />}
         </span>
         {showStatus && statusText && !offline && (
           <span className={styles.statusText}>

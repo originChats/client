@@ -1,9 +1,9 @@
 .skeleton {
   background: linear-gradient(
     90deg,
-    var(--surface-light) 0%,
+    var(--border) 0%,
     var(--surface-hover) 50%,
-    var(--surface-light) 100%
+    var(--border) 100%
   );
   background-size: 200% 100%;
   animation: shimmer 1.5s ease-in-out infinite;

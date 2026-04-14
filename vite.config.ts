@@ -7,9 +7,7 @@ export default defineConfig(() => ({
   plugins: [
     preact(),
     VitePWA({
-      // Automatically updates the SW in the background and reloads on next
-      // navigation — no manual "skip waiting" prompt needed.
-      registerType: "autoUpdate",
+      registerType: "prompt",
       // Use injectManifest so we can add custom push/notificationclick handlers
       // in src/sw.ts while still letting Workbox inject the precache manifest.
       strategies: "injectManifest",

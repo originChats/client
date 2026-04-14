@@ -102,11 +102,13 @@ import { ThreadPanel } from "./components/ThreadPanel";
 import { useFavicon } from "./lib/useFavicon";
 import { UpdatePopup, updateAvailable } from "./components/UpdatePopup";
 
-registerSW({
+const updateServiceWorker = registerSW({
   onNeedRefresh() {
     updateAvailable.value = true;
   },
 });
+
+window.updateServiceWorker = updateServiceWorker;
 
 function RootRouter() {
   const [showLanding, setShowLanding] = useState<boolean | null>(null);

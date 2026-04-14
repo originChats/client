@@ -14,6 +14,8 @@ import {
   readTimesByServer,
   typingUsersByServer,
   DM_SERVER_URL,
+  reachedNewestByServer,
+  missedMessagesCount,
 } from "../../../state";
 import { unreadState, getChannelNotifLevel } from "../../../state";
 import { messages } from "../../state/messages";
@@ -22,6 +24,7 @@ import {
   renderChannelsSignal,
   renderMessagesSignal,
   renderGuildSidebarSignal,
+  missedMessagesSignal,
 } from "../../ui-signals";
 import { wsSend } from "../../ws-sender";
 import { playPingSound } from "../../audio";
@@ -157,7 +160,22 @@ export function handleMessageNew(msg: MessageNew, sUrl: string): void {
   }
 
   if (isCurrentChannel && loadedChannelsByServer[sUrl]?.has(key)) {
-    messages.append(sUrl, key, msg.message as Message);
+    // Check if we're at the bottom (reachedNewest)
+    const isAtBottom = reachedNewestByServer[sUrl]?.has(key);
+
+    if (isAtBottom) {
+      // We're at the bottom, append the message normally
+      messages.append(sUrl, key, msg.message as Message);
+      // Mark as reached newest since we received a new message for the current channel
+      if (!reachedNewestByServer[sUrl]) reachedNewestByServer[sUrl] = new Set();
+      reachedNewestByServer[sUrl].add(key);
+    } else {
+      // We're not at the bottom, track missed messages instead of appending
+      if (!missedMessagesCount[sUrl]) missedMessagesCount[sUrl] = {};
+      if (!missedMessagesCount[sUrl][key]) missedMessagesCount[sUrl][key] = 0;
+      missedMessagesCount[sUrl][key]++;
+      missedMessagesSignal.value++;
+    }
   }
 
   updateLastMessage(sUrl, msg.channel, msg.message.timestamp);

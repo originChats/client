@@ -77,6 +77,9 @@
     background-color var(--anim-fast) var(--ease-standard),
     color var(--anim-fast) var(--ease-standard),
     transform var(--anim-fast) var(--ease-standard);
+  display: flex;
+  gap: 5px;
+  align-items: center;
 }
 
 .member:hover {

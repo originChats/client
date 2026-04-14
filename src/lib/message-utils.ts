@@ -3,7 +3,8 @@ import { messagesByServer } from "../state";
 
 type MessageKeyInput = { thread_id?: string; channel: string };
 
-const MAX_MESSAGES_PER_CHANNEL = 100;
+const MAX_MESSAGES_PER_CHANNEL = 200;
+const UNLOAD_BUFFER = 50;
 
 function trimMessages(messages: any[]): any[] {
   if (messages.length <= MAX_MESSAGES_PER_CHANNEL) return messages;
@@ -117,4 +118,52 @@ export function mergeAndSortMessages(existing: any[], incoming: any[]): any[] {
   const all = [...existing, ...incoming];
   const uniqueMap = new Map(all.map((m) => [m.id, m]));
   return Array.from(uniqueMap.values()).sort((a, b) => a.timestamp - b.timestamp);
+}
+
+export function trimMessagesFromEnd(
+  serverUrl: string,
+  key: string,
+  fromStart: boolean,
+  count: number
+): void {
+  const messages = messagesByServer.value[serverUrl]?.[key];
+  if (!messages || messages.length <= MAX_MESSAGES_PER_CHANNEL) return;
+
+  const trimmed = fromStart ? messages.slice(count) : messages.slice(0, -count);
+
+  messagesByServer.value = {
+    ...messagesByServer.value,
+    [serverUrl]: {
+      ...messagesByServer.value[serverUrl],
+      [key]: trimmed,
+    },
+  };
+  renderMessagesSignal.value++;
+}
+
+export function trimMessagesCenter(
+  serverUrl: string,
+  key: string,
+  visibleStartIndex: number,
+  visibleEndIndex: number
+): void {
+  const messages = messagesByServer.value[serverUrl]?.[key];
+  if (!messages || messages.length <= MAX_MESSAGES_PER_CHANNEL) return;
+
+  const visibleCount = visibleEndIndex - visibleStartIndex;
+  const bufferSize = Math.floor((MAX_MESSAGES_PER_CHANNEL - visibleCount) / 2);
+
+  const start = Math.max(0, visibleStartIndex - bufferSize);
+  const end = Math.min(messages.length, visibleEndIndex + bufferSize);
+
+  const trimmed = messages.slice(start, end);
+
+  messagesByServer.value = {
+    ...messagesByServer.value,
+    [serverUrl]: {
+      ...messagesByServer.value[serverUrl],
+      [key]: trimmed,
+    },
+  };
+  renderMessagesSignal.value++;
 }

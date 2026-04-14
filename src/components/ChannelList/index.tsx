@@ -27,6 +27,7 @@ import {
   clearNewThreadCount,
   token,
 } from "../../state";
+import { parseEmojisInContainer } from "../../lib/emoji";
 import {
   selectChannel,
   selectHomeChannel,
@@ -77,14 +78,28 @@ export function ChannelList() {
     voiceState.value; // re-render when voice state changes
     showVoiceCallView.value; // re-render when call view opens/closes
     showThreadPanel.value; // re-render when thread panel changes
+    serverUrl.value; // re-render when server changes
     forceUpdate(undefined);
+    requestAnimationFrame(() => {
+      if (channelsListRef.current) {
+        parseEmojisInContainer(channelsListRef.current);
+      }
+    });
   });
+
   const isDM = serverUrl.value === DM_SERVER_URL;
   const hasToken = !!token.value;
   const rawChs = channels.value;
   const chs = isDM
     ? [...rawChs].sort((a, b) => (b.last_message || 0) - (a.last_message || 0))
     : rawChs;
+
+  useEffect(() => {
+    if (channelsListRef.current) {
+      parseEmojisInContainer(channelsListRef.current);
+    }
+  }, [chs]);
+
   let separatorIndex = 0;
 
   const voice = voiceState.value;

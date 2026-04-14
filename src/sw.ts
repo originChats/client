@@ -12,8 +12,8 @@ declare const self: ServiceWorkerGlobalScope;
 
 // ── Workbox precache (injected by VitePWA at build time) ─────────────────────
 // __WB_MANIFEST is replaced by the list of precache entries.
-// skipWaiting/clientsClaim are intentionally omitted here — VitePWA's
-// registerType: "autoUpdate" handles the activation lifecycle correctly.
+self.skipWaiting();
+self.clients.claim();
 precacheAndRoute(self.__WB_MANIFEST);
 cleanupOutdatedCaches();
 

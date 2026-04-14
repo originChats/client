@@ -99,6 +99,10 @@
   overflow: hidden;
 }
 
+.unifiedPickerBodyGif {
+  flex-direction: column;
+}
+
 .emojiSidebar {
   border-right: 1px solid var(--border);
   display: flex;

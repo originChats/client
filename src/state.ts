@@ -58,6 +58,8 @@ import { messagesByServer } from "./lib/state/messages";
 
 export const loadedChannelsByServer: Record<string, Set<string>> = {};
 export const reachedOldestByServer: Record<string, Set<string>> = {};
+export const reachedNewestByServer: Record<string, Set<string>> = {};
+export const missedMessagesCount: Record<string, Record<string, number>> = {};
 export const usersByServer = signal<Record<string, Record<string, ServerUser>>>({});
 export const currentUserByServer = signal<Record<string, RoturAccount>>({});
 export const rolesByServer = signal<Record<string, Record<string, Role>>>({});

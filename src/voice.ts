@@ -10,6 +10,8 @@ import {
 } from "./state";
 import { showVoiceCallView } from "./lib/ui-signals";
 
+const DEBUG = false;
+
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 interface VoiceParticipant {
@@ -229,7 +231,7 @@ class VoiceManager {
 
     // Notify server — _currentChannel must be set first so onJoined() isn't
     // dropped if the server responds synchronously before we continue.
-    wsSend({ cmd: "voice_join", channel: channelName, peer_id: peer.id }, serverUrl.value);
+    wsSend({ cmd: "voice_join", channel: channelName, peer_id: peer.id! }, serverUrl.value);
 
     // Show self immediately (don't wait for server response)
     if (this._myUsername && peer.id) {
@@ -551,7 +553,9 @@ class VoiceManager {
       if (conn[outKey]) {
         try {
           conn[outKey]!.close();
-        } catch {}
+        } catch (e) {
+          if (DEBUG) console.debug("[Voice] Ignored error:", e);
+        }
         conn[outKey] = null;
       }
     }
@@ -616,7 +620,9 @@ class VoiceManager {
     if (conn[outKey]) {
       try {
         conn[outKey]!.close();
-      } catch {}
+      } catch (e) {
+        if (DEBUG) console.debug("[Voice] Ignored error:", e);
+      }
       conn[outKey] = null;
     }
 
@@ -930,28 +936,40 @@ class VoiceManager {
       // Close all outbound calls
       try {
         conn.outAudioCall?.close();
-      } catch {}
+      } catch (e) {
+        if (DEBUG) console.debug("[Voice] Ignored error:", e);
+      }
       try {
         conn.outScreenCall?.close();
-      } catch {}
+      } catch (e) {
+        if (DEBUG) console.debug("[Voice] Ignored error:", e);
+      }
       try {
         conn.outCameraCall?.close();
-      } catch {}
+      } catch (e) {
+        if (DEBUG) console.debug("[Voice] Ignored error:", e);
+      }
       // Close all inbound calls
       try {
         conn.inAudioCall?.close();
-      } catch {}
+      } catch (e) {
+        if (DEBUG) console.debug("[Voice] Ignored error:", e);
+      }
       try {
         conn.inScreenCall?.close();
-      } catch {}
+      } catch (e) {
+        if (DEBUG) console.debug("[Voice] Ignored error:", e);
+      }
       try {
         conn.inCameraCall?.close();
-      } catch {}
-      this._peers.delete(peerId);
+      } catch (e) {
+        if (DEBUG) console.debug("[Voice] Ignored error:", e);
+      }
     }
 
     document.getElementById("vcaudio-" + peerId)?.remove();
     this._stopRemoteSpeakingDetection(peerId);
+    this._peers.delete(peerId);
     this._publish();
   }
 
@@ -968,22 +986,34 @@ class VoiceManager {
       }
       try {
         conn.outAudioCall?.close();
-      } catch {}
+      } catch (e) {
+        if (DEBUG) console.debug("[Voice] Ignored error:", e);
+      }
       try {
         conn.outScreenCall?.close();
-      } catch {}
+      } catch (e) {
+        if (DEBUG) console.debug("[Voice] Ignored error:", e);
+      }
       try {
         conn.outCameraCall?.close();
-      } catch {}
+      } catch (e) {
+        if (DEBUG) console.debug("[Voice] Ignored error:", e);
+      }
       try {
         conn.inAudioCall?.close();
-      } catch {}
+      } catch (e) {
+        if (DEBUG) console.debug("[Voice] Ignored error:", e);
+      }
       try {
         conn.inScreenCall?.close();
-      } catch {}
+      } catch (e) {
+        if (DEBUG) console.debug("[Voice] Ignored error:", e);
+      }
       try {
         conn.inCameraCall?.close();
-      } catch {}
+      } catch (e) {
+        if (DEBUG) console.debug("[Voice] Ignored error:", e);
+      }
     }
     this._peers.clear();
 
@@ -1006,7 +1036,9 @@ class VoiceManager {
     if (this._peer) {
       try {
         this._peer.destroy();
-      } catch {}
+      } catch (e) {
+        if (DEBUG) console.debug("[Voice] Ignored error:", e);
+      }
       this._peer = null;
     }
     this._peerReady = null;
@@ -1124,7 +1156,9 @@ class VoiceManager {
       cancelAnimationFrame(this._localDetector.frameId);
       try {
         this._localDetector.ctx.close();
-      } catch {}
+      } catch (e) {
+        if (DEBUG) console.debug("[Voice] Ignored error:", e);
+      }
       this._localDetector = null;
     }
     this._isSpeaking = false;
@@ -1171,7 +1205,9 @@ class VoiceManager {
       cancelAnimationFrame(det.frameId);
       try {
         det.ctx.close();
-      } catch {}
+      } catch (e) {
+        if (DEBUG) console.debug("[Voice] Ignored error:", e);
+      }
       this._remoteDetectors.delete(peerId);
     }
   }

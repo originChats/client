@@ -109,6 +109,7 @@ export const renderGuildSidebarSignal = signal(0);
 export const renderChannelsSignal = signal(0);
 export const renderMessagesSignal = signal(0);
 export const renderMembersSignal = signal(0);
+export const missedMessagesSignal = signal(0);
 const renderVoiceSignal = signal(0);
 export const showSettingsModal = signal(false);
 export const showAccountModal = signal<string | null>(null);

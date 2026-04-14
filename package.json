@@ -10,6 +10,7 @@
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "lint": "eslint . --fix",
+    "fmt": "prettier --write .",
     "deploy": "npm run build && gh-pages -d dist",
     "css:types": "tcm src"
   },
@@ -26,7 +27,6 @@
     "@eslint/js": "^10.0.1",
     "@preact/preset-vite": "^2.10.3",
     "@types/dompurify": "^3.2.0",
-    "eslint": "^10.0.3",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.5",
     "eslint-plugin-react-hooks": "^7.0.1",

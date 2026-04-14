@@ -8,12 +8,19 @@ type PendingKey = string;
 interface PendingMessage extends Message {
   _pending: boolean;
   _pendingKey: string;
+  _contentUserKey: string;
 }
 
 const _pendingByServer = signal<Record<ServerUrl, Record<ChannelKey, PendingMessage[]>>>({});
 const _version = signal(0);
 
+let pendingNonce = 0;
+
 function generatePendingKey(content: string, user: string): string {
+  return `${user}:${Date.now()}:${++pendingNonce}:${content}`;
+}
+
+function getContentUserKey(content: string, user: string): string {
   return `${user}:${content}`;
 }
 
@@ -36,10 +43,12 @@ class PendingMessageStore {
 
   add(url: ServerUrl, channel: ChannelKey, msg: Message): string {
     const pendingKey = generatePendingKey(msg.content, msg.user);
+    const contentUserKey = getContentUserKey(msg.content, msg.user);
     const pendingMsg: PendingMessage = {
       ...msg,
       _pending: true,
       _pendingKey: pendingKey,
+      _contentUserKey: contentUserKey,
     };
 
     const serverMsgs = this.getServerMessages(url);
@@ -65,19 +74,23 @@ class PendingMessageStore {
   }
 
   removeByKey(url: ServerUrl, channel: ChannelKey, content: string, user: string): boolean {
-    const pendingKey = generatePendingKey(content, user);
-    const timeoutKey = `${url}:${channel}:${pendingKey}`;
+    const contentUserKey = getContentUserKey(content, user);
+
+    const serverMsgs = this.getServerMessages(url);
+    const arr = serverMsgs[channel];
+    if (!arr) return false;
+
+    const msgToRemove = arr.find((m) => m._contentUserKey === contentUserKey);
+    if (!msgToRemove) return false;
+
+    const timeoutKey = `${url}:${channel}:${msgToRemove._pendingKey}`;
     const timeoutId = this.timeouts.get(timeoutKey);
     if (timeoutId) {
       clearTimeout(timeoutId);
       this.timeouts.delete(timeoutKey);
     }
 
-    const serverMsgs = this.getServerMessages(url);
-    const arr = serverMsgs[channel];
-    if (!arr) return false;
-
-    const filtered = arr.filter((m) => m._pendingKey !== pendingKey);
+    const filtered = arr.filter((m) => m._contentUserKey !== contentUserKey);
     if (filtered.length === arr.length) return false;
 
     _pendingByServer.value = {

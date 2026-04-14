@@ -23,6 +23,7 @@ import { showThreadPanel, renderChannelsSignal } from "../../lib/ui-signals";
 import { Icon } from "../Icon";
 import { wsSend } from "../../lib/websocket";
 import { ThreadContextMenu, useThreadContextMenu } from "../ThreadContextMenu";
+import { pendingMessages } from "../../lib/state/pending-messages";
 import type { Thread } from "../../types";
 import styles from "./ThreadPanel.module.css";
 
@@ -64,6 +65,14 @@ export function ThreadPanel() {
         (t) => !prevThreadsRef.current.threads.some((pt) => pt.id === t.id)
       );
       if (newThread) {
+        const myUsername = currentUserByServer.value[serverUrl.value]?.username;
+        if (myUsername) {
+          pendingMessages.add(serverUrl.value, newThread.id, {
+            user: myUsername,
+            content: pendingThreadMessage.content,
+            timestamp: Date.now(),
+          });
+        }
         wsSend(
           {
             cmd: "message_new",

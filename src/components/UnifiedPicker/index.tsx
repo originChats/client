@@ -676,7 +676,7 @@ function GifPanel({
       });
 
   return (
-    <div className={styles.unifiedPickerBody}>
+    <div className={`${styles.unifiedPickerBody} ${styles.unifiedPickerBodyGif}`}>
       {showFavorites && (
         <div className={styles.gifSectionLabel}>
           <Icon name="Star" size={14} />

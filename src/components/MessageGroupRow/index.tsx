@@ -24,6 +24,7 @@ interface MessageGroupRowProps {
   showReply?: boolean;
   replyUserColor?: string;
   avatarSize?: number;
+  isPending?: boolean;
 }
 
 function MessageGroupRowInner({
@@ -35,6 +36,7 @@ function MessageGroupRowInner({
   showReply = false,
   replyUserColor,
   avatarSize,
+  isPending = false,
 }: MessageGroupRowProps) {
   const headUser = group.head.user;
   const displayName = useDisplayName(headUser);
@@ -80,7 +82,11 @@ function MessageGroupRowInner({
   );
 
   return (
-    <div className={styles.messageGroup} onClick={onClick} onContextMenu={onContextMenu}>
+    <div
+      className={`${styles.messageGroup} ${isPending ? styles.pending : ""}`}
+      onClick={onClick}
+      onContextMenu={onContextMenu}
+    >
       <UserAvatar
         username={headUser}
         className={`${styles.avatar} ${styles.clickable}`}

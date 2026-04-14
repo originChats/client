@@ -516,7 +516,7 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 140px;
+  max-width: 90%;
   padding-left: 4px;
 }
 

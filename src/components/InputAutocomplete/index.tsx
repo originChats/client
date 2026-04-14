@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "preact/hooks";
+import { TwemojiText } from "../TwemojiText";
 import {
   users,
   channels,
@@ -511,7 +512,11 @@ export function InputAutocomplete({ state, onSelect, onHover }: InputAutocomplet
                 />
               )}
               {item.type === "channel" && <span className="autocomplete-icon-hash">#</span>}
-              <span className="autocomplete-label">{item.label}</span>
+              {item.type === "channel" ? (
+                <TwemojiText className="autocomplete-label">{item.label}</TwemojiText>
+              ) : (
+                <span className="autocomplete-label">{item.label}</span>
+              )}
               {item.isCustomEmoji && item.serverName && (
                 <span className="autocomplete-emoji-server">{item.serverName}</span>
               )}

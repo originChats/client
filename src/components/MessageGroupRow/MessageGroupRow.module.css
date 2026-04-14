@@ -181,3 +181,12 @@
   white-space: nowrap;
   min-width: 0;
 }
+
+.pending {
+  opacity: 0.5;
+}
+
+.pending .messageBody,
+.pending .messageContentWrapper {
+  color: var(--text-dim);
+}

@@ -37,6 +37,7 @@ interface UseScrollLockResult {
   beginLoadNewer: () => void;
   overscrollPadding: number;
   topSentinelRef: (el: HTMLDivElement | null) => void;
+  bottomSentinelRef: (el: HTMLDivElement | null) => void;
 }
 
 export function useScrollLock({
@@ -46,6 +47,7 @@ export function useScrollLock({
   onLoadNewer,
   isLoadingNewer,
   onNewerLoaded,
+  onUnloadMessages,
 }: UseScrollLockOptions): UseScrollLockResult {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const autoScroll = useRef(true);
@@ -60,11 +62,15 @@ export function useScrollLock({
   const lastScrollDirection = useRef<"up" | "down" | null>(null);
   const lastContainerHeight = useRef(0);
   const topSentinelEl = useRef<HTMLDivElement | null>(null);
+  const bottomSentinelEl = useRef<HTMLDivElement | null>(null);
+  const [topSentinelMounted, setTopSentinelMounted] = useState(false);
+  const [bottomSentinelMounted, setBottomSentinelMounted] = useState(false);
 
   const stableOnLoadOlder = useStableCallback(onLoadOlder);
   const stableOnOlderLoaded = useStableCallback(onOlderLoaded);
   const stableOnLoadNewer = onLoadNewer ? useStableCallback(onLoadNewer) : null;
   const stableOnNewerLoaded = onNewerLoaded ? useStableCallback(onNewerLoaded) : null;
+  const stableOnUnloadMessages = onUnloadMessages ? useStableCallback(onUnloadMessages) : null;
   const isLoadingOlderRef = useRef(isLoadingOlder);
   isLoadingOlderRef.current = isLoadingOlder;
   const isLoadingNewerRef = useRef(isLoadingNewer || false);
@@ -128,17 +134,27 @@ export function useScrollLock({
 
   const topSentinelRef = useCallback((el: HTMLDivElement | null) => {
     topSentinelEl.current = el;
+    setTopSentinelMounted(!!el);
+  }, []);
+
+  const bottomSentinelRef = useCallback((el: HTMLDivElement | null) => {
+    bottomSentinelEl.current = el;
+    setBottomSentinelMounted(!!el);
   }, []);
 
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
 
+    const UNLOAD_THRESHOLD_PX = 2000;
+    const UNLOAD_COUNT = 50;
+
     const onScroll = () => {
       if (isScrollingProgrammatically.current) return;
 
       const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
       const nearBottom = distanceFromBottom < NEAR_BOTTOM_THRESHOLD;
+      const nearTop = el.scrollTop < NEAR_TOP_THRESHOLD;
 
       const currentScrollTop = el.scrollTop;
       const scrollDirection = currentScrollTop < prevScrollTop.current ? "up" : "down";
@@ -149,6 +165,17 @@ export function useScrollLock({
 
       autoScroll.current = nearBottom;
       setShowScrollBtn(!nearBottom);
+
+      // Unload messages when scrolled far away from them
+      if (stableOnUnloadMessages) {
+        if (scrollDirection === "down" && el.scrollTop > UNLOAD_THRESHOLD_PX) {
+          // Scrolled down, can unload older messages from the top
+          stableOnUnloadMessages(UNLOAD_COUNT, true);
+        } else if (scrollDirection === "up" && distanceFromBottom > UNLOAD_THRESHOLD_PX) {
+          // Scrolled up, can unload newer messages from the bottom
+          stableOnUnloadMessages(UNLOAD_COUNT, false);
+        }
+      }
 
       // Load newer messages when near bottom but not at bottom
       if (
@@ -176,7 +203,7 @@ export function useScrollLock({
         loadNewerDebounce.current = null;
       }
     };
-  }, [stableOnLoadNewer]);
+  }, [stableOnLoadNewer, stableOnUnloadMessages]);
 
   useEffect(() => {
     const sentinel = topSentinelEl.current;
@@ -195,7 +222,26 @@ export function useScrollLock({
 
     observer.observe(sentinel);
     return () => observer.disconnect();
-  }, [stableOnLoadOlder]);
+  }, [stableOnLoadOlder, topSentinelMounted]);
+
+  useEffect(() => {
+    const sentinel = bottomSentinelEl.current;
+    if (!sentinel || !stableOnLoadNewer) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting && !isLoadingNewerRef.current && !pendingNewerLoad.current) {
+            stableOnLoadNewer();
+          }
+        }
+      },
+      { threshold: 0 }
+    );
+
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [stableOnLoadNewer, bottomSentinelMounted]);
 
   useEffect(() => {
     const el = containerRef.current;
@@ -203,23 +249,38 @@ export function useScrollLock({
 
     let prevScrollHeight = el.scrollHeight;
     let rafId: number | null = null;
+    let olderLoadGeneration = 0;
 
-    const observer = new MutationObserver(() => {
+    const observer = new MutationObserver((mutations) => {
       const newScrollHeight = el.scrollHeight;
       const heightAdded = newScrollHeight - prevScrollHeight;
       prevScrollHeight = newScrollHeight;
 
-      if (pendingOlderLoad.current && heightAdded > 0) {
+      // Check if actual message content was added (not just skeleton)
+      const hasNewMessages = mutations.some((m) => {
+        for (const node of Array.from(m.addedNodes)) {
+          if (node instanceof HTMLElement) {
+            if (node.querySelector("[data-msg-id]") || node.hasAttribute("data-msg-id")) {
+              return true;
+            }
+          }
+        }
+        return false;
+      });
+
+      if (pendingOlderLoad.current && hasNewMessages) {
         cancelAnimationFrame(rafId!);
-        rafId = requestAnimationFrame(() => {
-          el.scrollTop += heightAdded;
-        });
+        if (heightAdded > 0) {
+          rafId = requestAnimationFrame(() => {
+            el.scrollTop += heightAdded;
+          });
+        }
         pendingOlderLoad.current = false;
         stableOnOlderLoaded();
         return;
       }
 
-      if (pendingNewerLoad.current && heightAdded > 0) {
+      if (pendingNewerLoad.current && hasNewMessages) {
         pendingNewerLoad.current = false;
         if (stableOnNewerLoaded) {
           stableOnNewerLoaded();
@@ -271,5 +332,6 @@ export function useScrollLock({
     beginLoadNewer,
     overscrollPadding: OVERSCROLL_PADDING,
     topSentinelRef,
+    bottomSentinelRef,
   };
 }

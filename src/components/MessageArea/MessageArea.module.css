@@ -29,6 +29,18 @@
   padding: 12px 20px;
 }
 
+.skeletonMessagesTop > * {
+  opacity: 1;
+}
+
+.skeletonMessagesBottom {
+  padding: 12px 20px;
+}
+
+.skeletonMessagesBottom > * {
+  opacity: 1;
+}
+
 .translation-loading {
   color: var(--text-dim);
   font-size: 12px;
@@ -79,14 +91,34 @@
   width: 20px;
 }
 
+.missedMessagesBtn {
+  align-items: center;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-df);
+  bottom: 8px;
+  box-shadow: var(--shadow-1);
+  color: white;
+  cursor: pointer;
+  display: flex;
+  font-size: 14px;
+  font-weight: 500;
+  padding: 8px 16px;
+  position: sticky;
+  margin: auto;
+  margin-bottom: 8px;
+  transition: all var(--anim-fast) var(--ease-standard);
+  z-index: 10;
+  align-self: self-end;
+  min-height: 40px;
+}
+
 .inputArea {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
   padding: var(--space-3);
-  padding-bottom: max(5px, env(safe-area-inset-bottom));
   position: relative;
-  border-top: 1px solid var(--border);
 }
 
 .inputWrapper {
@@ -99,6 +131,80 @@
   gap: var(--space-2);
   padding: var(--space-1) var(--space-2);
   width: 100%;
+}
+
+.typingPill {
+  position: absolute;
+  top: -28px;
+  left: 12px;
+  background: var(--surface-light);
+  border: 1px solid var(--border);
+  border-radius: 9999px;
+  padding: 4px 12px 4px 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted);
+  box-shadow: var(--shadow-1);
+  z-index: 10;
+  animation: typingPillIn 0.2s ease-out;
+}
+
+.typingPill[data-exiting="true"] {
+  animation: typingPillOut 0.15s ease-in forwards;
+}
+
+@keyframes typingPillIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes typingPillOut {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+
+.typingPillAvatars {
+  display: flex;
+  flex-shrink: 0;
+}
+
+.typingPillAvatar {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  margin-left: -4px;
+  border: 2px solid var(--surface-light);
+  flex-shrink: 0;
+}
+
+.typingPillAvatar:first-child {
+  margin-left: 0;
+}
+
+.typingPillText {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px;
+}
+
+.typingPillText span {
+  font-weight: 600;
 }
 
 .sendBtn {
@@ -1853,5 +1959,9 @@
   .modal {
     margin: 0 var(--space-4);
     border-radius: var(--radius-md);
+  }
+
+  .pending-message {
+    opacity: 0.5;
   }
 }

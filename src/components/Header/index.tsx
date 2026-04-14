@@ -1,4 +1,4 @@
-import { useReducer, useState } from "preact/hooks";
+import { useReducer, useState, useRef, useEffect } from "preact/hooks";
 import { useSignalEffect } from "@preact/signals";
 import {
   currentServer,
@@ -18,6 +18,7 @@ import {
   currentUserByServer,
   hasCapability,
 } from "../../state";
+import { TwemojiText } from "../TwemojiText";
 import { joinThread, leaveThread } from "../../lib/actions";
 import { Icon } from "../Icon";
 import {
@@ -41,6 +42,7 @@ export function Header() {
   const [, forceUpdate] = useReducer((n) => n + 1, 0);
   const [searchFocused, setSearchFocused] = useState(false);
   const [searchInput, setSearchInput] = useState("");
+  const headerRef = useRef<HTMLDivElement>(null);
   useSignalEffect(() => {
     currentChannel.value;
     serverUrl.value;
@@ -117,7 +119,7 @@ export function Header() {
   };
 
   const renderMobileHeader = () => (
-    <div className={styles.header}>
+    <div className={styles.header} ref={headerRef}>
       <button className={styles.menuBtn} onClick={toggleSidebar} aria-label="Toggle navigation">
         <Icon name="Menu" size={24} />
         {totalPings > 0 && !mobileSidebarOpen.value && (
@@ -130,7 +132,10 @@ export function Header() {
             <span>{currentServer.value?.name || "Direct Messages"}</span>
           </div>
           <div className={styles.channelName}>
-            # {currentChannel.value?.display_name || currentChannel.value?.name || "home"}
+            #{" "}
+            <TwemojiText>
+              {currentChannel.value?.display_name || currentChannel.value?.name || "home"}
+            </TwemojiText>
             {(currentChannel.value as any)?.description && (
               <span className={styles.channelDescription} style={{ marginLeft: 8, opacity: 0.6 }}>
                 {(currentChannel.value as any).description}
@@ -182,12 +187,12 @@ export function Header() {
   );
 
   const renderDesktopHeader = () => (
-    <div className={styles.mainMessagesHeader}>
+    <div className={styles.mainMessagesHeader} ref={headerRef}>
       <div className={styles.mainHeaderLeft}>
         <Icon name={ch?.type === "thread" ? "MessageSquare" : "Hash"} size={24} />
-        <span className={styles.mainHeaderChannelName}>
+        <TwemojiText className={styles.mainHeaderChannelName}>
           {currentChannel.value?.display_name || currentChannel.value?.name || "home"}
-        </span>
+        </TwemojiText>
         {(currentChannel.value as any)?.description && (
           <span className={styles.mainHeaderChannelDescription}>
             {(currentChannel.value as any).description}

@@ -6,6 +6,8 @@ import { VirtualMessageContainer } from "../VirtualMessageList";
 import { useMessageWindowing } from "../../hooks/useMessageWindowing";
 import { SkeletonMessageList } from "../Skeleton";
 import styles from "./MessageArea.module.css";
+import { addUniversalContextMenuItems } from "../../lib/link-context-menu";
+import { downloadAttachment } from "../../lib/download-attachment";
 
 const highlightTimeouts = new Set<ReturnType<typeof setTimeout>>();
 
@@ -35,6 +37,8 @@ import {
   pingsInboxOffset,
   PINGS_INBOX_LIMIT,
   reachedOldestByServer,
+  reachedNewestByServer,
+  missedMessagesCount,
   serverCapabilities,
   hasCapability,
   currentUserByServer,
@@ -47,7 +51,6 @@ import {
 } from "../../state";
 
 import {
-  renderMessagesSignal,
   showAccountModal,
   rightPanelView,
   pinnedMessages,
@@ -61,9 +64,12 @@ import {
   showError,
   translatedMessages,
   translatingMessageId,
+  renderMessagesSignal,
+  missedMessagesSignal,
 } from "../../lib/ui-signals";
 import { voiceState } from "../../voice";
 import { wsSend, fetchMissingReplyMessage, jumpToMessageAround } from "../../lib/websocket";
+import { setPendingOlderLoad, setPendingNewerLoad } from "../../lib/commands/message/s_around";
 import {
   highlightCodeInContainer,
   replaceShortcodes,
@@ -362,10 +368,11 @@ function groupMessages(messages: Message[]): MessageGroup[] {
   let currentGroup: MessageGroup | null = null;
 
   for (const msg of messages) {
+    const isPending = (msg as any)._pending;
     const shouldStartNewGroup =
       !currentGroup ||
       msg.user !== currentGroup.head.user ||
-      msg.timestamp - currentGroup.head.timestamp >= 300 ||
+      (msg.timestamp - currentGroup.head.timestamp >= 300 && !isPending) ||
       !!msg.reply_to;
 
     if (shouldStartNewGroup) {
@@ -547,7 +554,7 @@ function RightPanel() {
         });
       }
 
-      showContextMenu(e, menuItems);
+      showContextMenu(e, addUniversalContextMenuItems(e, menuItems));
     };
 
     return (
@@ -875,6 +882,34 @@ export function MessageArea() {
   const [loadingOlder, setLoadingOlder] = useState(false);
   const [loadingNewer, setLoadingNewer] = useState(false);
   const [channelLoading, setChannelLoading] = useState(false);
+  const loadingOlderStartTime = useRef<number | null>(null);
+  const loadingNewerStartTime = useRef<number | null>(null);
+  const MIN_SKELETON_DISPLAY_MS = 300;
+
+  const clearLoadingOlder = useCallback(() => {
+    const elapsed = loadingOlderStartTime.current
+      ? Date.now() - loadingOlderStartTime.current
+      : MIN_SKELETON_DISPLAY_MS;
+    const remaining = Math.max(0, MIN_SKELETON_DISPLAY_MS - elapsed);
+
+    setTimeout(() => {
+      setLoadingOlder(false);
+      loadingOlderStartTime.current = null;
+    }, remaining);
+  }, []);
+
+  const clearLoadingNewer = useCallback(() => {
+    const elapsed = loadingNewerStartTime.current
+      ? Date.now() - loadingNewerStartTime.current
+      : MIN_SKELETON_DISPLAY_MS;
+    const remaining = Math.max(0, MIN_SKELETON_DISPLAY_MS - elapsed);
+
+    setTimeout(() => {
+      setLoadingNewer(false);
+      loadingNewerStartTime.current = null;
+    }, remaining);
+  }, []);
+
   const {
     containerRef: messagesContainerRef,
     showScrollBtn,
@@ -884,9 +919,11 @@ export function MessageArea() {
     beginLoadOlder,
     beginLoadNewer,
     overscrollPadding,
+    topSentinelRef,
+    bottomSentinelRef,
   } = useScrollLock({
     isLoadingOlder: loadingOlder,
-    onOlderLoaded: () => setLoadingOlder(false),
+    onOlderLoaded: clearLoadingOlder,
     onLoadOlder: () => {
       const isThread = currentChannel.value?.type === "thread" && currentThread.value;
       const threadId = isThread ? currentThread.value!.id : null;
@@ -905,11 +942,13 @@ export function MessageArea() {
       const hasAround = caps.includes("messages_around");
 
       beginLoadOlder();
+      loadingOlderStartTime.current = Date.now();
       setLoadingOlder(true);
 
       if (hasAround) {
         const oldestMsg = msgs[0];
         if (oldestMsg?.id) {
+          setPendingOlderLoad(sUrl, messageKey);
           wsSend(
             threadId
               ? {
@@ -965,11 +1004,13 @@ export function MessageArea() {
       const hasAround = caps.includes("messages_around");
 
       beginLoadNewer();
+      loadingNewerStartTime.current = Date.now();
       setLoadingNewer(true);
 
       if (hasAround) {
         const newestMsg = msgs[msgs.length - 1];
         if (newestMsg?.id) {
+          setPendingNewerLoad(sUrl, messageKey);
           wsSend(
             threadId
               ? {
@@ -990,12 +1031,120 @@ export function MessageArea() {
           setLoadingNewer(false);
         }
       } else {
-        setLoadingNewer(false);
+        // Fallback: request messages from current position
+        wsSend(
+          threadId
+            ? {
+                cmd: "messages_get",
+                thread_id: threadId,
+                start: 0,
+                limit: 100,
+              }
+            : {
+                cmd: "messages_get",
+                channel: ch,
+                start: 0,
+                limit: 100,
+              },
+          sUrl
+        );
       }
     },
     isLoadingNewer: loadingNewer,
-    onNewerLoaded: () => setLoadingNewer(false),
+    onNewerLoaded: clearLoadingNewer,
+    onUnloadMessages: (count: number, fromStart: boolean) => {
+      const isThread = currentChannel.value?.type === "thread" && currentThread.value;
+      const threadId = isThread ? currentThread.value!.id : null;
+      const ch = isThread
+        ? (currentChannel.value as any).parent_channel
+        : currentChannel.value?.name;
+      const messageKey = threadId || ch;
+      const sUrl = serverUrl.value;
+      if (!ch || !sUrl || !messageKey) return;
+
+      const msgs = messagesByServer.value[sUrl]?.[messageKey] || [];
+      const MAX_MSGS = 200;
+      if (msgs.length <= MAX_MSGS) return;
+
+      const container = messagesContainerRef.current;
+      if (!container) return;
+
+      // Get the first visible message to anchor scroll position
+      const visibleMessages = container.querySelectorAll("[data-msg-id]");
+      let anchorMsgId: string | null = null;
+      let anchorOffset = 0;
+
+      for (let i = 0; i < visibleMessages.length; i++) {
+        const el = visibleMessages[i] as HTMLElement;
+        const rect = el.getBoundingClientRect();
+        const containerRect = container.getBoundingClientRect();
+        if (rect.top >= containerRect.top && rect.top <= containerRect.bottom) {
+          anchorMsgId = el.getAttribute("data-msg-id");
+          anchorOffset = rect.top - containerRect.top;
+          break;
+        }
+      }
+
+      // Trim messages
+      const newMsgs = fromStart ? msgs.slice(count) : msgs.slice(0, -count);
+
+      messagesByServer.value = {
+        ...messagesByServer.value,
+        [sUrl]: {
+          ...messagesByServer.value[sUrl],
+          [messageKey]: newMsgs,
+        },
+      };
+      renderMessagesSignal.value++;
+
+      // Clear reached state when unloading from that end
+      if (fromStart && reachedOldestByServer[sUrl]?.has(messageKey)) {
+        reachedOldestByServer[sUrl].delete(messageKey);
+      }
+      if (!fromStart && reachedNewestByServer[sUrl]?.has(messageKey)) {
+        reachedNewestByServer[sUrl].delete(messageKey);
+      }
+
+      // Restore scroll position to anchor message
+      if (anchorMsgId) {
+        requestAnimationFrame(() => {
+          const anchorEl = container.querySelector(`[data-msg-id="${anchorMsgId}"]`);
+          if (anchorEl) {
+            const newOffset =
+              (anchorEl as HTMLElement).getBoundingClientRect().top -
+              container.getBoundingClientRect().top;
+            container.scrollTop += newOffset - anchorOffset;
+          }
+        });
+      }
+    },
   });
+
+  // Jump to bottom - request latest messages and scroll
+  const jumpToBottom = useCallback(() => {
+    const isThread = currentChannel.value?.type === "thread" && currentThread.value;
+    const threadId = isThread ? currentThread.value!.id : null;
+    const ch = isThread ? (currentChannel.value as any).parent_channel : currentChannel.value?.name;
+    const messageKey = threadId || ch;
+    const sUrl = serverUrl.value;
+    if (!ch || !sUrl || !messageKey) return;
+
+    // Clear reached states, missed messages, and request fresh messages
+    reachedOldestByServer[sUrl]?.delete(messageKey);
+    reachedNewestByServer[sUrl]?.delete(messageKey);
+    if (missedMessagesCount[sUrl]) {
+      missedMessagesCount[sUrl][messageKey] = 0;
+    }
+
+    wsSend(
+      threadId
+        ? { cmd: "messages_get", thread_id: threadId, start: 0, limit: 100 }
+        : { cmd: "messages_get", channel: ch, start: 0, limit: 100 },
+      sUrl
+    );
+    scrollToBottom();
+  }, [scrollToBottom]);
+
   const [editingMessageState, setEditingMessageState] = useState<Message | null>(null);
   const setEditingMessage = (msg: Message | null) => {
     setEditingMessageState(msg);
@@ -1021,6 +1170,11 @@ export function MessageArea() {
   const [typingUsers, setTypingUsers] = useState<
     { username: string; displayName: string; color?: string | null }[]
   >([]);
+  const [prevTypingUsers, setPrevTypingUsers] = useState<
+    { username: string; displayName: string; color?: string | null }[]
+  >([]);
+  const [isTypingExiting, setIsTypingExiting] = useState(false);
+  const typingExitTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [pendingImages, setPendingImages] = useState<PendingImage[]>([]);
   const [pendingAttachments, setPendingAttachments] = useState<PendingAttachment[]>([]);
   const [uploading, setUploading] = useState(false);
@@ -1133,6 +1287,8 @@ export function MessageArea() {
 
   // Update typing indicators when signal changes
   useSignalEffect(() => {
+    // Subscribe to the typing signal to get reactivity
+    typingUsersByServer.value;
     const sUrl = serverUrl.value;
     const chName = currentChannel.value?.name;
     if (!sUrl || !chName) {
@@ -1152,25 +1308,90 @@ export function MessageArea() {
       displayName: string;
       color?: string | null;
     }[] = [];
+    const newMap = new Map<string, number>();
     let hasExpired = false;
     for (const [user, expiry] of map.entries()) {
       if (expiry < now) {
-        map.delete(user);
         hasExpired = true;
-      } else if (user !== myName) {
-        const serverUser = usersByServer.value[sUrl]?.[user.toLowerCase()];
-        typingList.push({
-          username: user,
-          displayName: getDisplayName(user),
-          color: serverUser?.color,
-        });
+      } else {
+        newMap.set(user, expiry);
+        if (user !== myName) {
+          const serverUser = usersByServer.value[sUrl]?.[user.toLowerCase()];
+          typingList.push({
+            username: user,
+            displayName: getDisplayName(user),
+            color: serverUser?.color,
+          });
+        }
       }
     }
     if (hasExpired) {
-      typingUsersByServer.value = { ...typingUsersByServer.value };
+      typingUsersByServer.value = {
+        ...typingUsersByServer.value,
+        [sUrl]: {
+          ...typingUsersByServer.value[sUrl],
+          [chName]: newMap,
+        },
+      };
     }
     setTypingUsers(typingList);
   });
+
+  // Periodic cleanup of expired typing indicators (every 2 seconds)
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const sUrl = serverUrl.value;
+      const chName = currentChannel.value?.name;
+      if (!sUrl || !chName) return;
+      const serverTyping = typingUsersByServer.value[sUrl];
+      if (!serverTyping || !serverTyping[chName]) return;
+      const map = serverTyping[chName] as Map<string, number>;
+      const now = Date.now();
+      let hasExpired = false;
+      for (const [, expiry] of map.entries()) {
+        if (expiry < now) {
+          hasExpired = true;
+          break;
+        }
+      }
+      if (hasExpired) {
+        const newMap = new Map<string, number>();
+        for (const [user, expiry] of map.entries()) {
+          if (expiry >= now) {
+            newMap.set(user, expiry);
+          }
+        }
+        typingUsersByServer.value = {
+          ...typingUsersByServer.value,
+          [sUrl]: {
+            ...typingUsersByServer.value[sUrl],
+            [chName]: newMap,
+          },
+        };
+      }
+    }, 2000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Handle typing indicator exit animation
+  useEffect(() => {
+    if (typingUsers.length === 0 && prevTypingUsers.length > 0) {
+      setIsTypingExiting(true);
+      if (typingExitTimeoutRef.current) {
+        clearTimeout(typingExitTimeoutRef.current);
+      }
+      typingExitTimeoutRef.current = setTimeout(() => {
+        setIsTypingExiting(false);
+        setPrevTypingUsers([]);
+      }, 150);
+    } else if (typingUsers.length > 0) {
+      setPrevTypingUsers(typingUsers);
+      setIsTypingExiting(false);
+      if (typingExitTimeoutRef.current) {
+        clearTimeout(typingExitTimeoutRef.current);
+      }
+    }
+  }, [typingUsers, prevTypingUsers.length]);
 
   useEffect(() => {
     return () => {
@@ -1234,6 +1455,7 @@ export function MessageArea() {
     blockedUsers.value;
     blockedMessageDisplay.value;
     pendingMessages.versionSignal.value;
+    missedMessagesSignal.value;
 
     // Schedule after the current paint so the new channel's DOM is in place.
     requestAnimationFrame(() => {
@@ -1257,6 +1479,11 @@ export function MessageArea() {
     currentChannel.value?.type === "thread" && currentThread.value
       ? currentThread.value.id
       : currentChannel.value?.name || "";
+
+  // Check if we have newer messages to load
+  const sUrl = serverUrl.value;
+  const hasReachedNewest = reachedNewestByServer[sUrl]?.has(messageKey);
+  const missedCount = missedMessagesCount[sUrl]?.[messageKey] || 0;
 
   // Merge pending messages with current messages
   const pendingForChannel = pendingMessages.get(serverUrl.value, messageKey);
@@ -1838,10 +2065,26 @@ export function MessageArea() {
         }),
     });
 
-    showContextMenu(e, menuItems);
+    showContextMenu(
+      e,
+      addUniversalContextMenuItems(e, menuItems, {
+        onViewReactions: (emoji: string) => {
+          const liveMsg = (messages.value[messageKey] || []).find((m) => m.id === msg.id);
+          const liveUsers: string[] = (liveMsg?.reactions?.[emoji] as string[]) ?? [];
+          setReactionModal({ emoji, users: liveUsers });
+        },
+      })
+    );
   };
 
-  const handleAttachmentContextMenu = (e: MouseEvent, att: { id: string }) => {
+  const handleAttachmentContextMenu = (
+    e: MouseEvent,
+    att: { id: string; url?: string; name?: string }
+  ) => {
+    e.preventDefault();
+    console.log("Full attachment object:", JSON.stringify(att, null, 2));
+    console.log("Attachment name:", att.name);
+    console.log("Attachment URL:", att.url);
     const sUrl = serverUrl.value;
     const currentRoles = rolesByServer.value[sUrl] || {};
     const myUsername = currentUser.value?.username?.toLowerCase();
@@ -1856,6 +2099,32 @@ export function MessageArea() {
     });
 
     const menuItems: any[] = [];
+
+    if (att.url) {
+      menuItems.push({
+        label: "Copy Image URL",
+        icon: "Image",
+        fn: () => {
+          navigator.clipboard.writeText(att.url!).catch(() => {});
+        },
+      });
+      menuItems.push({
+        label: "Open Image",
+        icon: "ExternalLink",
+        fn: () => {
+          window.open(att.url, "_blank", "noopener,noreferrer");
+        },
+      });
+      menuItems.push({
+        label: "Save Image",
+        icon: "Download",
+        fn: () => {
+          const filename = att.name || att.url?.split("/").pop() || "download";
+          downloadAttachment(att.url!, filename);
+        },
+      });
+    }
+
     menuItems.push({
       label: "Copy attachment ID",
       icon: "Hash",
@@ -1989,12 +2258,13 @@ export function MessageArea() {
       const interaction = msg.interaction;
       const webhook = msg.webhook;
       const displayName = webhook?.name || getDisplayName(msg.user);
+      const isPending = (msg as any)._pending;
       const groupClass =
-        isHead || interaction || webhook
+        (isHead || interaction || webhook
           ? (replyTo && canReply) || interaction
             ? "message-group has-reply"
             : "message-group"
-          : "message-single";
+          : "message-single") + (isPending ? " pending-message" : "");
 
       return (
         <SwipeableMessage
@@ -2182,6 +2452,7 @@ export function MessageArea() {
                         <AttachmentPreview
                           attachments={msg.attachments}
                           hasContent={!!msg.content}
+                          onContextMenu={handleAttachmentContextMenu}
                         />
                       )}
                       {msg.edited && <span className="edited-indicator">(edited)</span>}
@@ -2203,6 +2474,7 @@ export function MessageArea() {
                 {msg.attachments && msg.attachments.length > 0 && (
                   <AttachmentPreview
                     attachments={msg.attachments}
+                    hasContent={!!msg.content}
                     onContextMenu={handleAttachmentContextMenu}
                   />
                 )}
@@ -2329,13 +2601,18 @@ export function MessageArea() {
             className={styles.messages}
             onClick={handleMessagesClick as any}
           >
-            <div className={styles.overscrollArea} style={{ height: overscrollPadding }}>
-              {loadingOlder && (
-                <div className={styles.skeletonMessagesTop}>
-                  <SkeletonMessageList count={4} />
-                </div>
-              )}
-            </div>
+            {(!reachedOldestByServer[sUrl]?.has(messageKey) || loadingOlder) && (
+              <div className={styles.overscrollArea} style={{ height: overscrollPadding }}>
+                {!reachedOldestByServer[sUrl]?.has(messageKey) && (
+                  <div ref={topSentinelRef} style={{ height: 1 }} />
+                )}
+                {loadingOlder && (
+                  <div className={styles.skeletonMessagesTop}>
+                    <SkeletonMessageList count={4} />
+                  </div>
+                )}
+              </div>
+            )}
             {currentMessages.length === 0 && channelLoading ? (
               <div style={{ padding: "20px" }}>
                 <SkeletonMessageList count={3} />
@@ -2384,13 +2661,37 @@ export function MessageArea() {
                 return renderGroupedMessages(group);
               })
             )}
+            {(!hasReachedNewest || loadingNewer) && (
+              <>
+                <div ref={bottomSentinelRef} style={{ height: 1 }} />
+                {loadingNewer && (
+                  <div className={styles.skeletonMessagesBottom}>
+                    <SkeletonMessageList count={4} />
+                  </div>
+                )}
+              </>
+            )}
             {showScrollBtn && (
               <button
                 className={styles.scrollToBottomBtn}
-                onClick={scrollToBottom}
+                onClick={jumpToBottom}
                 title="Jump to bottom"
               >
                 <Icon name="ArrowDown" size={20} />
+              </button>
+            )}
+            {missedCount > 0 && !hasReachedNewest && (
+              <button
+                className={styles.missedMessagesBtn}
+                onClick={() => {
+                  // Clear missed count and jump to bottom
+                  if (missedMessagesCount[sUrl]) {
+                    missedMessagesCount[sUrl][messageKey] = 0;
+                  }
+                  jumpToBottom();
+                }}
+              >
+                {missedCount} unread message{missedCount !== 1 ? "s" : ""}
               </button>
             )}
           </div>
@@ -2565,6 +2866,65 @@ export function MessageArea() {
               />
             ) : (
               <div className={styles.inputWrapper}>
+                {(typingUsers.length > 0 || isTypingExiting) && prevTypingUsers.length > 0 && (
+                  <div className={styles.typingPill} data-exiting={isTypingExiting || undefined}>
+                    <div className={styles.typingPillAvatars}>
+                      {prevTypingUsers.slice(0, 3).map((u) => (
+                        <UserAvatar
+                          key={u.username}
+                          username={u.username}
+                          className={styles.typingPillAvatar}
+                          alt={u.displayName}
+                        />
+                      ))}
+                    </div>
+                    {prevTypingUsers.length === 1 ? (
+                      <span className={styles.typingPillText}>
+                        <span style={{ color: prevTypingUsers[0].color ?? undefined }}>
+                          {prevTypingUsers[0].displayName}
+                        </span>
+                        {" is typing..."}
+                      </span>
+                    ) : prevTypingUsers.length === 2 ? (
+                      <span className={styles.typingPillText}>
+                        <span style={{ color: prevTypingUsers[0].color ?? undefined }}>
+                          {prevTypingUsers[0].displayName}
+                        </span>
+                        {" and "}
+                        <span style={{ color: prevTypingUsers[1].color ?? undefined }}>
+                          {prevTypingUsers[1].displayName}
+                        </span>
+                        {" are typing..."}
+                      </span>
+                    ) : prevTypingUsers.length === 3 ? (
+                      <span className={styles.typingPillText}>
+                        <span style={{ color: prevTypingUsers[0].color ?? undefined }}>
+                          {prevTypingUsers[0].displayName}
+                        </span>
+                        {", "}
+                        <span style={{ color: prevTypingUsers[1].color ?? undefined }}>
+                          {prevTypingUsers[1].displayName}
+                        </span>
+                        {", and "}
+                        <span style={{ color: prevTypingUsers[2].color ?? undefined }}>
+                          {prevTypingUsers[2].displayName}
+                        </span>
+                        {" are typing..."}
+                      </span>
+                    ) : (
+                      <span className={styles.typingPillText}>
+                        <span style={{ color: prevTypingUsers[0].color ?? undefined }}>
+                          {prevTypingUsers[0].displayName}
+                        </span>
+                        {", "}
+                        <span style={{ color: prevTypingUsers[1].color ?? undefined }}>
+                          {prevTypingUsers[1].displayName}
+                        </span>
+                        {`, and ${prevTypingUsers.length - 2} others are typing...`}
+                      </span>
+                    )}
+                  </div>
+                )}
                 <div className={styles.plusBtnWrapper} ref={plusMenuRef}>
                   <button
                     className="icon-btn"
@@ -2688,67 +3048,6 @@ export function MessageArea() {
                   <Icon name="Send" />
                 </button>
               </div>
-            )}
-          </div>
-          <div className="typing">
-            {typingUsers.length > 0 && (
-              <div className="typing-avatars">
-                {typingUsers.slice(0, 3).map((u) => (
-                  <UserAvatar
-                    key={u.username}
-                    username={u.username}
-                    className="typing-avatar"
-                    alt={u.displayName}
-                  />
-                ))}
-              </div>
-            )}
-            {typingUsers.length === 1 ? (
-              <>
-                <span className="typing-name" style={{ color: typingUsers[0].color ?? undefined }}>
-                  {typingUsers[0].displayName}
-                </span>
-                {" is typing..."}
-              </>
-            ) : typingUsers.length === 2 ? (
-              <>
-                <span className="typing-name" style={{ color: typingUsers[0].color ?? undefined }}>
-                  {typingUsers[0].displayName}
-                </span>
-                {" and "}
-                <span className="typing-name" style={{ color: typingUsers[1].color ?? undefined }}>
-                  {typingUsers[1].displayName}
-                </span>
-                {" are typing..."}
-              </>
-            ) : typingUsers.length === 3 ? (
-              <>
-                <span className="typing-name" style={{ color: typingUsers[0].color ?? undefined }}>
-                  {typingUsers[0].displayName}
-                </span>
-                {", "}
-                <span className="typing-name" style={{ color: typingUsers[1].color ?? undefined }}>
-                  {typingUsers[1].displayName}
-                </span>
-                {", and "}
-                <span className="typing-name" style={{ color: typingUsers[2].color ?? undefined }}>
-                  {typingUsers[2].displayName}
-                </span>
-                {" are typing..."}
-              </>
-            ) : typingUsers.length > 3 ? (
-              <>
-                <span className="typing-name" style={{ color: typingUsers[0].color ?? undefined }}>
-                  {typingUsers[0].displayName}
-                </span>
-                {", "}
-                <span className="typing-name" style={{ color: typingUsers[1].color ?? undefined }}>
-                  {typingUsers[1].displayName}
-                </span>
-                {`, and ${typingUsers.length - 2} others are typing...`}
-              </>
-            ) : (
-              "\u00A0"
             )}
           </div>
         </div>

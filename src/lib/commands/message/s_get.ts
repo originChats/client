@@ -3,6 +3,7 @@ import {
   messagesByServer,
   loadedChannelsByServer,
   reachedOldestByServer,
+  reachedNewestByServer,
   serverUrl,
   currentChannel,
   channelsByServer,
@@ -39,6 +40,12 @@ export function handleMessagesGet(msg: MessagesGet, sUrl: string): void {
   }
 
   setMessages(sUrl, messageKey, sortedMsgs);
+
+  // Mark as reached newest on initial load
+  if (sortedMsgs.length > 0) {
+    if (!reachedNewestByServer[sUrl]) reachedNewestByServer[sUrl] = new Set();
+    reachedNewestByServer[sUrl].add(messageKey);
+  }
 
   if (sortedMsgs.length > 0) {
     const latestMessage = sortedMsgs[sortedMsgs.length - 1];

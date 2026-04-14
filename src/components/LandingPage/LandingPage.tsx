@@ -12,6 +12,7 @@ import {
   Github,
   ArrowRight,
   Layers,
+  ServerCog,
 } from "lucide-react";
 import "./LandingPage.css";
 
@@ -57,8 +58,8 @@ export function LandingPage({ onOpenApp }: LandingPageProps) {
           <div class="hero-badge-spacer" />
           <h1 class="hero-title">Own your conversations.</h1>
           <p class="hero-subtitle">
-            A decentralized chat platform where you control everything. Self-host your servers,
-            build your own clients, or use our public network. The choice is yours.
+            A chat platform where you control your content. Self-host your servers, build your own
+            clients, or just hang out! The choice is yours.
           </p>
           <div class="hero-actions">
             <button class="btn btn-primary btn-lg" onClick={onOpenApp}>
@@ -71,7 +72,7 @@ export function LandingPage({ onOpenApp }: LandingPageProps) {
               target="_blank"
               rel="noopener"
             >
-              <Github size={20} />
+              <ServerCog size={20} />
               Self-Host
             </a>
             <a

@@ -16,7 +16,16 @@ export function UpdatePopup() {
         </div>
       </div>
       <div class="update-popup-actions">
-        <button class="update-popup-refresh" onClick={() => window.location.reload()}>
+        <button
+          class="update-popup-refresh"
+          onClick={() => {
+            if (window.updateServiceWorker) {
+              window.updateServiceWorker(true);
+            } else {
+              window.location.reload();
+            }
+          }}
+        >
           Refresh
         </button>
         <button class="update-popup-dismiss" onClick={() => (updateAvailable.value = false)}>

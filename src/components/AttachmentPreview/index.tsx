@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "preact/hooks";
 import { Icon } from "../Icon";
 import { imageViewerState } from "../../lib/ui-signals";
+import { downloadAttachment } from "../../lib/download-attachment";
 
 interface Attachment {
   id: string;
@@ -38,7 +39,8 @@ function formatFileSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-function formatExpiry(expiresAt: number): string {
+function formatExpiry(expiresAt: number | null | undefined): string {
+  if (expiresAt == null) return "";
   const now = Date.now() / 1000;
   const secondsLeft = expiresAt - now;
   if (secondsLeft <= 0) return "Expired";
@@ -200,42 +202,51 @@ function AudioPlayer({ att }: { att: Attachment }) {
 
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
 
+  const showExpiry = att.expires_at;
+
   return (
     <div className="audio-player">
       <audio ref={audioRef} src={att.url} preload="metadata" />
       <div className="audio-player-header">
         <button className="audio-player-play-btn" onClick={togglePlay}>
-          <Icon name={isPlaying ? "Pause" : "Play"} size={18} />
+          <Icon name={isPlaying ? "Pause" : "Play"} size={16} />
         </button>
-        <div className="audio-player-info">
-          <span className="audio-player-name">{att.name}</span>
-          <div className="audio-player-meta">
-            <span className="audio-player-size">{formatFileSize(att.size)}</span>
-            <span className="audio-player-dot">·</span>
-            <span className="audio-player-time">
-              {formatTime(currentTime)} / {formatTime(duration)}
+        <div className="audio-player-content">
+          <div className="audio-player-name-row">
+            <span className="audio-player-name">{att.name}</span>
+            {showExpiry && (
+              <span className="audio-player-expiry">{formatExpiry(att.expires_at)}</span>
+            )}
+          </div>
+          <div
+            ref={progressRef}
+            className="audio-player-progress"
+            onClick={handleProgressClick}
+            onMouseDown={handleDragStart}
+          >
+            <span className="audio-player-time audio-player-time-current">
+              {formatTime(currentTime)}
+            </span>
+            <div className="audio-player-progress-bg">
+              <div className="audio-player-progress-fill" style={{ width: `${progress}%` }} />
+              <div className="audio-player-progress-handle" style={{ left: `${progress}%` }} />
+            </div>
+            <span className="audio-player-time audio-player-time-total">
+              {formatTime(duration)}
             </span>
           </div>
         </div>
-        <a
-          href={att.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          download={att.name}
-          className="audio-player-download"
-        >
-          <Icon name="Download" size={18} />
-        </a>
-      </div>
-      <div
-        ref={progressRef}
-        className="audio-player-progress"
-        onClick={handleProgressClick}
-        onMouseDown={handleDragStart}
-      >
-        <div className="audio-player-progress-bg">
-          <div className="audio-player-progress-fill" style={{ width: `${progress}%` }} />
-          <div className="audio-player-progress-handle" style={{ left: `${progress}%` }} />
+        <div className="audio-player-right">
+          <a
+            href={att.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            download={att.name}
+            className="audio-player-download"
+          >
+            <Icon name="Download" size={16} />
+          </a>
+          <span className="audio-player-size">{formatFileSize(att.size)}</span>
         </div>
       </div>
     </div>
@@ -268,9 +279,9 @@ export function AttachmentPreview({
   };
 
   const handleContextMenu = (e: MouseEvent, att: Attachment) => {
+    e.preventDefault();
     e.stopPropagation();
     if (onContextMenu) {
-      e.preventDefault();
       onContextMenu(e, att);
     }
   };
@@ -342,10 +353,12 @@ export function AttachmentPreview({
               <AudioPlayer att={att} />
             ) : (
               <a
-                href={att.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                download={att.name}
+                href="#"
+                onClick={(e) => {
+                  e.preventDefault();
+                  const filename = att.name || att.url.split("/").pop() || "download";
+                  downloadAttachment(att.url, filename);
+                }}
                 className="message-attachment-file"
               >
                 <div

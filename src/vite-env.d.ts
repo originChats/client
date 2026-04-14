@@ -11,3 +11,7 @@ declare module "virtual:pwa-register" {
 
   export function registerSW(options?: RegisterSWOptions): (reloadPage?: boolean) => Promise<void>;
 }
+
+interface Window {
+  updateServiceWorker?: (reloadPage?: boolean) => Promise<void>;
+}

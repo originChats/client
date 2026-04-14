@@ -1,4 +1,5 @@
 import { useState, useEffect } from "preact/hooks";
+import { TwemojiText } from "../TwemojiText";
 import {
   serverUrl,
   currentServer,
@@ -1060,7 +1061,9 @@ export function ServerSettingsModal() {
                         </div>
                         <div className="settings-item-info">
                           <div className="settings-item-name">
-                            {(channel as any).display_name || channel.name}
+                            <TwemojiText>
+                              {(channel as any).display_name || channel.name}
+                            </TwemojiText>
                           </div>
                           <div className="settings-item-meta">
                             {channel.type}

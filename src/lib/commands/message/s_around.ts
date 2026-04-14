@@ -1,11 +1,18 @@
 import type { MessagesAround } from "@/msgTypes";
-import { messagesByServer, loadedChannelsByServer, reachedOldestByServer } from "../../../state";
+import {
+  messagesByServer,
+  loadedChannelsByServer,
+  reachedOldestByServer,
+  reachedNewestByServer,
+} from "../../../state";
 import { finishMessageFetch } from "../../ws-sender";
 import { getMessageKey, setMessages, mergeAndSortMessages } from "../../message-utils";
+import { renderMessagesSignal } from "../../ui-signals";
 
 const pendingJumpByServer: Record<string, { messageId: string; channel: string } | null> = {};
 
 const olderLoadPendingByServer: Record<string, Set<string>> = {};
+const newerLoadPendingByServer: Record<string, Set<string>> = {};
 
 export function setPendingJump(sUrl: string, messageId: string, channel: string): void {
   pendingJumpByServer[sUrl] = { messageId, channel };
@@ -22,6 +29,13 @@ export function setPendingOlderLoad(sUrl: string, channel: string): void {
   olderLoadPendingByServer[sUrl].add(channel);
 }
 
+export function setPendingNewerLoad(sUrl: string, channel: string): void {
+  if (!newerLoadPendingByServer[sUrl]) {
+    newerLoadPendingByServer[sUrl] = new Set();
+  }
+  newerLoadPendingByServer[sUrl].add(channel);
+}
+
 export function handleMessagesAround(msg: MessagesAround, sUrl: string): void {
   const messageKey = getMessageKey(msg);
   finishMessageFetch(sUrl, messageKey);
@@ -31,8 +45,12 @@ export function handleMessagesAround(msg: MessagesAround, sUrl: string): void {
 
   const existingMsgs = messagesByServer.value[sUrl]?.[messageKey] || [];
   const isOlderLoad = olderLoadPendingByServer[sUrl]?.has(messageKey);
+  const isNewerLoad = newerLoadPendingByServer[sUrl]?.has(messageKey);
   if (isOlderLoad) {
     olderLoadPendingByServer[sUrl].delete(messageKey);
+  }
+  if (isNewerLoad) {
+    newerLoadPendingByServer[sUrl].delete(messageKey);
   }
 
   const newMessages = (msg.messages || []).map((m) => {
@@ -46,20 +64,37 @@ export function handleMessagesAround(msg: MessagesAround, sUrl: string): void {
 
   const sortedMsgs = mergeAndSortMessages(existingMsgs, newMessages);
 
-  const SCROLL_UP_LIMIT = 20;
-  if (existingMsgs.length > 0 && newMessages.length > 0 && newMessages.length < SCROLL_UP_LIMIT) {
-    const oldestNewTimestamp = Math.min(...newMessages.map((m) => m.timestamp));
-    const oldestExistingTimestamp = Math.min(...existingMsgs.map((m) => m.timestamp));
-    if (oldestNewTimestamp < oldestExistingTimestamp) {
-      if (!reachedOldestByServer[sUrl]) reachedOldestByServer[sUrl] = new Set();
-      reachedOldestByServer[sUrl].add(messageKey);
-    }
+  const hasNewMessages =
+    newMessages.length > 0 && newMessages.some((m) => !existingMsgs.some((e) => e.id === m.id));
+
+  // Mark as reached oldest if range.start is 0 (we've hit the beginning of the channel)
+  // or if we requested older messages but got none back
+  if (msg.range?.start === 0 || (isOlderLoad && newMessages.length === 0)) {
+    if (!reachedOldestByServer[sUrl]) reachedOldestByServer[sUrl] = new Set();
+    reachedOldestByServer[sUrl].add(messageKey);
   }
 
-  if (isOlderLoad) {
+  // Mark as reached newest if only 1 message returned and range.start !== 0
+  // (means we've hit the end of the channel), or if we loaded newer and got none back
+  if (
+    (newMessages.length === 1 && msg.range?.start !== 0) ||
+    (isNewerLoad && newMessages.length === 0)
+  ) {
+    if (!reachedNewestByServer[sUrl]) reachedNewestByServer[sUrl] = new Set();
+    reachedNewestByServer[sUrl].add(messageKey);
+  }
+
+  // For initial load (not scroll-based), mark as reached newest
+  if (!isOlderLoad && !isNewerLoad && sortedMsgs.length > 0) {
+    if (!reachedNewestByServer[sUrl]) reachedNewestByServer[sUrl] = new Set();
+    reachedNewestByServer[sUrl].add(messageKey);
+  }
+
+  if (isOlderLoad || isNewerLoad) {
     if (!messagesByServer.value[sUrl]) {
       messagesByServer.value = { ...messagesByServer.value, [sUrl]: {} };
     }
+
     messagesByServer.value = {
       ...messagesByServer.value,
       [sUrl]: {
@@ -67,6 +102,9 @@ export function handleMessagesAround(msg: MessagesAround, sUrl: string): void {
         [messageKey]: sortedMsgs,
       },
     };
+    if (!hasNewMessages) {
+      renderMessagesSignal.value++;
+    }
   } else {
     setMessages(sUrl, messageKey, sortedMsgs);
   }
@@ -74,6 +112,9 @@ export function handleMessagesAround(msg: MessagesAround, sUrl: string): void {
   const pendingJump = pendingJumpByServer[sUrl];
   if (pendingJump && pendingJump.channel === messageKey) {
     pendingJumpByServer[sUrl] = null;
+    // Clear reached states since we jumped to a specific message
+    reachedOldestByServer[sUrl]?.delete(messageKey);
+    reachedNewestByServer[sUrl]?.delete(messageKey);
     setTimeout(() => {
       const el = document.querySelector(`[data-msg-id="${pendingJump.messageId}"]`);
       if (el) {
