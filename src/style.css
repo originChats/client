@@ -2111,24 +2111,6 @@ a {
   width: 14px;
 }
 
-.input-wrapper {
-  position: relative;
-  align-items: center;
-  background: var(--surface-light);
-  border: 1px solid transparent;
-  border-radius: var(--radius-df);
-  border: 1px solid var(--border);
-  display: flex;
-  gap: var(--space-2);
-  padding: var(--space-1) var(--space-2);
-  transition:
-    background-color var(--anim-normal) var(--ease-standard),
-    border-color var(--anim-normal) var(--ease-standard),
-    box-shadow var(--anim-normal) var(--ease-standard);
-  width: 100%;
-  height: 60px;
-}
-
 #message-input {
   background: transparent;
   border: none;
