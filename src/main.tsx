@@ -52,7 +52,6 @@ import {
   loadFolders,
   loadFriendNicknames,
 } from "./lib/persistence";
-import { unreadState } from "./lib/state";
 import { OriginFSClientClass } from "./originFSKit";
 import { LocalOriginFSClass } from "./localOriginFSKit";
 import {
