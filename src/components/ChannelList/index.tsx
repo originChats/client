@@ -61,6 +61,7 @@ import { saveNotifSettings } from "../../lib/persistence";
 import { ThreadContextMenu, useThreadContextMenu } from "../ThreadContextMenu";
 import { wsSend } from "../../lib/websocket";
 import { StatusSelector } from "../StatusSelector";
+import { dmVoiceStates } from "../../lib/commands/voice/voice";
 import styles from "./ChannelList.module.css";
 
 import type { Channel } from "../../types";
@@ -626,6 +627,7 @@ export function ChannelList() {
             }
 
             const channelDescription = (channel as any).description;
+            const dmVoiceUsers = isDM ? dmVoiceStates.get(channel.name) : undefined;
 
             return (
               <div
@@ -637,11 +639,18 @@ export function ChannelList() {
                 title={channelDescription || undefined}
               >
                 {isDM && channel.icon ? (
-                  <img
-                    src={channel.icon}
-                    alt={channel.display_name || channel.name}
-                    className={styles.channelItemDmAvatar}
-                  />
+                  <div className={styles.dmAvatarWrapper}>
+                    <img
+                      src={channel.icon}
+                      alt={channel.display_name || channel.name}
+                      className={styles.channelItemDmAvatar}
+                    />
+                    {dmVoiceUsers && dmVoiceUsers.length > 0 && (
+                      <div className={styles.dmVoiceIndicator}>
+                        <Icon name="Phone" size={12} />
+                      </div>
+                    )}
+                  </div>
                 ) : (
                   <>
                     <Icon name="Hash" size={18} />
@@ -704,15 +713,6 @@ export function ChannelList() {
               title={voice.isScreenSharing ? "Stop Sharing" : "Share Screen"}
             >
               <Icon name={voice.isScreenSharing ? "MonitorOff" : "Monitor"} size={18} />
-            </button>
-            <button
-              className={styles.voiceControlBtn}
-              onClick={() => {
-                showVoiceCallView.value = !showVoiceCallView.value;
-              }}
-              title="Open Call View"
-            >
-              <Icon name="Maximize2" size={18} />
             </button>
             <button
               className={`${styles.voiceControlBtn} ${styles.voiceLeaveBtn}`}

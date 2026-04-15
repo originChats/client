@@ -1,0 +1,123 @@
+.settings-sidebar {
+  width: 278px;
+  background: var(--surface, #0a0a0c);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+
+.settings-nav {
+  flex: 1;
+  padding: 16px 12px;
+  overflow-y: auto;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: calc(100% - 24px);
+  padding: 11px;
+  margin: 1px 12px;
+  border: none;
+  background: none;
+  color: var(--text-dim, #a0a0a0);
+  border-radius: calc(var(--border-radius, 12px) - 4px);
+  cursor: pointer;
+  text-align: left;
+  transition:
+    all 0.2s ease,
+    border-radius 0.2s ease;
+}
+
+.nav-item:hover {
+  background: var(--surface-hover, #1f1f26);
+  color: var(--text, #ededed);
+}
+
+.nav-item.active {
+  background: var(--surface-light, #141419);
+  color: var(--text, #ededed);
+}
+
+.nav-item-icon {
+  display: flex;
+}
+
+.nav-item-icon svg {
+  width: 20px;
+  height: 20px;
+  color: var(--text-dim);
+  transition: color 0.2s ease;
+}
+
+.nav-item:hover .nav-item-icon svg,
+.nav-item.active .nav-item-icon svg {
+  color: var(--text);
+}
+
+.nav-item-label {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.settings-nav-section-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-dim, #a0a0a0);
+  padding: 6px 12px 2px;
+  user-select: none;
+}
+
+.settings-nav-divider {
+  height: 1px;
+  background: var(--border, #2a2a33);
+  margin: 6px 8px;
+}
+
+.settings-nav-chevron {
+  display: none;
+  margin-left: auto;
+  color: var(--text-dim);
+}
+
+.settings-mobile-back,
+.settings-mobile-close {
+  display: none;
+}
+
+.danger-nav {
+  color: var(--danger, #ed4245) !important;
+}
+
+.danger-nav:hover {
+  background: rgba(237, 66, 69, 0.15) !important;
+  color: var(--danger, #ed4245) !important;
+}
+
+@media (max-width: 768px) {
+  .settings-sidebar {
+    position: fixed;
+    left: -278px;
+    top: 0;
+    bottom: 0;
+    z-index: 10;
+    transition: transform 0.3s ease;
+  }
+
+  .settings-sidebar.mobile-open {
+    transform: translateX(278px);
+  }
+
+  .settings-nav-chevron {
+    display: flex;
+    margin-left: auto;
+  }
+
+  .settings-mobile-back,
+  .settings-mobile-close {
+    display: flex;
+  }
+}

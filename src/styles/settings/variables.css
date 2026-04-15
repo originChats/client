@@ -1,0 +1,22 @@
+:root {
+  --bg-tertiary: var(--surface, #0a0a0c);
+  --bg-secondary: var(--surface-light, #141419);
+  --bg-primary: var(--surface-hover, #1f1f26);
+  --header-primary: var(--text, #ededed);
+  --header-secondary: var(--text-dim, #a0a0a0);
+  --text-muted: var(--text-dim, #a0a0a0);
+  --text-normal: var(--text, #ededed);
+  --text-link: var(--link, #00a8fc);
+  --text-mention: var(--mention, #9b87f5);
+  --interactive-normal: var(--text-dim, #a0a0a0);
+  --interactive-hover: var(--text, #ededed);
+  --interactive-active: #fff;
+  --brand-experiment: var(--primary, #4e5058);
+  --brand-experiment-hover: var(--primary-hover, #586068);
+  --status-green: #3ba55c;
+  --divider-light: var(--border, #2a2a33);
+  --scrollbar-thin-thumb: var(--surface-light, #141419);
+  --scrollbar-thin-track: var(--surface, #0a0a0c);
+  --input-bg: var(--surface, #0a0a0c);
+  --red: var(--danger, #ed4245);
+}

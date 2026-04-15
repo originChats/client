@@ -1,0 +1,78 @@
+body.hide-scrollbars::-webkit-scrollbar,
+body.hide-scrollbars *::-webkit-scrollbar {
+  width: 0 !important;
+  height: 0 !important;
+  display: none;
+}
+
+body.hide-scrollbars {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+body.hide-avatar-borders .avatar {
+  border: none;
+}
+
+body.hide-message-shadows .message-group:hover,
+body.hide-message-shadows .message-single:hover {
+  background: transparent;
+}
+
+body.hide-message-shadows .message-group::before,
+body.hide-message-shadows .message-single::before {
+  display: none;
+}
+
+body.font-system {
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+}
+
+body.font-geometric {
+  font-family: "Segoe UI", "Roboto", "Helvetica Neue", sans-serif;
+}
+
+body.font-humanist {
+  font-family: "Helvetica Neue", Arial, sans-serif;
+}
+
+body.font-mono {
+  font-family: "SF Mono", "Consolas", "Monaco", "Lucida Console", monospace;
+}
+
+body.font-serif {
+  font-family: "Georgia", "Times New Roman", serif;
+}
+
+body.compact-mode .message-group,
+body.compact-mode .message-single {
+  padding-top: 2px;
+  padding-bottom: 2px;
+}
+
+body.compact-mode .message-single {
+  padding-left: 45px;
+}
+
+body.compact-mode .avatar {
+  width: 24px !important;
+  height: 24px !important;
+}
+
+body.compact-mode .message-group-content {
+  gap: 1px;
+}
+
+body.hide-timestamps .timestamp {
+  display: none;
+}
+
+body.hide-edited-indicator .edited-indicator {
+  display: none;
+}
+
+.message-image,
+img.tenor-gif {
+  max-width: min(100%, var(--max-inline-image-width, 400px));
+}

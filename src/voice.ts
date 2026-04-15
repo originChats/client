@@ -81,12 +81,17 @@ interface PeerConn {
   screenStream: MediaStream | null;
   cameraStream: MediaStream | null;
 
-  // Retry timers for outbound video calls (setTimeout IDs)
+  // Retry timers for outbound calls (setTimeout IDs)
+  audioRetryTimer: ReturnType<typeof setTimeout> | null;
   screenRetryTimer: ReturnType<typeof setTimeout> | null;
   cameraRetryTimer: ReturnType<typeof setTimeout> | null;
   // How many retry attempts so far (for backoff)
+  audioRetryCount: number;
   screenRetryCount: number;
   cameraRetryCount: number;
+  // Connection health tracking
+  lastSeen: number;
+  connectionState: "new" | "connecting" | "connected" | "disconnected" | "failed";
 }
 
 function emptyPeerConn(): PeerConn {
@@ -100,17 +105,26 @@ function emptyPeerConn(): PeerConn {
     audioStream: null,
     screenStream: null,
     cameraStream: null,
+    audioRetryTimer: null,
     screenRetryTimer: null,
     cameraRetryTimer: null,
+    audioRetryCount: 0,
     screenRetryCount: 0,
     cameraRetryCount: 0,
+    lastSeen: Date.now(),
+    connectionState: "new",
   };
 }
 
-// Max retry attempts and backoff ceiling (ms) for outbound video calls
+// Max retry attempts and backoff ceiling (ms) for outbound calls
+const AUDIO_RETRY_MAX = 5;
 const VIDEO_RETRY_MAX = 6;
+const AUDIO_RETRY_BASE_MS = 2000;
 const VIDEO_RETRY_BASE_MS = 1500;
-const VIDEO_RETRY_CAP_MS = 20_000;
+const RETRY_CAP_MS = 20_000;
+const PEER_TIMEOUT_MS = 30_000;
+const HEALTH_CHECK_INTERVAL_MS = 8_000;
+const CONNECTION_MONITOR_INTERVAL_MS = 5_000;
 
 // ── Speaking detection ────────────────────────────────────────────────────────
 
@@ -142,6 +156,8 @@ class VoiceManager {
 
   // Periodic video health-check interval
   private _videoHealthInterval: ReturnType<typeof setInterval> | null = null;
+  private _connectionMonitorInterval: ReturnType<typeof setInterval> | null = null;
+  private _peerReconnectTimer: ReturnType<typeof setTimeout> | null = null;
 
   // Internal state
   private _currentChannel: string | null = null;
@@ -154,6 +170,9 @@ class VoiceManager {
   // Speaking detection
   private _localDetector: SpeakingDetector | null = null;
   private _remoteDetectors = new Map<string, SpeakingDetector>();
+
+  // Setup beforeunload handler for cleanup
+  private _beforeUnloadHandler: (() => void) | null = null;
 
   // ── Public read-only accessors ──────────────────────────────────────────────
 
@@ -255,6 +274,8 @@ class VoiceManager {
 
     // Start periodic health-check to catch silently dropped video calls
     this._startVideoHealthCheck();
+    this._startConnectionMonitor();
+    this._setupBeforeUnload();
 
     // For chat channels the embedded panel in MessageArea shows automatically;
     // for all other channel types open the fullscreen overlay.
@@ -270,6 +291,24 @@ class VoiceManager {
     wsSend({ cmd: "voice_leave" }, serverUrl.value);
     this._cleanup();
     showVoiceCallView.value = false;
+  }
+
+  private _setupBeforeUnload(): void {
+    if (this._beforeUnloadHandler) return;
+    this._beforeUnloadHandler = () => {
+      if (this._currentChannel) {
+        wsSend({ cmd: "voice_leave" }, serverUrl.value);
+        this._stopAllLocalStreams();
+      }
+    };
+    window.addEventListener("beforeunload", this._beforeUnloadHandler);
+  }
+
+  private _removeBeforeUnload(): void {
+    if (this._beforeUnloadHandler) {
+      window.removeEventListener("beforeunload", this._beforeUnloadHandler);
+      this._beforeUnloadHandler = null;
+    }
   }
 
   // ── Server event handlers ───────────────────────────────────────────────────
@@ -373,6 +412,10 @@ class VoiceManager {
       return;
     }
 
+    if (this._localCameraStream) {
+      this._stopCamera();
+    }
+
     const constraints = this._videoConstraints();
     let stream: MediaStream | null = null;
 
@@ -388,7 +431,6 @@ class VoiceManager {
 
     this._localScreenStream = stream;
 
-    // Auto-cleanup when OS/browser ends the share
     const videoTrack = stream.getVideoTracks()[0];
     if (videoTrack) {
       videoTrack.addEventListener("ended", () => this._stopScreenShare(), {
@@ -396,7 +438,6 @@ class VoiceManager {
       });
     }
 
-    // Send to all remote peers
     this._broadcastVideo("screen", stream);
     this._publish();
   }
@@ -405,6 +446,10 @@ class VoiceManager {
     if (this._localCameraStream) {
       this._stopCamera();
       return;
+    }
+
+    if (this._localScreenStream) {
+      this._stopScreenShare();
     }
 
     const constraints = this._videoConstraints();
@@ -422,7 +467,6 @@ class VoiceManager {
 
     this._localCameraStream = stream;
 
-    // Auto-cleanup if track ends externally
     const videoTrack = stream.getVideoTracks()[0];
     if (videoTrack) {
       videoTrack.addEventListener("ended", () => this._stopCamera(), {
@@ -430,7 +474,6 @@ class VoiceManager {
       });
     }
 
-    // Send to all remote peers
     this._broadcastVideo("camera", stream);
     this._publish();
   }
@@ -586,12 +629,26 @@ class VoiceManager {
   private _callPeerAudio(peerId: string): void {
     if (!this._peer || !this._localAudioStream) return;
     const conn = this._getConn(peerId);
-    if (conn.outAudioCall) return; // already have an outbound audio call
+    if (conn.outAudioCall) return;
+
+    const timerKey = "audioRetryTimer" as const;
+    const countKey = "audioRetryCount" as const;
+
+    if (conn[timerKey] !== null) {
+      clearTimeout(conn[timerKey]!);
+      conn[timerKey] = null;
+    }
+
     const call = this._peer.call(peerId, this._localAudioStream, {
       metadata: { kind: "audio" },
     });
-    if (!call) return;
+    if (!call) {
+      vcWarn(`_callPeerAudio: peer.call() returned null for ${peerId}`);
+      this._scheduleAudioRetry(peerId);
+      return;
+    }
     conn.outAudioCall = call;
+    conn.connectionState = "connecting";
     this._onOutboundAudioStream(call);
   }
 
@@ -695,7 +752,7 @@ class VoiceManager {
     }
 
     const attempt = conn[countKey];
-    const delay = Math.min(VIDEO_RETRY_BASE_MS * 2 ** attempt, VIDEO_RETRY_CAP_MS);
+    const delay = Math.min(VIDEO_RETRY_BASE_MS * 2 ** attempt, RETRY_CAP_MS);
     conn[countKey] += 1;
 
     vcWarn(`Scheduling ${kind} retry #${conn[countKey]} for ${peerId} in ${delay}ms`);
@@ -719,38 +776,84 @@ class VoiceManager {
 
   private _onOutboundAudioStream(call: MediaConnection): void {
     call.on("stream", (stream) => {
-      // The remote peer answered our audio call — play their audio.
-      // Guard against duplicate delivery: if we already have audio from their
-      // inbound call, don't restart the element/detector.
       const conn = this._getConn(call.peer);
-      if (conn.audioStream) return; // already receiving audio via inbound call
+      if (conn.audioStream) return;
       conn.audioStream = stream;
+      conn.connectionState = "connected";
+      conn.lastSeen = Date.now();
+      conn.audioRetryCount = 0;
       this._playAudio(call.peer, stream);
       this._startRemoteSpeakingDetection(call.peer, stream);
     });
     call.on("close", () => {
-      // Outbound audio call closed — clean up audio only, keep the peer entry
-      // and any video streams intact. A transient disconnect shouldn't wipe the
-      // entire peer.
       const conn = this._peers.get(call.peer);
       if (conn && conn.outAudioCall === call) {
         conn.outAudioCall = null;
         conn.audioStream = null;
+        conn.connectionState = "disconnected";
         document.getElementById("vcaudio-" + call.peer)?.remove();
         this._stopRemoteSpeakingDetection(call.peer);
+        if (!this._peer?.destroyed && this._currentChannel) {
+          vcWarn(`Audio call to ${call.peer} closed — will retry`);
+          this._scheduleAudioRetry(call.peer);
+        }
         this._publish();
       }
     });
-    call.on("error", () => {
+    call.on("error", (err) => {
+      vcWarn(`Outbound audio call error for ${call.peer}:`, err);
       const conn = this._peers.get(call.peer);
       if (conn && conn.outAudioCall === call) {
         conn.outAudioCall = null;
         conn.audioStream = null;
+        conn.connectionState = "failed";
         document.getElementById("vcaudio-" + call.peer)?.remove();
         this._stopRemoteSpeakingDetection(call.peer);
+        if (!this._peer?.destroyed && this._currentChannel) {
+          this._scheduleAudioRetry(call.peer);
+        }
         this._publish();
       }
     });
+  }
+
+  private _scheduleAudioRetry(peerId: string): void {
+    const conn = this._peers.get(peerId);
+    if (!conn) return;
+
+    const timerKey = "audioRetryTimer" as const;
+    const countKey = "audioRetryCount" as const;
+
+    if (conn[countKey] >= AUDIO_RETRY_MAX) {
+      vcWarn(`Giving up audio retries for ${peerId} after ${conn[countKey]} attempts`);
+      conn[countKey] = 0;
+      return;
+    }
+
+    if (conn[timerKey] !== null) {
+      clearTimeout(conn[timerKey]!);
+      conn[timerKey] = null;
+    }
+
+    const attempt = conn[countKey];
+    const delay = Math.min(AUDIO_RETRY_BASE_MS * 2 ** attempt, RETRY_CAP_MS);
+    conn[countKey] += 1;
+
+    vcWarn(`Scheduling audio retry #${conn[countKey]} for ${peerId} in ${delay}ms`);
+
+    conn[timerKey] = setTimeout(() => {
+      const c = this._peers.get(peerId);
+      if (!c || !this._currentChannel) {
+        if (c) c[countKey] = 0;
+        return;
+      }
+      c[timerKey] = null;
+      if (!this._localAudioStream) {
+        c[countKey] = 0;
+        return;
+      }
+      this._callPeerAudio(peerId);
+    }, delay);
   }
 
   // ── Private: PeerJS initialization ──────────────────────────────────────────
@@ -924,7 +1027,10 @@ class VoiceManager {
   private _detachPeer(peerId: string): void {
     const conn = this._peers.get(peerId);
     if (conn) {
-      // Cancel any pending retry timers first
+      if (conn.audioRetryTimer !== null) {
+        clearTimeout(conn.audioRetryTimer);
+        conn.audioRetryTimer = null;
+      }
       if (conn.screenRetryTimer !== null) {
         clearTimeout(conn.screenRetryTimer);
         conn.screenRetryTimer = null;
@@ -974,8 +1080,16 @@ class VoiceManager {
   }
 
   private _cleanup(): void {
-    // Cancel all retry timers and close all peer connections (both directions)
+    this._removeBeforeUnload();
+    if (this._peerReconnectTimer !== null) {
+      clearTimeout(this._peerReconnectTimer);
+      this._peerReconnectTimer = null;
+    }
     for (const conn of this._peers.values()) {
+      if (conn.audioRetryTimer !== null) {
+        clearTimeout(conn.audioRetryTimer);
+        conn.audioRetryTimer = null;
+      }
       if (conn.screenRetryTimer !== null) {
         clearTimeout(conn.screenRetryTimer);
         conn.screenRetryTimer = null;
@@ -1017,11 +1131,9 @@ class VoiceManager {
     }
     this._peers.clear();
 
-    // Stop all local streams
     this._stopAllLocalStreams();
-
-    // Stop the video health-check
     this._stopVideoHealthCheck();
+    this._stopConnectionMonitor();
 
     // Remove all audio elements
     document.querySelectorAll('[id^="vcaudio-"]').forEach((el) => el.remove());
@@ -1110,6 +1222,32 @@ class VoiceManager {
     if (this._videoHealthInterval !== null) {
       clearInterval(this._videoHealthInterval);
       this._videoHealthInterval = null;
+    }
+  }
+
+  private _startConnectionMonitor(): void {
+    this._stopConnectionMonitor();
+    this._connectionMonitorInterval = setInterval(() => {
+      if (!this._peer || this._peer.destroyed || !this._currentChannel) return;
+      const now = Date.now();
+      for (const p of this._participants) {
+        if (!p.peer_id || p.peer_id === this._peer?.id) continue;
+        const conn = this._peers.get(p.peer_id);
+        if (!conn) continue;
+        if (conn.connectionState === "failed" && conn.lastSeen < now - PEER_TIMEOUT_MS) {
+          vcWarn(`Peer ${p.peer_id} timed out, reinitializing connection`);
+          this._detachPeer(p.peer_id);
+          this._callPeerAudio(p.peer_id);
+          this._pushVideoStreams(p.peer_id);
+        }
+      }
+    }, CONNECTION_MONITOR_INTERVAL_MS);
+  }
+
+  private _stopConnectionMonitor(): void {
+    if (this._connectionMonitorInterval !== null) {
+      clearInterval(this._connectionMonitorInterval);
+      this._connectionMonitorInterval = null;
     }
   }
 
@@ -1215,9 +1353,27 @@ class VoiceManager {
   // ── Private: video constraints ──────────────────────────────────────────────
 
   private _videoConstraints(): MediaTrackConstraints {
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+      navigator.userAgent
+    );
+    const isFirefox = /Firefox/i.test(navigator.userAgent);
     const h = voiceVideoRes.value;
     const w = h >= 2160 ? 3840 : h >= 1440 ? 2560 : h >= 1080 ? 1920 : h >= 720 ? 1280 : 854;
     const fps = voiceVideoFps.value;
+    if (isMobile && isFirefox) {
+      return {
+        width: { ideal: 640, max: 1280 },
+        height: { ideal: 480, max: 720 },
+        frameRate: { ideal: Math.min(fps, 15), max: 15 },
+      };
+    }
+    if (isMobile) {
+      return {
+        width: { ideal: 854, max: 1280 },
+        height: { ideal: 480, max: 720 },
+        frameRate: { ideal: Math.min(fps, 24), max: 30 },
+      };
+    }
     return {
       width: { ideal: w },
       height: { ideal: h },

@@ -123,6 +123,10 @@ export const currentDMTab = signal<"friends" | "requests" | "blocked" | "groups"
 
 export const showVoiceCallView = signal(false);
 
+export function hideVoiceCallView(): void {
+  showVoiceCallView.value = false;
+}
+
 export const rightPanelView = signal<"members" | "pinned" | "search" | "inbox" | "threads" | null>(
   "members"
 );

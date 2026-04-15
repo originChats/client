@@ -67,7 +67,8 @@ import {
   renderMessagesSignal,
   missedMessagesSignal,
 } from "../../lib/ui-signals";
-import { voiceState } from "../../voice";
+import { voiceState, voiceManager } from "../../voice";
+import { dmVoiceStates } from "../../lib/commands/voice/voice";
 import { wsSend, fetchMissingReplyMessage, jumpToMessageAround } from "../../lib/websocket";
 import { setPendingOlderLoad, setPendingNewerLoad } from "../../lib/commands/message/s_around";
 import {
@@ -2554,6 +2555,10 @@ export function MessageArea() {
   const isChatChannel = ch !== null && ch.type === "chat";
   const voice = voiceState.value;
   const inCallHere = isChatChannel && voice.currentChannel === ch?.name;
+  const rawDmCallUsers = isDM && ch ? dmVoiceStates.get(ch.name) : undefined;
+  const myUsername = currentUserByServer.value[serverUrl.value]?.username;
+  const dmCallUsers = rawDmCallUsers?.filter((u) => u.username !== myUsername);
+  const hasIncomingDmCall = isDM && dmCallUsers && dmCallUsers.length > 0 && !inCallHere;
 
   const canSendInChannel = (() => {
     if (isDM) return true;
@@ -2574,6 +2579,7 @@ export function MessageArea() {
       <Header />
       <ErrorBannerStack />
       {inCallHere && !showVoiceCallView.value && <VoiceCallView embedded />}
+      {hasIncomingDmCall && <IncomingDMCall users={dmCallUsers!} />}
       <div className="main-content-area">
         <div
           className={styles.messagesContainer}
@@ -3413,6 +3419,41 @@ function ReactionUserItem({ username }: { username: string }) {
     <div className="reaction-modal-user">
       <UserAvatar username={username} className="reaction-modal-avatar" alt={displayName} />
       <span className="reaction-modal-username">{displayName}</span>
+    </div>
+  );
+}
+
+function IncomingDMCall({ users }: { users: { username: string; muted?: boolean }[] }) {
+  const ch = currentChannel.value;
+  const myUsername = currentUserByServer.value[serverUrl.value]?.username;
+
+  const handleJoin = () => {
+    if (ch) {
+      voiceManager.joinChannel(ch.name, myUsername, ch.type);
+    }
+  };
+
+  return (
+    <div className={styles.incomingCall}>
+      <div className={styles.incomingCallHeader}>
+        <Icon name="Phone" size={20} />
+        <span>Incoming Call</span>
+      </div>
+      <div className={styles.incomingCallUsers}>
+        {users.map((u) => (
+          <div key={u.username} className={styles.incomingCallUser}>
+            <UserAvatar username={u.username} className={styles.incomingCallAvatar} />
+            <span className={styles.incomingCallUsername}>{u.username}</span>
+            {u.muted && <Icon name="MicOff" size={14} />}
+          </div>
+        ))}
+      </div>
+      <div className={styles.incomingCallActions}>
+        <button className={styles.incomingCallJoin} onClick={handleJoin}>
+          <Icon name="Phone" size={18} />
+          <span>Join</span>
+        </button>
+      </div>
     </div>
   );
 }

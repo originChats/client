@@ -1,0 +1,111 @@
+.settings-panel {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 60000;
+}
+
+.settings-panel.active {
+  display: block;
+}
+
+.settings-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(8px);
+  z-index: 1;
+}
+
+.settings-container {
+  display: flex;
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 100%;
+  height: 100%;
+  background: var(--surface, #0a0a0c);
+  overflow: hidden;
+  z-index: 2;
+}
+
+.settings-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 32px;
+  height: 32px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: calc(var(--border-radius, 12px) - 4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--text-dim, #a0a0a0);
+  z-index: 20;
+  transition:
+    all 0.2s ease,
+    border-radius 0.2s ease;
+}
+
+.settings-close:hover {
+  background: rgba(0, 0, 0, 0.5);
+  color: var(--text, #ededed);
+  transform: scale(1.1);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.settings-close svg {
+  width: 18px;
+  height: 18px;
+}
+
+.settings-toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  padding: 12px 20px;
+  background: var(--surface-hover, #1f1f26);
+  color: var(--text, #ededed);
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  opacity: 0;
+  visibility: hidden;
+  z-index: 65000;
+  border: none;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  transform: translateY(10px);
+  transition: all 0.3s ease;
+}
+
+.settings-toast.active {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.settings-toast.toast-success {
+  background: var(--success, #3ba55c);
+  color: #fff;
+  border-color: var(--success, #3ba55c);
+}
+
+.settings-toast.toast-error {
+  background: var(--danger, #ed4245);
+  color: #fff;
+  border-color: var(--danger, #ed4245);
+}
+
+.settings-toast.toast-info {
+  background: var(--primary, #4e5058);
+  color: #fff;
+  border-color: var(--primary, #4e5058);
+}

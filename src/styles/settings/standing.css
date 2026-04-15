@@ -1,0 +1,121 @@
+.standing-loading {
+  display: flex;
+  justify-content: center;
+  padding: 24px 0;
+}
+
+.standing-error {
+  color: var(--text-dim);
+  font-size: 13px;
+  padding: 12px 0;
+}
+
+.standing-card {
+  align-items: center;
+  border: none;
+  border-radius: 10px;
+  display: flex;
+  gap: 16px;
+  margin-top: 12px;
+  padding: 16px 20px;
+}
+
+.standing-card-badge {
+  color: var(--text-dim);
+  flex-shrink: 0;
+}
+
+.standing-card-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.standing-card-value {
+  font-size: 18px;
+  font-weight: 700;
+  text-transform: capitalize;
+}
+
+.standing-card-desc {
+  color: var(--text-dim);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.standing-card-good,
+.standing-card-excellent {
+  background: color-mix(in srgb, #3ba55c 10%, transparent);
+  border-color: color-mix(in srgb, #3ba55c 35%, transparent);
+}
+
+.standing-card-good .standing-card-badge,
+.standing-card-excellent .standing-card-badge {
+  color: #3ba55c;
+}
+
+.standing-card-good .standing-card-value,
+.standing-card-excellent .standing-card-value {
+  color: #3ba55c;
+}
+
+.standing-card-bad,
+.standing-card-poor {
+  background: color-mix(in srgb, #ed4245 10%, transparent);
+  border-color: color-mix(in srgb, #ed4245 35%, transparent);
+}
+
+.standing-card-bad .standing-card-badge,
+.standing-card-poor .standing-card-badge {
+  color: #ed4245;
+}
+
+.standing-card-bad .standing-card-value,
+.standing-card-poor .standing-card-value {
+  color: #ed4245;
+}
+
+.standing-card-suspended,
+.standing-card-banned {
+  background: color-mix(in srgb, #ed4245 15%, transparent);
+  border-color: #ed4245;
+}
+
+.standing-card-suspended .standing-card-badge,
+.standing-card-banned .standing-card-badge {
+  color: #ed4245;
+}
+
+.standing-card-suspended .standing-card-value,
+.standing-card-banned .standing-card-value {
+  color: #ed4245;
+}
+
+.standing-card-normal,
+.standing-card-neutral {
+  background: var(--surface-2, var(--surface));
+}
+
+.timeout-presets {
+  display: flex;
+  gap: 10px;
+  margin-top: 8px;
+  margin-bottom: 16px;
+}
+
+.timeout-presets button {
+  background: var(--surface-hover, #1f1f26);
+  border: none;
+  border-radius: 999px;
+  color: var(--text, #ededed);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 8px 16px;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.timeout-presets button:hover {
+  background: var(--primary, #4e5058);
+  color: #fff;
+}

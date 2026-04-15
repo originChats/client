@@ -1,0 +1,156 @@
+.settings-field {
+  margin-bottom: 24px;
+}
+
+.settings-field > label {
+  color: var(--text-dim);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+  display: block;
+  text-transform: uppercase;
+}
+
+.settings-field > input[type="text"],
+.settings-field > input[type="color"],
+.settings-field input[type="text"],
+.settings-field input[type="color"] {
+  background: var(--surface, #0a0a0c);
+  border: 1px solid var(--border, #2a2a2f);
+  border-radius: 10px;
+  color: var(--text);
+  font-size: 14px;
+  padding: 12px 16px;
+  width: 100%;
+  transition: all 0.2s ease;
+}
+
+.settings-field > input[type="text"]:focus,
+.settings-field > input[type="password"]:focus,
+.settings-field > select:focus,
+.settings-field input[type="text"]:focus,
+.settings-field input[type="password"]:focus,
+.settings-field select:focus,
+.settings-input:focus {
+  border-color: var(--primary, #4e5058);
+  box-shadow: 0 0 0 3px rgba(78, 80, 88, 0.2);
+  outline: none;
+}
+
+.settings-field > input[type="password"],
+.settings-field > select,
+.settings-field input[type="password"],
+.settings-field select,
+.settings-input {
+  background: var(--surface, #0a0a0c);
+  border: 1px solid var(--border, #2a2a2f);
+  border-radius: 10px;
+  box-sizing: border-box;
+  color: var(--text);
+  font-size: 14px;
+  padding: 12px 16px;
+  width: 100%;
+  transition: all 0.2s ease;
+}
+
+.settings-field input[type="password"]:focus,
+.settings-field select:focus,
+.settings-input:focus {
+  box-shadow: 0 0 0 2px rgba(78, 80, 88, 0.3);
+  outline: none;
+}
+
+.settings-field input[type="text"]:focus {
+  box-shadow: 0 0 0 2px rgba(78, 80, 88, 0.3);
+  outline: none;
+}
+
+.settings-field input[type="color"] {
+  cursor: pointer;
+  height: 36px;
+  padding: 4px;
+  width: 60px;
+}
+
+.settings-value {
+  color: var(--text, #ededed);
+  font-size: 15px;
+  background: var(--surface, #0a0a0c);
+  border: none;
+  border-radius: 10px;
+  padding: 12px 16px;
+  display: inline-block;
+  outline: none;
+  box-shadow: none;
+}
+
+.settings-value-static {
+  display: flex;
+  align-items: center;
+  padding: 10px 12px;
+  background: var(--surface-light, #141419);
+  border-radius: 4px;
+  color: var(--text, #ededed);
+  font-size: 14px;
+}
+
+.settings-field-hint {
+  font-size: 13px;
+  color: var(--text-dim, #a0a0a0);
+  margin-bottom: 10px;
+  line-height: 1.4;
+}
+
+.settings-field-footer {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  margin-top: 8px;
+}
+
+.settings-char-count {
+  color: var(--text-dim, #a0a0a0);
+  font-size: 12px;
+}
+
+.settings-save-msg {
+  border-radius: 6px;
+  font-size: 13px;
+  margin-top: 12px;
+  padding: 8px 12px;
+}
+
+.settings-save-msg.success {
+  background: rgba(59, 165, 92, 0.15);
+  color: #3ba55c;
+}
+
+.settings-save-msg.error {
+  background: rgba(237, 66, 69, 0.15);
+  color: #ed4245;
+}
+
+.settings-textarea {
+  background: var(--surface, #0a0a0c);
+  border: 1px solid var(--border, #2a2a2f);
+  border-radius: 12px;
+  color: var(--text, #ededed);
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.6;
+  padding: 14px 16px;
+  resize: vertical;
+  width: 100%;
+  transition: all 0.2s ease;
+}
+
+.settings-textarea:focus {
+  border-color: var(--primary, #4e5058);
+  box-shadow: 0 0 0 3px rgba(78, 80, 88, 0.2);
+  outline: none;
+}
+
+.settings-textarea::placeholder {
+  color: var(--text-dim, #a0a0a0);
+}

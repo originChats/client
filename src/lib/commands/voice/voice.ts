@@ -6,9 +6,11 @@ import type {
   VoiceLeave,
 } from "@/msgTypes";
 import type { VoiceUser, Channel } from "../../../types";
-import { channelsByServer, currentUserByServer } from "../../../state";
+import { channelsByServer, currentUserByServer, DM_SERVER_URL } from "../../../state";
 import { voiceManager } from "../../../voice";
 import { renderChannelsSignal } from "../../ui-signals";
+
+export const dmVoiceStates = new Map<string, VoiceUser[]>();
 
 function _vcUpdateChannelState(
   sUrl: string,
@@ -52,6 +54,14 @@ export function handleVoiceUserJoined(msg: VoiceUserJoined, sUrl: string): void 
       },
     ];
   });
+
+  if (sUrl === DM_SERVER_URL) {
+    const existing = dmVoiceStates.get(msg.channel) || [];
+    if (!existing.find((u) => u.username === msg.user.username)) {
+      dmVoiceStates.set(msg.channel, [...existing, msg.user as VoiceUser]);
+    }
+  }
+
   renderChannelsSignal.value++;
 }
 
@@ -60,6 +70,17 @@ export function handleVoiceUserLeft(msg: VoiceUserLeft, sUrl: string): void {
   _vcUpdateChannelState(sUrl, msg.channel, (prev) =>
     prev.filter((u) => u.username !== msg.username)
   );
+
+  if (sUrl === DM_SERVER_URL) {
+    const existing = dmVoiceStates.get(msg.channel) || [];
+    const updated = existing.filter((u) => u.username !== msg.username);
+    if (updated.length === 0) {
+      dmVoiceStates.delete(msg.channel);
+    } else {
+      dmVoiceStates.set(msg.channel, updated);
+    }
+  }
+
   renderChannelsSignal.value++;
 }
 

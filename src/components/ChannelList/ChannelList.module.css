@@ -161,6 +161,27 @@
   width: 28px;
 }
 
+.dmAvatarWrapper {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.dmVoiceIndicator {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  background: var(--success, #23a55a);
+  border-radius: 50%;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dmVoiceIndicator svg {
+  color: white;
+}
+
 .channelItemIcon {
   border-radius: 50%;
   flex-shrink: 0;

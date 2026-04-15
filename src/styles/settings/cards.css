@@ -1,0 +1,119 @@
+.card {
+  background: var(--surface-light, #141419);
+  border-radius: var(--border-radius, 12px);
+  padding: 16px;
+  margin-bottom: 16px;
+  border: none;
+  transition: border-radius 0.2s ease;
+}
+
+.settings-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.setting-card {
+  background: var(--surface-light, #141419);
+  border-radius: var(--border-radius, 12px);
+  padding: 18px;
+  border: none;
+  transition: border-radius 0.2s ease;
+}
+
+.setting-card.full-width {
+  grid-column: span 2;
+}
+
+.setting-card-header h3 {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-dim, #a0a0a0);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.setting-card-header h3 svg {
+  width: 16px;
+  height: 16px;
+  color: var(--text-dim);
+}
+
+.setting-sublabel {
+  font-size: 13px;
+  color: var(--text-dim, #a0a0a0);
+  margin-left: 26px;
+}
+
+.setting-card-body {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 14px;
+  margin-top: 8px;
+}
+
+.setting-value-display {
+  font-size: 15px;
+  color: var(--text, #ededed);
+  word-break: break-word;
+}
+
+.setting-text-display {
+  line-height: 1.4;
+  max-height: 80px;
+  overflow-y: auto;
+}
+
+.info-card {
+  background: var(--surface-light, #141419);
+  border-radius: 12px;
+  padding: 20px;
+  border: none;
+}
+
+.info-card h3 {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text, #ededed);
+  margin: 0 0 16px 0;
+}
+
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: none;
+}
+
+.info-row:last-child {
+  border-bottom: none;
+}
+
+.info-label {
+  font-size: 14px;
+  color: var(--text-dim, #a0a0a0);
+  font-weight: 500;
+}
+
+.info-value {
+  font-size: 14px;
+  color: var(--text, #ededed);
+  font-weight: 600;
+}
+
+@media (max-width: 768px) {
+  .settings-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .card {
+    border-radius: 12px;
+    margin: 0;
+  }
+}

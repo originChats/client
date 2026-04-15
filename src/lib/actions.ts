@@ -26,7 +26,12 @@ import {
   unreadState,
   isSpecialChannel,
 } from "../state";
-import { renderGuildSidebarSignal, renderChannelsSignal, renderMessagesSignal } from "./ui-signals";
+import {
+  renderGuildSidebarSignal,
+  renderChannelsSignal,
+  renderMessagesSignal,
+  hideVoiceCallView,
+} from "./ui-signals";
 import { wsSend } from "./ws-sender";
 import { closeWebSocket } from "./ws-connection";
 import { startMessageFetch } from "./ws-sender";
@@ -74,6 +79,8 @@ export function selectChannel(channel: {
 
   markChannelAsReadInternal(channel.name);
 
+  hideVoiceCallView();
+
   if (isSpecialChannel(channel.name, sUrl)) {
     messageState.setCurrentChannel(null, null);
     renderChannelsSignal.value++;
@@ -116,6 +123,7 @@ export function selectHomeChannel(): void {
     display_name: "Home",
   } as Channel;
   messageState.setCurrentChannel(null, null);
+  hideVoiceCallView();
   renderChannelsSignal.value++;
   updateUrlFromState();
 }
@@ -128,6 +136,7 @@ export function selectRelationshipsChannel(): void {
     display_name: "Friends",
   } as Channel;
   messageState.setCurrentChannel(null, null);
+  hideVoiceCallView();
   renderChannelsSignal.value++;
   updateUrlFromState();
 }
@@ -139,6 +148,7 @@ export function selectDiscoveryChannel(): void {
     display_name: "Discover",
   } as Channel;
   messageState.setCurrentChannel(null, null);
+  hideVoiceCallView();
   renderChannelsSignal.value++;
   updateUrlFromState();
 }
@@ -150,6 +160,7 @@ export function selectRolesChannel(): void {
     display_name: "Roles",
   } as Channel;
   messageState.setCurrentChannel(null, null);
+  hideVoiceCallView();
   renderChannelsSignal.value++;
   updateUrlFromState();
   wsSend({ cmd: "self_roles_list" }, serverUrl.value);

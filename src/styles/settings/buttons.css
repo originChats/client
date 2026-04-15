@@ -1,0 +1,194 @@
+.btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+}
+
+.btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+.btn-primary {
+  background: var(--primary);
+  color: var(--text-on-primary, #fff);
+}
+
+.btn-primary:hover {
+  background: var(--primary-hover);
+}
+
+.btn-secondary {
+  background: var(--surface, #0a0a0c);
+  color: var(--text, #ededed);
+  border: none;
+}
+
+.btn-secondary:hover {
+  background: var(--surface-hover, #1f1f26);
+}
+
+.setting-edit-btn,
+.setting-save-btn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+}
+
+.setting-edit-btn {
+  background: var(--surface, #0a0a0c);
+  color: var(--primary, #4e5058);
+  border: none;
+}
+
+.setting-edit-btn:hover {
+  background: var(--surface-hover, #1f1f26);
+}
+
+.setting-save-btn {
+  background: var(--primary, #4e5058);
+  color: #fff;
+  border: none;
+}
+
+.setting-save-btn:hover {
+  background: var(--primary-hover, #586068);
+}
+
+.setting-save-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.settings-btn-cancel {
+  background: var(--surface, #0a0a0c);
+  border: none;
+  border-radius: 999px;
+  color: var(--text-dim);
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  padding: 12px 24px;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.settings-btn-cancel:hover {
+  background: var(--surface-hover);
+  color: var(--text, #ededed);
+}
+
+.settings-btn-confirm {
+  background: var(--primary, #4e5058);
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  padding: 12px 24px;
+  color: #fff;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.settings-btn-confirm:hover {
+  background: var(--primary-hover, #586068);
+  transform: translateY(-2px);
+}
+
+.settings-btn-confirm:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.settings-btn-secondary {
+  background: transparent;
+  border: none;
+  border-radius: 999px;
+  color: var(--text-dim);
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  padding: 10px 20px;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.settings-btn-secondary:hover:not(:disabled) {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+
+.settings-btn-secondary:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.settings-danger-btn {
+  align-items: center;
+  background: rgba(237, 66, 69, 0.15);
+  border: none;
+  border-radius: 999px;
+  color: var(--danger, #ed4245);
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 14px;
+  font-weight: 500;
+  gap: 8px;
+  padding: 10px 20px;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.settings-danger-btn:hover {
+  background: var(--danger, #ed4245);
+  color: #fff;
+}
+
+.settings-btn-danger {
+  background: #ed4245;
+  border: none;
+  border-radius: 999px;
+  color: #fff;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  padding: 10px 20px;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.settings-btn-danger:hover {
+  background: #c93b3e;
+  transform: translateY(-1px);
+}
+
+.settings-action-btn {
+  align-items: center;
+  background: var(--primary, #4e5058);
+  border: none;
+  border-radius: 999px;
+  color: #fff;
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 14px;
+  font-weight: 500;
+  gap: 8px;
+  padding: 10px 20px;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.settings-action-btn:hover {
+  background: var(--primary-hover, #586068);
+  transform: translateY(-1px);
+}
