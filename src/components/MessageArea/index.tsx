@@ -157,9 +157,8 @@ function MessageUsername({
 import { ErrorBannerStack } from "../ErrorBanner";
 import { createGift, ROTUR_GIFT_URL } from "../../lib/rotur-api";
 import { VoiceCallView } from "../VoiceCallView";
-import { CallButton } from "../buttons/CallButton";
 import { Header } from "../Header";
-import { startChannelLoad, isChannelLoading } from "../../lib/image-cache";
+import { startChannelLoad } from "../../lib/image-cache";
 
 function formatRelativeTime(timestamp: number): string {
   const now = Date.now();

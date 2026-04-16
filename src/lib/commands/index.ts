@@ -34,10 +34,7 @@ export { handleMessageEdit } from "./message/edit";
 export { handleMessageDelete } from "./message/delete";
 export { handleMessageReact } from "./message/react";
 export { handleMessagesGet } from "./message/s_get";
-export {
-  handleMessagesAround,
-  setPendingJump,
-} from "./message/s_around";
+export { handleMessagesAround, setPendingJump } from "./message/s_around";
 export { handleMessagesSearch } from "./message/s_search";
 export { handleMessagesPinned } from "./message/s_pinned";
 

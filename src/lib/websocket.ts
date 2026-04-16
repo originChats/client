@@ -625,6 +625,8 @@ function handleMessage(msg: any, sUrl: string): void {
       handleUsersBannedList(msg, sUrl);
       break;
     case "message_react_add":
+      handleMessageReact(msg, sUrl);
+      break;
     case "message_react_remove":
       handleMessageReact(msg, sUrl);
       break;
@@ -725,7 +727,6 @@ function handleMessage(msg: any, sUrl: string): void {
       handleWebhookDelete(msg, sUrl);
       break;
     case "error":
-    case "err":
       handleError(msg, sUrl);
       break;
     case "poll_create":

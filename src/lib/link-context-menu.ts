@@ -111,10 +111,7 @@ function addLinkContextMenuItem(e: MouseEvent, items: ContextMenuItem[]): Contex
   return [...items, copyLinkItem];
 }
 
-function addImageContextMenuItem(
-  e: MouseEvent,
-  items: ContextMenuItem[]
-): ContextMenuItem[] {
+function addImageContextMenuItem(e: MouseEvent, items: ContextMenuItem[]): ContextMenuItem[] {
   const imageData = getImageFromContextMenuEvent(e);
   if (!imageData) return items;
 

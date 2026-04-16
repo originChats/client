@@ -1,12 +1,4 @@
-import type {
-  Channel,
-  Message,
-  Role,
-  ServerUser,
-  Thread,
-  VoiceUser,
-  Webhook,
-} from "./types";
+import type { Channel, Message, Role, ServerUser, Thread, VoiceUser, Webhook } from "./types";
 
 interface UsersList {
   cmd: "users_list";

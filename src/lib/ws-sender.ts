@@ -34,7 +34,12 @@ export function cleanupWsSenderAudio(): void {
   }
 }
 
-export function markChannelAsRead(channelName: string, messageId?: string, sUrl?: string): boolean {
+function markChannelOrThreadAsRead(
+  channelName?: string,
+  threadId?: string,
+  messageId?: string,
+  sUrl?: string
+): boolean {
   const url = sUrl || serverUrl.value;
   const caps = serverCapabilitiesByServer.value[url] || [];
 
@@ -46,6 +51,7 @@ export function markChannelAsRead(channelName: string, messageId?: string, sUrl?
   const payload: any = {
     cmd: "unreads_ack",
     channel: channelName,
+    thread_id: threadId,
   };
   if (messageId) {
     payload.message_id = messageId;
@@ -53,23 +59,12 @@ export function markChannelAsRead(channelName: string, messageId?: string, sUrl?
   return wsSend(payload, sUrl);
 }
 
+export function markChannelAsRead(channelName: string, messageId?: string, sUrl?: string): boolean {
+  return markChannelOrThreadAsRead(channelName, undefined, messageId, sUrl);
+}
+
 export function markThreadAsRead(threadId: string, messageId?: string, sUrl?: string): boolean {
-  const url = sUrl || serverUrl.value;
-  const caps = serverCapabilitiesByServer.value[url] || [];
-
-  // Only send unreads_ack if server supports it
-  if (!caps.includes("unreads_ack")) {
-    return false;
-  }
-
-  const payload: any = {
-    cmd: "unreads_ack",
-    thread_id: threadId,
-  };
-  if (messageId) {
-    payload.message_id = messageId;
-  }
-  return wsSend(payload, sUrl);
+  return markChannelOrThreadAsRead(undefined, threadId, messageId, sUrl);
 }
 
 function getUnreadCount(channelName: string, sUrl?: string): boolean {
