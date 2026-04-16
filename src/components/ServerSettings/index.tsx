@@ -7,7 +7,6 @@ import {
   channels,
   rolesByServer,
   currentUser,
-  servers,
   customEmojisByServer,
   usersByServer,
 } from "../../state";
@@ -21,9 +20,8 @@ import {
 } from "../../lib/ui-signals";
 import { wsSend } from "../../lib/websocket";
 import { Icon } from "../Icon";
-import type { Role, Channel, ServerUser, CustomEmoji } from "../../types";
+import type { Role, CustomEmoji } from "../../types";
 import { UserAvatar } from "../UserAvatar";
-import { avatarUrl } from "../../utils";
 import {
   isServerOwner,
   canManageChannels,
@@ -31,6 +29,8 @@ import {
   canManageUsers,
   canManageEmojis,
 } from "../../lib/permissions";
+
+import styles from "./ServerSettings.module.css";
 
 type Section = "overview" | "channels" | "roles" | "members" | "bans" | "emojis";
 
@@ -327,7 +327,7 @@ function UserRolesEditor({
         <h4>Assigned Roles</h4>
         <div className="user-roles-actions">
           <button
-            className="user-roles-toggle-btn"
+            className={styles.SettingsActionBtn}
             onClick={() => setShowJsonEditor(!showJsonEditor)}
           >
             <Icon name="Code" size={14} />
@@ -339,44 +339,44 @@ function UserRolesEditor({
       {showJsonEditor ? (
         <div className="json-editor-section">
           <textarea
-            className="json-editor-textarea"
+            className={styles.JsonEditorTextarea}
             value={jsonValue}
             onInput={(e) => setJsonValue((e.target as HTMLTextAreaElement).value)}
             spellcheck={false}
           />
-          <div className="json-editor-actions">
-            <button className="settings-btn-cancel" onClick={() => setShowJsonEditor(false)}>
+          <div className={styles.SettingsActions}>
+            <button className={styles.SettingsBtnCancel} onClick={() => setShowJsonEditor(false)}>
               Cancel
             </button>
-            <button className="settings-btn-confirm" onClick={handleJsonSave}>
+            <button className={styles.SettingsBtnConfirm} onClick={handleJsonSave}>
               Save JSON
             </button>
           </div>
         </div>
       ) : (
         <>
-          <div className="assigned-roles-list">
+          <div>
             {assignedRoles.map((roleName, index) => (
               <div
                 key={roleName}
-                className={`assigned-role-item ${draggedIndex === index ? "dragging" : ""} ${dragOverIndex === index ? "drag-over" : ""}`}
+                className={`${styles.SettingsListItem} ${draggedIndex === index ? "dragging" : ""} ${dragOverIndex === index ? "drag-over" : ""}`}
                 draggable
                 onDragStart={() => handleDragStart(index)}
                 onDragOver={(e) => handleDragOver(e as any, index)}
                 onDrop={() => handleDrop(index)}
               >
-                <div className="role-drag-handle">
+                <div className={styles.RoleDragHandle}>
                   <Icon name="GripVertical" size={14} />
                 </div>
                 <div
-                  className="role-color-dot"
+                  className={styles.RoleColorDot}
                   style={{ background: getRoleColor(roleName) }}
                 ></div>
-                <span className="role-name" style={{ color: getRoleColor(roleName) }}>
+                <span className={styles.RoleName} style={{ color: getRoleColor(roleName) }}>
                   {roleName}
                 </span>
                 {roleName !== "user" && (
-                  <button className="role-remove-btn" onClick={() => removeRole(roleName)}>
+                  <button className={styles.ActionButton} onClick={() => removeRole(roleName)}>
                     <Icon name="X" size={12} />
                   </button>
                 )}
@@ -384,28 +384,25 @@ function UserRolesEditor({
             ))}
           </div>
 
-          <div className="add-role-section">
+          <div className={styles.AddRoleSection}>
             <h5>Add Role</h5>
             {availableRoles.length === 0 ? (
               <div className="no-roles-available">All roles already assigned</div>
             ) : (
-              <div className="available-roles-grid">
+              <div className={styles.UserRoles}>
                 {availableRoles.map((role) => (
                   <button
                     key={role.name}
-                    className="available-role-btn"
-                    style={{ borderColor: role.color || "transparent" }}
+                    className={styles.UserRoleBadge}
+                    style={{ background: role.color || "var(--surface-hover)" }}
                     onClick={() => addRole(role.name)}
                   >
-                    {role.color && (
-                      <span className="role-color-dot" style={{ background: role.color }}></span>
-                    )}
                     <span>{role.name}</span>
                     <Icon name="Plus" size={12} />
                   </button>
                 ))}
                 <div className="user-roles-footer">
-                  <button className="settings-btn-confirm" onClick={handleSave}>
+                  <button className={styles.SettingsBtnConfirm} onClick={handleSave}>
                     Save Changes
                   </button>
                 </div>
@@ -989,15 +986,15 @@ export function ServerSettingsModal() {
 
           {section === "overview" && (
             <div className="server-section-body">
-              <div className="settings-field">
+              <div className={styles.SettingsField}>
                 <label>Server Name</label>
                 <div className="settings-value">{server?.name || "-"}</div>
               </div>
-              <div className="settings-field">
+              <div className={styles.SettingsField}>
                 <label>Server URL</label>
                 <div className="settings-value">{serverUrl.value}</div>
               </div>
-              <div className="settings-field">
+              <div className={styles.SettingsField}>
                 <label>Your Role</label>
                 <div
                   className="settings-value"
@@ -1010,11 +1007,11 @@ export function ServerSettingsModal() {
                   {myServerUser?.roles?.join(", ") || "None"}
                 </div>
               </div>
-              <div className="settings-field">
+              <div className={styles.SettingsField}>
                 <label>Members</label>
                 <div className="settings-value">{usersList.length}</div>
               </div>
-              <div className="settings-field">
+              <div className={styles.SettingsField}>
                 <label>Channels</label>
                 <div className="settings-value">
                   {channelsList.filter((c) => c.type !== "separator").length}
@@ -1039,7 +1036,7 @@ export function ServerSettingsModal() {
                     return (
                       <div
                         key={channel.name}
-                        className={`settings-list-item clickable ${draggedChannel === channel.name ? "dragging" : ""} ${dragOverChannel === channel.name ? "drag-over" : ""}`}
+                        className={`${styles.SettingsListItem} clickable ${draggedChannel === channel.name ? "dragging" : ""} ${dragOverChannel === channel.name ? "drag-over" : ""}`}
                         draggable={isOwner}
                         onDragStart={() => handleChannelDragStart(channel.name)}
                         onDragOver={(e) => handleChannelDragOver(e as any, channel.name)}
@@ -1072,7 +1069,7 @@ export function ServerSettingsModal() {
                         </div>
                         {isOwner && (
                           <button
-                            className="settings-icon-btn"
+                            className={styles.ActionButton}
                             onClick={(e) => {
                               e.stopPropagation();
                               channelEditFromSettings.value = true;
@@ -1094,10 +1091,10 @@ export function ServerSettingsModal() {
 
           {section === "roles" && (
             <div className="server-section-body roles-section-body">
-              <div className="roles-list-container">
+              <div className={styles.RolesListContainer}>
                 {isOwner && (
                   <button
-                    className="settings-action-btn"
+                    className={styles.SettingsActionBtn}
                     onClick={() => {
                       setCreatingRole(true);
                       setEditingRole(null);
@@ -1110,7 +1107,7 @@ export function ServerSettingsModal() {
                 {serverRoles.length === 0 ? (
                   <div className="settings-empty">No roles found</div>
                 ) : (
-                  <div className="roles-list-new">
+                  <div>
                     {serverRoles.map((role) => {
                       const isSystem = ["owner", "user"].includes(role.name);
                       const rolePerms = getRolePermissions(role);
@@ -1118,7 +1115,7 @@ export function ServerSettingsModal() {
                       return (
                         <div
                           key={role.name}
-                          className={`role-card ${editingRole === role.name ? "active" : ""} ${draggedRole === role.name ? "dragging" : ""} ${dragOverRole === role.name ? "drag-over" : ""}`}
+                          className={`${styles.SettingsListItem} ${editingRole === role.name ? "active" : ""} ${draggedRole === role.name ? "dragging" : ""} ${dragOverRole === role.name ? "drag-over" : ""}`}
                           draggable={isOwner && editingRole !== role.name}
                           onDragStart={() => handleRoleDragStart(role.name)}
                           onDragOver={(e) => handleRoleDragOver(e as any, role.name)}
@@ -1126,26 +1123,26 @@ export function ServerSettingsModal() {
                           onDragEnd={handleRoleDragEnd}
                         >
                           <div
-                            className="role-card-header"
+                            className={styles.RoleCardHeader}
                             onClick={() => startEditingRole(role.name)}
                           >
-                            <div className="role-drag-area">
+                            <div className={styles.RoleDragArea}>
                               {isOwner && <Icon name="GripVertical" size={14} />}
                             </div>
                             <div
-                              className="role-color-dot"
+                              className={styles.RoleColorDot}
                               style={{
                                 background: role.color || "var(--text-dim)",
                               }}
                             />
-                            <div className="role-card-info">
+                            <div className={styles.RoleCardInfo}>
                               <span
-                                className="role-card-name"
+                                className={styles.RoleCardName}
                                 style={{ color: role.color || "inherit" }}
                               >
                                 {role.name}
                               </span>
-                              <span className="role-card-meta">
+                              <span className={styles.RoleCardMeta}>
                                 {role.description || "No description"}
                                 {role.category && ` · ${role.category}`}
                                 {!isSystem && ` · ${rolePerms.length} permissions`}
@@ -1159,20 +1156,14 @@ export function ServerSettingsModal() {
                 )}
               </div>
 
-              <div className="role-editor-panel">
+              <div className={styles.RoleEditorPanel}>
                 {creatingRole ? (
                   <>
-                    <div className="role-editor-panel-header">
+                    <div className={styles.RoleEditorPanelHeader}>
                       <h3>Create Role</h3>
-                      <button
-                        className="server-settings-close"
-                        onClick={() => setCreatingRole(false)}
-                      >
-                        <Icon name="X" size={18} />
-                      </button>
                     </div>
-                    <div className="role-editor-panel-body">
-                      <div className="role-editor-field">
+                    <div className={styles.RoleEditorPanelBody}>
+                      <div className={styles.RoleEditorField}>
                         <label>Role Name</label>
                         <input
                           type="text"
@@ -1183,7 +1174,7 @@ export function ServerSettingsModal() {
                           autoFocus
                         />
                       </div>
-                      <div className="role-editor-field">
+                      <div className={styles.RoleEditorField}>
                         <label>Description</label>
                         <input
                           type="text"
@@ -1192,9 +1183,9 @@ export function ServerSettingsModal() {
                           placeholder="Role description"
                         />
                       </div>
-                      <div className="role-editor-field">
+                      <div className={styles.RoleEditorField}>
                         <label>Color</label>
-                        <div className="color-picker-row">
+                        <div className={styles.ColorPickerRow}>
                           <input
                             type="color"
                             value={newRoleColor ?? "#5865F2"}
@@ -1207,18 +1198,18 @@ export function ServerSettingsModal() {
                               setNewRoleColor((e.target as HTMLInputElement).value || null)
                             }
                             placeholder="#5865F2"
-                            className="color-hex-input"
+                            className={styles.ColorHexInput}
                           />
                           <button
-                            className="settings-btn-secondary small"
+                            className={styles.SettingsBtnSecondary}
                             onClick={() => setNewRoleColor(null)}
                           >
                             Clear
                           </button>
                         </div>
                       </div>
-                      <div className="role-editor-row">
-                        <label className="checkbox-label">
+                      <div className={styles.RoleEditorToggles}>
+                        <label className={styles.CheckboxLabel}>
                           <input
                             type="checkbox"
                             checked={newRoleHoisted}
@@ -1228,9 +1219,7 @@ export function ServerSettingsModal() {
                           />
                           <span>Hoisted (show separately in member list)</span>
                         </label>
-                      </div>
-                      <div className="role-editor-row">
-                        <label className="checkbox-label">
+                        <label className={styles.CheckboxLabel}>
                           <input
                             type="checkbox"
                             checked={newRoleSelfAssignable}
@@ -1241,7 +1230,7 @@ export function ServerSettingsModal() {
                           <span>Self-assignable (users can assign to themselves)</span>
                         </label>
                       </div>
-                      <div className="role-editor-field">
+                      <div className={styles.RoleEditorField}>
                         <label>Category</label>
                         <input
                           type="text"
@@ -1252,13 +1241,13 @@ export function ServerSettingsModal() {
                           placeholder="No category"
                         />
                       </div>
-                      <div className="role-permissions-section">
+                      <div className={styles.RolePermissionsSection}>
                         <label>Permissions</label>
-                        <div className="permissions-grid">
+                        <div className={styles.PermissionsGrid}>
                           {ALL_PERMISSIONS.map((perm) => (
                             <button
                               key={perm.id}
-                              className={`permission-chip ${newRolePermissions.includes(perm.id) ? "active" : ""}`}
+                              className={newRolePermissions.includes(perm.id) ? styles.PermissionChipActive : styles.PermissionChip}
                               onClick={() => {
                                 if (newRolePermissions.includes(perm.id)) {
                                   setNewRolePermissions(
@@ -1278,13 +1267,13 @@ export function ServerSettingsModal() {
                     </div>
                     <div className="role-editor-actions">
                       <button
-                        className="settings-btn-cancel"
+                        className={styles.SettingsBtnCancel}
                         onClick={() => setCreatingRole(false)}
                       >
                         Cancel
                       </button>
                       <button
-                        className="settings-btn-confirm"
+                        className={styles.SettingsBtnConfirm}
                         onClick={saveNewRole}
                         disabled={!newRoleName.trim()}
                       >
@@ -1301,26 +1290,18 @@ export function ServerSettingsModal() {
 
                     return (
                       <>
-                        <div className="role-editor-panel-header">
-                          <h3>Edit Role</h3>
+                        <div className={styles.RoleEditorPanelHeader}>
+                          <h3>Edit Role:
+                            <div style={{
+                              color: role.color || "inherit",
+                              fontWeight: 600,
+                            }}>{role.name}</div>
+                          </h3>
                         </div>
-                        <div className="role-editor-panel-body">
-                          <div className="role-editor-field">
-                            <label>Role Name</label>
-                            <input
-                              type="text"
-                              className="role-name-input"
-                              value={role.name}
-                              disabled
-                              style={{
-                                color: role.color || "inherit",
-                                fontWeight: 600,
-                              }}
-                            />
-                          </div>
-                          <div className="role-editor-field">
+                        <div className={styles.RoleEditorPanelBody}>
+                          <div className={styles.RoleEditorField}>
                             <label>Color</label>
-                            <div className="color-picker-row">
+                            <div className={styles.ColorPickerRow}>
                               <input
                                 type="color"
                                 value={(getRoleEditValue(role, "color") as string) ?? "#5865F2"}
@@ -1345,10 +1326,10 @@ export function ServerSettingsModal() {
                                 }}
                                 onBlur={() => saveRoleField(role.name, "color")}
                                 placeholder="No color"
-                                className="color-hex-input"
+                                className={styles.ColorHexInput}
                               />
                               <button
-                                className="settings-btn-secondary small"
+                                className={styles.SettingsBtnSecondary}
                                 onClick={() => {
                                   wsSend(
                                     {
@@ -1365,7 +1346,7 @@ export function ServerSettingsModal() {
                               </button>
                             </div>
                           </div>
-                          <div className="role-editor-field">
+                          <div className={styles.RoleEditorField}>
                             <label>Description</label>
                             <input
                               type="text"
@@ -1381,7 +1362,7 @@ export function ServerSettingsModal() {
                               placeholder="No description"
                             />
                           </div>
-                          <div className="role-editor-field">
+                          <div className={styles.RoleEditorField}>
                             <label>Category</label>
                             <input
                               type="text"
@@ -1397,8 +1378,8 @@ export function ServerSettingsModal() {
                               placeholder="No category"
                             />
                           </div>
-                          <div className="role-editor-toggles">
-                            <label className="checkbox-label">
+                          <div className={styles.RoleEditorToggles}>
+                            <label className={styles.CheckboxLabel}>
                               <input
                                 type="checkbox"
                                 checked={(getRoleEditValue(role, "hoisted") as boolean) ?? false}
@@ -1421,7 +1402,7 @@ export function ServerSettingsModal() {
                               <span>Hoisted (show separately in member list)</span>
                             </label>
                             {!["owner", "admin", "moderator"].includes(role.name) && (
-                              <label className="checkbox-label">
+                              <label className={styles.CheckboxLabel}>
                                 <input
                                   type="checkbox"
                                   checked={
@@ -1447,12 +1428,12 @@ export function ServerSettingsModal() {
                               </label>
                             )}
                           </div>
-                          <div className="role-permissions-section">
-                            <div className="permissions-header">
+                          <div className={styles.RolePermissionsSection}>
+                            <div className={styles.PermissionsHeader}>
                               <label>Permissions</label>
-                              <div className="permissions-actions">
+                              <div className={styles.PermissionsActions}>
                                 <button
-                                  className="settings-btn-secondary small"
+                                  className={styles.SettingsBtnSecondary}
                                   onClick={() => {
                                     const allPerms = ALL_PERMISSIONS.map((p) => p.id);
                                     wsSend(
@@ -1469,7 +1450,7 @@ export function ServerSettingsModal() {
                                   Select All
                                 </button>
                                 <button
-                                  className="settings-btn-secondary small"
+                                  className={styles.SettingsBtnSecondary}
                                   onClick={() => {
                                     wsSend(
                                       {
@@ -1486,13 +1467,13 @@ export function ServerSettingsModal() {
                                 </button>
                               </div>
                             </div>
-                            <div className="permissions-grid">
+                            <div className={styles.PermissionsGrid}>
                               {ALL_PERMISSIONS.map((perm) => {
                                 const hasPerm = rolePerms.includes(perm.id);
                                 return (
                                   <button
                                     key={perm.id}
-                                    className={`permission-chip ${hasPerm ? "active" : ""}`}
+                                    className={hasPerm ? styles.PermissionChipActive : styles.PermissionChip}
                                     onClick={() => togglePermission(role.name, perm.id)}
                                     title={perm.description}
                                   >
@@ -1504,9 +1485,9 @@ export function ServerSettingsModal() {
                           </div>
                         </div>
                         {!isSystem && (
-                          <div className="role-editor-panel-footer">
+                          <div className={styles.RoleEditorPanelFooter}>
                             <button
-                              className="settings-btn-danger"
+                              className={styles.SettingsBtnDanger}
                               onClick={() => {
                                 if (confirm(`Delete role "${role.name}"?`)) {
                                   wsSend({ cmd: "role_delete", name: role.name }, serverUrl.value);
@@ -1524,7 +1505,7 @@ export function ServerSettingsModal() {
                     );
                   })()
                 ) : (
-                  <div className="role-editor-empty">
+                  <div className={styles.RoleEditorEmpty}>
                     <p>Select a role to edit</p>
                   </div>
                 )}
@@ -1534,7 +1515,7 @@ export function ServerSettingsModal() {
 
           {section === "members" && (
             <div className="server-section-body">
-              <div className="settings-search">
+              <div className={styles.SettingsSearch}>
                 <Icon name="Search" size={14} />
                 <input
                   type="text"
@@ -1543,11 +1524,11 @@ export function ServerSettingsModal() {
                   onInput={(e) => setMemberFilter((e.target as HTMLInputElement).value)}
                 />
               </div>
-              <div className="settings-list">
+              <div className={styles.SettingsList}>
                 {filteredMembers.map((member) => (
                   <div
                     key={member.username}
-                    className="settings-list-item clickable member-row"
+                    className={`${styles.SettingsListItem} clickable member-row`}
                     onClick={() =>
                       setUserDetailModal({
                         username: member.username,
@@ -1557,23 +1538,23 @@ export function ServerSettingsModal() {
                   >
                     <UserAvatar
                       username={member.username}
-                      className="settings-member-avatar"
+                      className={styles.UserAvatar}
                       alt=""
                     />
-                    <div className="settings-item-info">
+                    <div className={styles.UserInfo}>
                       <div
-                        className="settings-item-name"
+                        className={styles.UserName}
                         style={{ color: member.color || "inherit" }}
                       >
                         {member.username}
                       </div>
-                      <div className="settings-item-roles">
+                      <div className={styles.UserRoles}>
                         {(member.roles || []).slice(0, 3).map((role) => {
                           const roleColor = getRoleColor(role);
                           return (
                             <span
                               key={role}
-                              className="member-role-badge"
+                              className={styles.UserRoleBadge}
                               style={roleColor ? { background: roleColor } : undefined}
                             >
                               {role}
@@ -1581,14 +1562,14 @@ export function ServerSettingsModal() {
                           );
                         })}
                         {(member.roles || []).length > 3 && (
-                          <span className="member-role-badge">
+                          <span className={styles.UserRoleBadge}>
                             +{(member.roles || []).length - 3}
                           </span>
                         )}
                       </div>
                     </div>
                     <button
-                      className="settings-icon-btn"
+                      className={styles.ActionButton}
                       onClick={(e) => {
                         e.stopPropagation();
                         setUserDetailModal({
@@ -1613,7 +1594,7 @@ export function ServerSettingsModal() {
               ) : (
                 <div className="settings-list">
                   {bannedUsers.map((username) => (
-                    <div key={username} className="settings-list-item">
+                    <div key={username} className={styles.SettingsListItem}>
                       <div className="settings-item-icon">
                         <Icon name="Ban" size={16} />
                       </div>
@@ -1623,7 +1604,7 @@ export function ServerSettingsModal() {
                       </div>
                       {isOwner && (
                         <button
-                          className="settings-icon-btn"
+                          className={styles.ActionButton}
                           onClick={() => handleUnbanUser(username)}
                           title="Unban"
                         >
@@ -1641,7 +1622,7 @@ export function ServerSettingsModal() {
             <div className="server-section-body">
               {isOwner && (
                 <div className="settings-section-actions">
-                  <button className="settings-action-btn" onClick={openAddEmoji}>
+                  <button className={styles.SettingsActionBtn} onClick={openAddEmoji}>
                     <Icon name="Plus" size={16} /> Add Emoji
                   </button>
                 </div>
@@ -1649,28 +1630,30 @@ export function ServerSettingsModal() {
               {serverEmojis.length === 0 ? (
                 <div className="settings-empty">No custom emojis</div>
               ) : (
-                <div className="emoji-grid">
+                <div className={styles.EmojiGrid}>
                   {serverEmojis.map((emoji) => (
-                    <div key={emoji.id} className="emoji-grid-item">
-                      <img
-                        src={getEmojiUrl(emoji)}
-                        alt={emoji.name}
-                        className="emoji-preview-img"
-                      />
-                      <div className="emoji-item-info">
-                        <span className="emoji-item-name">:{emoji.name}:</span>
+                    <div key={emoji.id} className={styles.EmojiGridItem}>
+                      <div className={styles.EmojiItemInfo}>
+                        <img
+                          src={getEmojiUrl(emoji)}
+                          alt={emoji.name}
+                          className="emoji-preview-img"
+                        />
+                        <div className="emoji-item-info">
+                          <span className="emoji-item-name">:{emoji.name}:</span>
+                        </div>
                       </div>
                       {isOwner && (
-                        <div className="emoji-item-actions">
+                        <div className={styles.EmojiItemActions}>
                           <button
-                            className="settings-icon-btn"
+                            className={styles.ActionButton}
                             onClick={() => setEmojiEditModal(emoji)}
                             title="Edit"
                           >
                             <Icon name="Edit3" size={14} />
                           </button>
                           <button
-                            className="settings-icon-btn danger"
+                            className={`${styles.ActionButton} danger`}
                             onClick={() => handleDeleteEmoji(emoji)}
                             title="Delete"
                           >
@@ -1688,14 +1671,14 @@ export function ServerSettingsModal() {
 
         {channelModalOpen && (
           <div
-            className="settings-inner-modal"
+            className={styles.SettingsModal}
             onClick={(e) => {
               if (e.target === e.currentTarget) setChannelModalOpen(false);
             }}
           >
-            <div className="settings-inner-dialog">
+            <div className={styles.SettingsInnerDialog}>
               <h3>Create Channel</h3>
-              <div className="settings-field">
+              <div className={styles.SettingsField}>
                 <label>Channel Name</label>
                 <input
                   type="text"
@@ -1704,7 +1687,7 @@ export function ServerSettingsModal() {
                   placeholder="channel-name"
                 />
               </div>
-              <div className="settings-field">
+              <div className={styles.SettingsField}>
                 <label>Channel Type</label>
                 <div className="settings-radio-group">
                   <label className="settings-radio-option">
@@ -1743,7 +1726,7 @@ export function ServerSettingsModal() {
                 </div>
               </div>
               {channelType !== "separator" && (
-                <div className="settings-field">
+                <div className={styles.SettingsField}>
                   <label>Description</label>
                   <input
                     type="text"
@@ -1753,12 +1736,12 @@ export function ServerSettingsModal() {
                   />
                 </div>
               )}
-              <div className="settings-dialog-actions">
-                <button className="settings-btn-cancel" onClick={() => setChannelModalOpen(false)}>
+              <div className={styles.SettingsActions}>
+                <button className={styles.SettingsBtnCancel} onClick={() => setChannelModalOpen(false)}>
                   Cancel
                 </button>
                 <button
-                  className="settings-btn-confirm"
+                  className={styles.SettingsBtnConfirm}
                   onClick={handleCreateChannel}
                   disabled={!channelName.trim()}
                 >
@@ -1771,212 +1754,180 @@ export function ServerSettingsModal() {
 
         {userDetailModal && (
           <div
-            className="settings-inner-modal"
+            className={styles.SettingsModal}
             onClick={(e) => {
               if (e.target === e.currentTarget) setUserDetailModal(null);
             }}
           >
-            <div className="settings-inner-dialog settings-inner-dialog-wide">
-              <div className="user-detail-header">
-                <UserAvatar
-                  username={userDetailModal.username}
-                  className="user-detail-avatar"
-                  alt=""
-                />
-                <div className="user-detail-info">
-                  <h3>{userDetailModal.username}</h3>
-                  <div className="user-detail-roles">
-                    {(users.value[userDetailModal.username.toLowerCase()]?.roles || []).map(
-                      (role) => (
-                        <span
-                          key={role}
-                          className="member-role-badge"
-                          style={{ background: getRoleColor(role) }}
-                        >
-                          {role}
-                        </span>
-                      )
-                    )}
-                  </div>
-                </div>
+            <div className={styles.UserDetailHeader}>
+              <UserAvatar
+                username={userDetailModal.username}
+                className={styles.UserDetailAvatar}
+                alt=""
+              />
+              <div className={styles.UserDetailInfo}>
+                <h3>{userDetailModal.username}</h3>
               </div>
-              <div className="user-detail-tabs">
-                <button
-                  className={`user-detail-tab ${userDetailModal.tab === "overview" ? "active" : ""}`}
-                  onClick={() => setUserDetailModal({ ...userDetailModal, tab: "overview" })}
-                >
-                  Overview
-                </button>
-                <button
-                  className={`user-detail-tab ${userDetailModal.tab === "roles" ? "active" : ""}`}
-                  onClick={() => setUserDetailModal({ ...userDetailModal, tab: "roles" })}
-                >
-                  Roles
-                </button>
-                <button
-                  className={`user-detail-tab ${userDetailModal.tab === "moderation" ? "active" : ""}`}
-                  onClick={() =>
-                    setUserDetailModal({
-                      ...userDetailModal,
-                      tab: "moderation",
-                    })
-                  }
-                >
-                  Moderation
-                </button>
-              </div>
-              <div className="user-detail-content">
-                {userDetailModal.tab === "overview" && (
-                  <div className="settings-field-group">
-                    {editingUser === userDetailModal.username ? (
-                      <>
-                        <div className="settings-field">
-                          <label>Nickname</label>
-                          <div className="settings-nickname-field">
-                            <input
-                              type="text"
-                              value={editNickname ?? ""}
-                              onInput={(e) => {
-                                const val = (e.target as HTMLInputElement).value;
-                                setEditNickname(val || null);
-                              }}
-                              placeholder="No nickname"
-                            />
-                            <button
-                              type="button"
-                              className="settings-btn-secondary"
-                              onClick={() => setEditNickname(null)}
-                              title="Clear nickname"
-                            >
-                              Clear
-                            </button>
-                          </div>
-                        </div>
-                        <div className="settings-dialog-actions">
-                          <button className="settings-btn-cancel" onClick={cancelEditUser}>
-                            Cancel
-                          </button>
-                          <button className="settings-btn-confirm" onClick={handleUserUpdate}>
-                            Save
-                          </button>
-                        </div>
-                      </>
-                    ) : (
-                      <>
-                        <div className="settings-field">
-                          <label>Username</label>
-                          <div className="settings-value">
-                            {users.value[userDetailModal.username.toLowerCase()]?.username ||
-                              userDetailModal.username}
-                          </div>
-                        </div>
-                        <div className="settings-field">
-                          <label>Nickname</label>
-                          <div className="settings-value">
-                            {users.value[userDetailModal.username.toLowerCase()]?.nickname ||
-                              "None"}
-                          </div>
-                        </div>
-                        <div className="settings-field">
-                          <label>Status</label>
-                          <div className="settings-value">
-                            {users.value[userDetailModal.username.toLowerCase()]?.status?.status ||
-                              "offline"}
-                          </div>
-                        </div>
-                        {isOwner && (
+            </div>
+            <div className={styles.UserDetailTabs}>
+              <button
+                className={userDetailModal.tab === "overview" ? styles.UserDetailTabActive : styles.UserDetailTab}
+                onClick={() => setUserDetailModal({ ...userDetailModal, tab: "overview" })}
+              >
+                Overview
+              </button>
+              <button
+                className={userDetailModal.tab === "roles" ? styles.UserDetailTabActive : styles.UserDetailTab}
+                onClick={() => setUserDetailModal({ ...userDetailModal, tab: "roles" })}
+              >
+                Roles
+              </button>
+              <button
+                className={userDetailModal.tab === "moderation" ? styles.UserDetailTabActive : styles.UserDetailTab}
+                onClick={() => setUserDetailModal({ ...userDetailModal, tab: "moderation" })}
+              >
+                Moderation
+              </button>
+            </div>
+            <div className={styles.UserDetailContent}>
+              {userDetailModal.tab === "overview" && (
+                <div className="settings-field-group">
+                  {editingUser === userDetailModal.username ? (
+                    <>
+                      <div className={styles.SettingsField}>
+                        <label>Nickname</label>
+                        <div className="settings-nickname-field">
+                          <input
+                            type="text"
+                            value={editNickname ?? ""}
+                            onInput={(e) => {
+                              const val = (e.target as HTMLInputElement).value;
+                              setEditNickname(val || null);
+                            }}
+                            placeholder="No nickname"
+                          />
                           <button
-                            className="settings-btn-secondary"
-                            onClick={() => openEditUser(userDetailModal.username)}
+                            type="button"
+                            className={styles.SettingsBtnSecondary}
+                            onClick={() => setEditNickname(null)}
+                            title="Clear nickname"
                           >
-                            Edit User
+                            Clear
                           </button>
-                        )}
-                      </>
-                    )}
-                  </div>
-                )}
-                {userDetailModal.tab === "roles" && (
-                  <UserRolesEditor
-                    username={userDetailModal.username}
-                    serverRoles={serverRoles}
-                    serverUrl={serverUrl.value}
-                  />
-                )}
-                {userDetailModal.tab === "moderation" && (
-                  <div className="moderation-actions">
-                    <div className="moderation-section">
-                      <h4>Timeout</h4>
-                      <p className="moderation-description">
-                        Temporarily prevent the user from sending messages.
-                      </p>
-                      <div className="moderation-buttons">
-                        <button
-                          className="moderation-btn warning"
-                          onClick={() => handleTimeoutUser(userDetailModal.username, 60)}
-                        >
-                          1 min
+                        </div>
+                      </div>
+                      <div className={styles.SettingsActions}>
+                        <button className={styles.SettingsBtnCancel} onClick={cancelEditUser}>
+                          Cancel
                         </button>
-                        <button
-                          className="moderation-btn warning"
-                          onClick={() => handleTimeoutUser(userDetailModal.username, 300)}
-                        >
-                          5 min
-                        </button>
-                        <button
-                          className="moderation-btn warning"
-                          onClick={() => handleTimeoutUser(userDetailModal.username, 3600)}
-                        >
-                          1 hour
-                        </button>
-                        <button
-                          className="moderation-btn warning"
-                          onClick={() => handleTimeoutUser(userDetailModal.username, 86400)}
-                        >
-                          24 hours
-                        </button>
-                        <button
-                          className="moderation-btn warning"
-                          onClick={() => setTimeoutModal(userDetailModal.username)}
-                        >
-                          Custom
+                        <button className={styles.SettingsBtnConfirm} onClick={handleUserUpdate}>
+                          Save
                         </button>
                       </div>
-                    </div>
-                    <div className="moderation-section">
-                      <h4>Delete Account</h4>
-                      <p className="moderation-description">
-                        Permanently delete this user's account from the server.
-                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <div className={styles.SettingsField}>
+                        <label>Username</label>
+                        <div className="settings-value">
+                          {users.value[userDetailModal.username.toLowerCase()]?.username ||
+                            userDetailModal.username}
+                        </div>
+                      </div>
+                      <div className={styles.SettingsField}>
+                        <label>Nickname</label>
+                        <div className="settings-value">
+                          {users.value[userDetailModal.username.toLowerCase()]?.nickname ||
+                            "None"}
+                        </div>
+                      </div>
+                      <div className={styles.SettingsField}>
+                        <label>Status</label>
+                        <div className="settings-value">
+                          {users.value[userDetailModal.username.toLowerCase()]?.status?.status ||
+                            "offline"}
+                        </div>
+                      </div>
+                      {isOwner && (
+                        <button
+                          className={styles.SettingsBtnSecondary}
+                          onClick={() => openEditUser(userDetailModal.username)}
+                        >
+                          Edit User
+                        </button>
+                      )}
+                    </>
+                  )}
+                </div>
+              )}
+              {userDetailModal.tab === "roles" && (
+                <UserRolesEditor
+                  username={userDetailModal.username}
+                  serverRoles={serverRoles}
+                  serverUrl={serverUrl.value}
+                />
+              )}
+              {userDetailModal.tab === "moderation" && (
+                <div className="moderation-actions">
+                  <div className="moderation-section">
+                    <h4>Timeout</h4>
+                    <p className="moderation-description">
+                      Temporarily prevent the user from sending messages.
+                    </p>
+                    <div className="moderation-buttons">
                       <button
-                        className="moderation-btn danger"
-                        onClick={() => setConfirmDelete(userDetailModal.username)}
+                        className={styles.ModerationBtnWarning}
+                        onClick={() => handleTimeoutUser(userDetailModal.username, 60)}
                       >
-                        Delete Account
+                        1 min
+                      </button>
+                      <button
+                        className={styles.ModerationBtnWarning}
+                        onClick={() => handleTimeoutUser(userDetailModal.username, 300)}
+                      >
+                        5 min
+                      </button>
+                      <button
+                        className={styles.ModerationBtnWarning}
+                        onClick={() => handleTimeoutUser(userDetailModal.username, 3600)}
+                      >
+                        1 hour
+                      </button>
+                      <button
+                        className={styles.ModerationBtnWarning}
+                        onClick={() => handleTimeoutUser(userDetailModal.username, 86400)}
+                      >
+                        24 hours
+                      </button>
+                      <button
+                        className={styles.ModerationBtnWarning}
+                        onClick={() => setTimeoutModal(userDetailModal.username)}
+                      >
+                        Custom
                       </button>
                     </div>
                   </div>
-                )}
-              </div>
-              <div className="settings-dialog-actions">
-                <button className="settings-btn-confirm" onClick={() => setUserDetailModal(null)}>
-                  Done
-                </button>
-              </div>
+                </div>
+              )}
+            </div>
+            <div className={styles.SettingsActions}>
+              <button className={styles.SettingsBtnConfirm} onClick={() => setUserDetailModal(null)}>
+                Done
+              </button>
             </div>
           </div>
         )}
 
         {timeoutModal && (
           <div
-            className="settings-inner-modal"
+            className={styles.SettingsModal}
             onClick={(e) => {
               if (e.target === e.currentTarget) setTimeoutModal(null);
             }}
           >
-            <div className="settings-inner-dialog">
+            <div className={styles.SettingsInnerDialog}>
               <h3>Set Custom Timeout</h3>
-              <div className="settings-field">
+              <div className={styles.SettingsField}>
                 <label>Duration (seconds)</label>
                 <input
                   type="number"
@@ -1992,12 +1943,12 @@ export function ServerSettingsModal() {
                 <button onClick={() => setTimeoutSeconds(3600)}>1h</button>
                 <button onClick={() => setTimeoutSeconds(86400)}>24h</button>
               </div>
-              <div className="settings-dialog-actions">
-                <button className="settings-btn-cancel" onClick={() => setTimeoutModal(null)}>
+              <div className={styles.SettingsActions}>
+                <button className={styles.SettingsBtnCancel} onClick={() => setTimeoutModal(null)}>
                   Cancel
                 </button>
                 <button
-                  className="settings-btn-confirm"
+                  className={styles.SettingsBtnConfirm}
                   onClick={() => handleTimeoutUser(timeoutModal, timeoutSeconds)}
                 >
                   Apply Timeout
@@ -2007,44 +1958,16 @@ export function ServerSettingsModal() {
           </div>
         )}
 
-        {confirmDelete && (
-          <div
-            className="settings-inner-modal"
-            onClick={(e) => {
-              if (e.target === e.currentTarget) setConfirmDelete(null);
-            }}
-          >
-            <div className="settings-inner-dialog">
-              <h3>Delete Account</h3>
-              <p className="settings-warning-text">
-                Are you sure you want to permanently delete "{confirmDelete}"? This cannot be
-                undone.
-              </p>
-              <div className="settings-dialog-actions">
-                <button className="settings-btn-cancel" onClick={() => setConfirmDelete(null)}>
-                  Cancel
-                </button>
-                <button
-                  className="settings-btn-danger"
-                  onClick={() => handleDeleteUser(confirmDelete)}
-                >
-                  Delete
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
         {emojiModalOpen && (
           <div
-            className="settings-inner-modal"
+            className={styles.SettingsModal}
             onClick={(e) => {
               if (e.target === e.currentTarget) setEmojiModalOpen(false);
             }}
           >
-            <div className="settings-inner-dialog">
+            <div className={styles.SettingsInnerDialog}>
               <h3>Add Emoji</h3>
-              <div className="settings-field">
+              <div className={styles.SettingsField}>
                 <label>Emoji Name</label>
                 <input
                   type="text"
@@ -2053,7 +1976,7 @@ export function ServerSettingsModal() {
                   placeholder="emoji_name"
                 />
               </div>
-              <div className="settings-field">
+              <div className={styles.SettingsField}>
                 <label>Image (GIF, JPG, JPEG, SVG)</label>
                 <input
                   type="file"
@@ -2062,17 +1985,17 @@ export function ServerSettingsModal() {
                 />
               </div>
               {emojiPreview && (
-                <div className="emoji-preview-container">
+                <div>
                   <img src={emojiPreview} alt="Preview" className="emoji-preview-img" />
                   <span className="emoji-preview-label">:{emojiName || "name"}:</span>
                 </div>
               )}
-              <div className="settings-dialog-actions">
-                <button className="settings-btn-cancel" onClick={() => setEmojiModalOpen(false)}>
+              <div className={styles.SettingsActions}>
+                <button className={styles.SettingsBtnCancel} onClick={() => setEmojiModalOpen(false)}>
                   Cancel
                 </button>
                 <button
-                  className="settings-btn-confirm"
+                  className={styles.SettingsBtnConfirm}
                   onClick={handleAddEmoji}
                   disabled={!emojiName.trim() || !emojiFile}
                 >
@@ -2085,16 +2008,16 @@ export function ServerSettingsModal() {
 
         {emojiEditModal && (
           <div
-            className="settings-inner-modal"
+            className={styles.SettingsModal}
             onClick={(e) => {
               if (e.target === e.currentTarget) setEmojiEditModal(null);
             }}
           >
-            <div className="settings-inner-dialog">
+            <div className={styles.SettingsInnerDialog}>
               <h3>Edit Emoji</h3>
-              <div className="settings-field">
+              <div className={styles.SettingsField}>
                 <label>Current Emoji</label>
-                <div className="emoji-preview-container">
+                <div>
                   <img
                     src={getEmojiUrl(emojiEditModal)}
                     alt={emojiEditModal.name}
@@ -2103,7 +2026,7 @@ export function ServerSettingsModal() {
                   <span className="emoji-preview-label">:{emojiEditModal.name}:</span>
                 </div>
               </div>
-              <div className="settings-field">
+              <div className={styles.SettingsField}>
                 <label>New Name</label>
                 <input
                   type="text"
@@ -2112,12 +2035,12 @@ export function ServerSettingsModal() {
                   placeholder="emoji_name"
                 />
               </div>
-              <div className="settings-dialog-actions">
-                <button className="settings-btn-cancel" onClick={() => setEmojiEditModal(null)}>
+              <div className={styles.SettingsActions}>
+                <button className={styles.SettingsBtnCancel} onClick={() => setEmojiEditModal(null)}>
                   Cancel
                 </button>
                 <button
-                  className="settings-btn-confirm"
+                  className={styles.SettingsBtnConfirm}
                   onClick={() => {
                     const input = document.getElementById(
                       "emoji-edit-name-input"

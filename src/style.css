@@ -9727,18 +9727,6 @@ body,
   overflow-y: auto;
 }
 
-.emoji-grid-container {
-  display: flex;
-  height: 100%;
-}
-
-.emoji-grid {
-  display: grid;
-  gap: 2px;
-  grid-template-columns: repeat(8, 1fr);
-  margin-bottom: 8px;
-}
-
 .emoji-button {
   align-items: center;
   background: transparent;

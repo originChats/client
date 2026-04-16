@@ -172,23 +172,3 @@
   background: #c93b3e;
   transform: translateY(-1px);
 }
-
-.settings-action-btn {
-  align-items: center;
-  background: var(--primary, #4e5058);
-  border: none;
-  border-radius: 999px;
-  color: #fff;
-  cursor: pointer;
-  display: inline-flex;
-  font-size: 14px;
-  font-weight: 500;
-  gap: 8px;
-  padding: 10px 20px;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.settings-action-btn:hover {
-  background: var(--primary-hover, #586068);
-  transform: translateY(-1px);
-}

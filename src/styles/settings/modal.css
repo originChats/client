@@ -94,14 +94,14 @@
 
 .server-settings-sidebar {
   width: 260px;
-  background: var(--surface, #0a0a0c);
+  background: var(--surface);
   flex-shrink: 0;
   position: sticky;
   top: 0;
   height: 100%;
   overflow-y: auto;
   border-radius: 10px;
-  border: 1px solid var(--border, #2a2a2f);
+  border: none;
 }
 
 .server-settings-nav {
@@ -117,7 +117,7 @@
   margin: 2px 8px;
   border: none;
   background: none;
-  color: var(--text-dim, #a0a0a0);
+  color: var(--text-dim);
   border-radius: 10px;
   cursor: pointer;
   text-align: left;
@@ -126,13 +126,13 @@
 }
 
 .server-nav-item:hover {
-  background: var(--surface-hover, #1f1f26);
-  color: var(--text, #ededed);
+  background: var(--surface-hover);
+  color: var(--text);
 }
 
 .server-nav-item.active {
-  background: var(--primary, #4e5058);
-  color: #fff;
+  border: 1px solid var(--border);
+  color: var(--text);
 }
 
 .server-nav-item svg {
@@ -249,7 +249,7 @@
 
 .server-settings-modal {
   background: var(--surface, #0a0a0c);
-  border: none;
+  border: 1px solid var(--border);
   border-radius: 16px;
   box-shadow: 0 24px 80px rgba(0, 0, 0, 0.7);
   display: flex;
