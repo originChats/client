@@ -156,11 +156,6 @@
   background: var(--primary);
 }
 
-.homeGuild.serverError .guildIcon {
-  background: var(--surface);
-  border: var(--space-1) solid var(--danger);
-}
-
 .homeGuild.serverDisconnected .guildIcon {
   outline: 2px solid var(--danger);
   outline-offset: -2px;

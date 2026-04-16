@@ -7,8 +7,6 @@ import {
   rolesByServer,
   serverUrl,
   currentChannel,
-  servers,
-  customEmojisByServer,
   recentEmojis,
 } from "../../state";
 import { avatarUrl } from "../../utils";

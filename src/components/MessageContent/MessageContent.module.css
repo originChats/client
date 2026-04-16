@@ -89,10 +89,3 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
-
-.replyContent :global(img.emoji),
-.replyContent :global(img.custom-emoji) {
-  height: 16px;
-  width: 16px;
-  vertical-align: middle;
-}

@@ -97,48 +97,6 @@
   background: var(--surface-hover);
 }
 
-.contextMenuAvatar {
-  border-radius: 50%;
-  flex-shrink: 0;
-  height: 36px;
-  object-fit: cover;
-  width: 36px;
-}
-
-.contextMenuInfo {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-
-.contextMenuName {
-  color: var(--text);
-  font-size: 14px;
-  font-weight: 600;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.contextMenuStatus {
-  color: var(--text-dim);
-  font-size: 11px;
-}
-
-.contextMenuParticipants {
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
-  margin-left: 4px;
-}
-
-.contextMenuIcon {
-  align-items: center;
-  color: var(--text-dim);
-  display: flex;
-  justify-content: center;
-}
-
 @media (max-width: 768px) {
   .contextMenu {
     border-bottom: none;

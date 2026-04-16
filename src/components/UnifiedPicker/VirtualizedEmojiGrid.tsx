@@ -215,118 +215,19 @@ interface EmojiButtonProps {
   style?: React.CSSProperties;
 }
 
-const EmojiButton = memo(function EmojiButton({
-  item,
-  useSystemEmojis,
-  onClick,
-  style,
-}: EmojiButtonProps) {
+interface EmojiFromUrlProps {
+  url: string;
+  label: string;
+  onClick: () => void;
+  style?: React.CSSProperties;
+}
+
+const EmojiFromUrl = function EmojiFromUrl({ url, label, onClick, style }: EmojiFromUrlProps) {
   const cellSize = EMOJI_SIZE + EMOJI_PADDING;
-
-  if (item.type === "custom" && item.customUrl) {
-    return (
-      <button
-        onClick={onClick}
-        title={item.label}
-        style={{
-          width: cellSize,
-          height: cellSize,
-          padding: `${EMOJI_PADDING / 2}px`,
-          border: "none",
-          background: "transparent",
-          cursor: "pointer",
-          borderRadius: "4px",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          ...style,
-        }}
-        onMouseEnter={(e) => {
-          (e.currentTarget as HTMLButtonElement).style.background = "var(--surface-hover)";
-        }}
-        onMouseLeave={(e) => {
-          (e.currentTarget as HTMLButtonElement).style.background = "transparent";
-        }}
-      >
-        <img
-          src={item.customUrl}
-          alt={item.label}
-          style={{ width: EMOJI_SIZE, height: EMOJI_SIZE }}
-          draggable={false}
-        />
-      </button>
-    );
-  }
-
-  if (useSystemEmojis || !item.hexcode) {
-    return (
-      <button
-        onClick={onClick}
-        title={item.label}
-        style={{
-          width: cellSize,
-          height: cellSize,
-          padding: `${EMOJI_PADDING / 2}px`,
-          border: "none",
-          background: "transparent",
-          cursor: "pointer",
-          borderRadius: "4px",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          fontSize: `${EMOJI_SIZE}px`,
-          lineHeight: 1,
-          ...style,
-        }}
-        onMouseEnter={(e) => {
-          (e.currentTarget as HTMLButtonElement).style.background = "var(--surface-hover)";
-        }}
-        onMouseLeave={(e) => {
-          (e.currentTarget as HTMLButtonElement).style.background = "transparent";
-        }}
-      >
-        {item.emoji}
-      </button>
-    );
-  }
-
-  const url = emojiImgUrl(item.hexcode);
-  if (!url) {
-    return (
-      <button
-        onClick={onClick}
-        title={item.label}
-        style={{
-          width: cellSize,
-          height: cellSize,
-          padding: `${EMOJI_PADDING / 2}px`,
-          border: "none",
-          background: "transparent",
-          cursor: "pointer",
-          borderRadius: "4px",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          fontSize: `${EMOJI_SIZE}px`,
-          lineHeight: 1,
-          ...style,
-        }}
-        onMouseEnter={(e) => {
-          (e.currentTarget as HTMLButtonElement).style.background = "var(--surface-hover)";
-        }}
-        onMouseLeave={(e) => {
-          (e.currentTarget as HTMLButtonElement).style.background = "transparent";
-        }}
-      >
-        {item.emoji}
-      </button>
-    );
-  }
-
   return (
     <button
       onClick={onClick}
-      title={item.label}
+      title={label}
       style={{
         width: cellSize,
         height: cellSize,
@@ -349,12 +250,60 @@ const EmojiButton = memo(function EmojiButton({
     >
       <img
         src={url}
-        alt={item.label}
+        alt={label}
         style={{ width: EMOJI_SIZE, height: EMOJI_SIZE }}
         draggable={false}
       />
     </button>
   );
+};
+
+const EmojiButton = memo(function EmojiButton({
+  item,
+  useSystemEmojis,
+  onClick,
+  style,
+}: EmojiButtonProps) {
+  const cellSize = EMOJI_SIZE + EMOJI_PADDING;
+
+  if (item.type === "custom" && item.customUrl) {
+    return <EmojiFromUrl url={item.customUrl} label={item.label} onClick={onClick} style={style} />;
+  }
+
+  const url = emojiImgUrl(item.hexcode || "");
+  if (useSystemEmojis || !item.hexcode || !url) {
+    return (
+      <button
+        onClick={onClick}
+        title={item.label}
+        style={{
+          width: cellSize,
+          height: cellSize,
+          padding: `${EMOJI_PADDING / 2}px`,
+          border: "none",
+          background: "transparent",
+          cursor: "pointer",
+          borderRadius: "4px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontSize: `${EMOJI_SIZE}px`,
+          lineHeight: 1,
+          ...style,
+        }}
+        onMouseEnter={(e) => {
+          (e.currentTarget as HTMLButtonElement).style.background = "var(--surface-hover)";
+        }}
+        onMouseLeave={(e) => {
+          (e.currentTarget as HTMLButtonElement).style.background = "transparent";
+        }}
+      >
+        {item.emoji}
+      </button>
+    );
+  }
+
+  return <EmojiFromUrl url={url} label={item.label} onClick={onClick} style={style} />;
 });
 
 export const MemoVirtualizedEmojiGrid = memo(VirtualizedEmojiGrid);

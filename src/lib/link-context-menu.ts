@@ -1,7 +1,7 @@
 import type { ContextMenuItem } from "../components/ContextMenu";
 import { downloadAttachment } from "./download-attachment";
 
-export function getLinkFromContextMenuEvent(e: MouseEvent): string | null {
+function getLinkFromContextMenuEvent(e: MouseEvent): string | null {
   const target = e.target as HTMLElement;
   const link = target.closest("a");
   if (!link) return null;
@@ -12,7 +12,7 @@ export function getLinkFromContextMenuEvent(e: MouseEvent): string | null {
   return href;
 }
 
-export function getImageFromContextMenuEvent(e: MouseEvent): { url: string; alt?: string } | null {
+function getImageFromContextMenuEvent(e: MouseEvent): { url: string; alt?: string } | null {
   const target = e.target as HTMLElement;
 
   if (target.tagName === "IMG") {
@@ -35,7 +35,7 @@ export function getImageFromContextMenuEvent(e: MouseEvent): { url: string; alt?
   return null;
 }
 
-export function getReactionFromContextMenuEvent(
+function getReactionFromContextMenuEvent(
   e: MouseEvent
 ): { emoji: string; element: HTMLElement } | null {
   const target = e.target as HTMLElement;
@@ -54,7 +54,7 @@ export function getReactionFromContextMenuEvent(
   return null;
 }
 
-export function createCopyLinkMenuItem(linkUrl: string): ContextMenuItem {
+function createCopyLinkMenuItem(linkUrl: string): ContextMenuItem {
   return {
     label: "Copy Link",
     icon: "Link",
@@ -64,7 +64,7 @@ export function createCopyLinkMenuItem(linkUrl: string): ContextMenuItem {
   };
 }
 
-export function createCopyImageMenuItem(imageUrl: string): ContextMenuItem {
+function createCopyImageMenuItem(imageUrl: string): ContextMenuItem {
   return {
     label: "Copy Image URL",
     icon: "Image",
@@ -74,7 +74,7 @@ export function createCopyImageMenuItem(imageUrl: string): ContextMenuItem {
   };
 }
 
-export function createOpenImageMenuItem(imageUrl: string): ContextMenuItem {
+function createOpenImageMenuItem(imageUrl: string): ContextMenuItem {
   return {
     label: "Open Image",
     icon: "ExternalLink",
@@ -84,7 +84,7 @@ export function createOpenImageMenuItem(imageUrl: string): ContextMenuItem {
   };
 }
 
-export function createSaveImageMenuItem(imageUrl: string, filename?: string): ContextMenuItem {
+function createSaveImageMenuItem(imageUrl: string, filename?: string): ContextMenuItem {
   return {
     label: "Save Image",
     icon: "Download",
@@ -95,7 +95,7 @@ export function createSaveImageMenuItem(imageUrl: string, filename?: string): Co
   };
 }
 
-export function addLinkContextMenuItem(e: MouseEvent, items: ContextMenuItem[]): ContextMenuItem[] {
+function addLinkContextMenuItem(e: MouseEvent, items: ContextMenuItem[]): ContextMenuItem[] {
   const linkUrl = getLinkFromContextMenuEvent(e);
   if (!linkUrl) return items;
 
@@ -111,7 +111,7 @@ export function addLinkContextMenuItem(e: MouseEvent, items: ContextMenuItem[]):
   return [...items, copyLinkItem];
 }
 
-export function addImageContextMenuItem(
+function addImageContextMenuItem(
   e: MouseEvent,
   items: ContextMenuItem[]
 ): ContextMenuItem[] {
@@ -135,7 +135,7 @@ export function addImageContextMenuItem(
   return [...imageItems, ...items];
 }
 
-export function addReactionContextMenuItem(
+function addReactionContextMenuItem(
   e: MouseEvent,
   items: ContextMenuItem[],
   onViewReactions: (emoji: string) => void

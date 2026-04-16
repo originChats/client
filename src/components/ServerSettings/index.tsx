@@ -9,6 +9,7 @@ import {
   currentUser,
   customEmojisByServer,
   usersByServer,
+  DEFAULT_PERMISSIONS,
 } from "../../state";
 import {
   showServerSettingsModal,
@@ -39,188 +40,7 @@ interface UserDetailModal {
   tab: "overview" | "roles" | "moderation";
 }
 
-const ALL_PERMISSIONS = [
-  {
-    id: "administrator",
-    name: "Administrator",
-    description: "Full permissions (bypasses all checks except owner)",
-    category: "Server",
-  },
-  {
-    id: "manage_server",
-    name: "Manage Server",
-    description: "Update server settings, emojis, and webhooks",
-    category: "Server",
-  },
-  {
-    id: "view_audit_log",
-    name: "View Audit Log",
-    description: "View server audit logs",
-    category: "Server",
-  },
-  {
-    id: "manage_roles",
-    name: "Manage Roles",
-    description: "Create, delete, and assign roles below own position",
-    category: "Roles",
-  },
-  {
-    id: "manage_channels",
-    name: "Manage Channels",
-    description: "Create, delete, and configure channels",
-    category: "Channels",
-  },
-  {
-    id: "manage_threads",
-    name: "Manage Threads",
-    description: "Lock, archive, and delete threads",
-    category: "Channels",
-  },
-  {
-    id: "manage_users",
-    name: "Manage Users",
-    description: "Ban, unban, timeout, and manage user nicknames",
-    category: "Moderation",
-  },
-  {
-    id: "kick_members",
-    name: "Kick Members",
-    description: "Kick users from the server",
-    category: "Moderation",
-  },
-  {
-    id: "manage_nicknames",
-    name: "Manage Nicknames",
-    description: "Change other users' nicknames",
-    category: "Moderation",
-  },
-  {
-    id: "change_nickname",
-    name: "Change Nickname",
-    description: "Change own nickname",
-    category: "Moderation",
-  },
-  {
-    id: "manage_messages",
-    name: "Manage Messages",
-    description: "Delete and pin any message across all channels",
-    category: "Messages",
-  },
-  {
-    id: "read_message_history",
-    name: "Read History",
-    description: "View previous messages in channel",
-    category: "Messages",
-  },
-  {
-    id: "send_messages",
-    name: "Send Messages",
-    description: "Send messages in text channels",
-    category: "Messages",
-  },
-  {
-    id: "send_tts",
-    name: "Send TTS",
-    description: "Send text-to-speech messages",
-    category: "Messages",
-  },
-  {
-    id: "embed_links",
-    name: "Embed Links",
-    description: "Embed links in messages",
-    category: "Messages",
-  },
-  {
-    id: "attach_files",
-    name: "Attach Files",
-    description: "Attach files to messages",
-    category: "Messages",
-  },
-  {
-    id: "add_reactions",
-    name: "Add Reactions",
-    description: "Add reactions to messages",
-    category: "Messages",
-  },
-  {
-    id: "external_emojis",
-    name: "External Emojis",
-    description: "Use external/custom emojis",
-    category: "Messages",
-  },
-  {
-    id: "mention_everyone",
-    name: "Mention Everyone",
-    description: "Mention the @everyone role",
-    category: "Special",
-  },
-  {
-    id: "use_slash_commands",
-    name: "Use Slash Commands",
-    description: "Use slash commands in chat",
-    category: "Special",
-  },
-  {
-    id: "create_invite",
-    name: "Create Invite",
-    description: "Create channel invites",
-    category: "Invites",
-  },
-  {
-    id: "manage_invites",
-    name: "Manage Invites",
-    description: "Manage and revoke invites",
-    category: "Invites",
-  },
-  {
-    id: "connect",
-    name: "Connect",
-    description: "Connect to voice channels",
-    category: "Voice",
-  },
-  {
-    id: "speak",
-    name: "Speak",
-    description: "Speak in voice channels",
-    category: "Voice",
-  },
-  {
-    id: "stream",
-    name: "Stream",
-    description: "Stream video in voice channels",
-    category: "Voice",
-  },
-  {
-    id: "mute_members",
-    name: "Mute Members",
-    description: "Mute users in voice channels",
-    category: "Voice",
-  },
-  {
-    id: "deafen_members",
-    name: "Deafen Members",
-    description: "Deafen users in voice channels",
-    category: "Voice",
-  },
-  {
-    id: "move_members",
-    name: "Move Members",
-    description: "Move users between voice channels",
-    category: "Voice",
-  },
-  {
-    id: "use_voice_activity",
-    name: "Voice Activity",
-    description: "Use voice activity detection",
-    category: "Voice",
-  },
-  {
-    id: "priority_speaker",
-    name: "Priority Speaker",
-    description: "Be heard over other speakers",
-    category: "Voice",
-  },
-];
+const ALL_PERMISSIONS = DEFAULT_PERMISSIONS;
 
 function UserRolesEditor({
   username,
@@ -1247,7 +1067,11 @@ export function ServerSettingsModal() {
                           {ALL_PERMISSIONS.map((perm) => (
                             <button
                               key={perm.id}
-                              className={newRolePermissions.includes(perm.id) ? styles.PermissionChipActive : styles.PermissionChip}
+                              className={
+                                newRolePermissions.includes(perm.id)
+                                  ? styles.PermissionChipActive
+                                  : styles.PermissionChip
+                              }
                               onClick={() => {
                                 if (newRolePermissions.includes(perm.id)) {
                                   setNewRolePermissions(
@@ -1291,11 +1115,16 @@ export function ServerSettingsModal() {
                     return (
                       <>
                         <div className={styles.RoleEditorPanelHeader}>
-                          <h3>Edit Role:
-                            <div style={{
-                              color: role.color || "inherit",
-                              fontWeight: 600,
-                            }}>{role.name}</div>
+                          <h3>
+                            Edit Role:
+                            <div
+                              style={{
+                                color: role.color || "inherit",
+                                fontWeight: 600,
+                              }}
+                            >
+                              {role.name}
+                            </div>
                           </h3>
                         </div>
                         <div className={styles.RoleEditorPanelBody}>
@@ -1473,7 +1302,9 @@ export function ServerSettingsModal() {
                                 return (
                                   <button
                                     key={perm.id}
-                                    className={hasPerm ? styles.PermissionChipActive : styles.PermissionChip}
+                                    className={
+                                      hasPerm ? styles.PermissionChipActive : styles.PermissionChip
+                                    }
                                     onClick={() => togglePermission(role.name, perm.id)}
                                     title={perm.description}
                                   >
@@ -1536,16 +1367,9 @@ export function ServerSettingsModal() {
                       })
                     }
                   >
-                    <UserAvatar
-                      username={member.username}
-                      className={styles.UserAvatar}
-                      alt=""
-                    />
+                    <UserAvatar username={member.username} className={styles.UserAvatar} alt="" />
                     <div className={styles.UserInfo}>
-                      <div
-                        className={styles.UserName}
-                        style={{ color: member.color || "inherit" }}
-                      >
+                      <div className={styles.UserName} style={{ color: member.color || "inherit" }}>
                         {member.username}
                       </div>
                       <div className={styles.UserRoles}>
@@ -1737,7 +1561,10 @@ export function ServerSettingsModal() {
                 </div>
               )}
               <div className={styles.SettingsActions}>
-                <button className={styles.SettingsBtnCancel} onClick={() => setChannelModalOpen(false)}>
+                <button
+                  className={styles.SettingsBtnCancel}
+                  onClick={() => setChannelModalOpen(false)}
+                >
                   Cancel
                 </button>
                 <button
@@ -1771,19 +1598,31 @@ export function ServerSettingsModal() {
             </div>
             <div className={styles.UserDetailTabs}>
               <button
-                className={userDetailModal.tab === "overview" ? styles.UserDetailTabActive : styles.UserDetailTab}
+                className={
+                  userDetailModal.tab === "overview"
+                    ? styles.UserDetailTabActive
+                    : styles.UserDetailTab
+                }
                 onClick={() => setUserDetailModal({ ...userDetailModal, tab: "overview" })}
               >
                 Overview
               </button>
               <button
-                className={userDetailModal.tab === "roles" ? styles.UserDetailTabActive : styles.UserDetailTab}
+                className={
+                  userDetailModal.tab === "roles"
+                    ? styles.UserDetailTabActive
+                    : styles.UserDetailTab
+                }
                 onClick={() => setUserDetailModal({ ...userDetailModal, tab: "roles" })}
               >
                 Roles
               </button>
               <button
-                className={userDetailModal.tab === "moderation" ? styles.UserDetailTabActive : styles.UserDetailTab}
+                className={
+                  userDetailModal.tab === "moderation"
+                    ? styles.UserDetailTabActive
+                    : styles.UserDetailTab
+                }
                 onClick={() => setUserDetailModal({ ...userDetailModal, tab: "moderation" })}
               >
                 Moderation
@@ -1837,8 +1676,7 @@ export function ServerSettingsModal() {
                       <div className={styles.SettingsField}>
                         <label>Nickname</label>
                         <div className="settings-value">
-                          {users.value[userDetailModal.username.toLowerCase()]?.nickname ||
-                            "None"}
+                          {users.value[userDetailModal.username.toLowerCase()]?.nickname || "None"}
                         </div>
                       </div>
                       <div className={styles.SettingsField}>
@@ -1911,7 +1749,10 @@ export function ServerSettingsModal() {
               )}
             </div>
             <div className={styles.SettingsActions}>
-              <button className={styles.SettingsBtnConfirm} onClick={() => setUserDetailModal(null)}>
+              <button
+                className={styles.SettingsBtnConfirm}
+                onClick={() => setUserDetailModal(null)}
+              >
                 Done
               </button>
             </div>
@@ -1991,7 +1832,10 @@ export function ServerSettingsModal() {
                 </div>
               )}
               <div className={styles.SettingsActions}>
-                <button className={styles.SettingsBtnCancel} onClick={() => setEmojiModalOpen(false)}>
+                <button
+                  className={styles.SettingsBtnCancel}
+                  onClick={() => setEmojiModalOpen(false)}
+                >
                   Cancel
                 </button>
                 <button
@@ -2036,7 +1880,10 @@ export function ServerSettingsModal() {
                 />
               </div>
               <div className={styles.SettingsActions}>
-                <button className={styles.SettingsBtnCancel} onClick={() => setEmojiEditModal(null)}>
+                <button
+                  className={styles.SettingsBtnCancel}
+                  onClick={() => setEmojiEditModal(null)}
+                >
                   Cancel
                 </button>
                 <button

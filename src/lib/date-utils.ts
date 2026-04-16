@@ -63,61 +63,10 @@ function formatRelativeTimeShort(timestamp: number): string {
   return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
 
-function formatFullDateTime(timestamp: number): string {
-  return new Date(timestamp).toLocaleString("en-US", {
-    weekday: "long",
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
-}
-
-function formatTimeAgo(ms: number): string {
-  const seconds = Math.floor(ms / 1000);
-  if (seconds < 60) return "just now";
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  if (days < 30) return `${days}d ago`;
-  const months = Math.floor(days / 30);
-  if (months < 12) return `${months}mo ago`;
-  const years = Math.floor(months / 12);
-  return `${years}y ago`;
-}
-
 function formatJoinDate(timestamp: number): string {
   return new Date(timestamp).toLocaleDateString("en-US", {
     month: "long",
     year: "numeric",
-  });
-}
-
-function formatExpiry(expiresAt: number): string {
-  const now = Date.now();
-  const diff = expiresAt - now;
-
-  if (diff <= 0) return "Expired";
-  if (diff < 60000) return "Expires in less than a minute";
-  if (diff < 3600000) {
-    const mins = Math.floor(diff / 60000);
-    return `Expires in ${mins} minute${mins > 1 ? "s" : ""}`;
-  }
-  if (diff < 86400000) {
-    const hours = Math.floor(diff / 3600000);
-    return `Expires in ${hours} hour${hours > 1 ? "s" : ""}`;
-  }
-  const days = Math.floor(diff / 86400000);
-  return `Expires in ${days} day${days > 1 ? "s" : ""}`;
-}
-
-function formatShortTime(timestamp: number): string {
-  return new Date(timestamp).toLocaleTimeString("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
   });
 }
 
@@ -180,11 +129,9 @@ function formatShortDateTime(timestamp: number): string {
 }
 
 export {
-  formatRelativeTime,
   formatRelativeTimeShort,
   formatJoinDate,
   formatDateShort,
   formatMessageTime,
   formatThreadTime,
-  formatShortDateTime,
 };

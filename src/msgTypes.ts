@@ -6,7 +6,6 @@ import type {
   Thread,
   VoiceUser,
   Webhook,
-  CustomEmoji,
 } from "./types";
 
 interface UsersList {

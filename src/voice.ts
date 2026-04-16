@@ -1085,49 +1085,8 @@ class VoiceManager {
       clearTimeout(this._peerReconnectTimer);
       this._peerReconnectTimer = null;
     }
-    for (const conn of this._peers.values()) {
-      if (conn.audioRetryTimer !== null) {
-        clearTimeout(conn.audioRetryTimer);
-        conn.audioRetryTimer = null;
-      }
-      if (conn.screenRetryTimer !== null) {
-        clearTimeout(conn.screenRetryTimer);
-        conn.screenRetryTimer = null;
-      }
-      if (conn.cameraRetryTimer !== null) {
-        clearTimeout(conn.cameraRetryTimer);
-        conn.cameraRetryTimer = null;
-      }
-      try {
-        conn.outAudioCall?.close();
-      } catch (e) {
-        if (DEBUG) console.debug("[Voice] Ignored error:", e);
-      }
-      try {
-        conn.outScreenCall?.close();
-      } catch (e) {
-        if (DEBUG) console.debug("[Voice] Ignored error:", e);
-      }
-      try {
-        conn.outCameraCall?.close();
-      } catch (e) {
-        if (DEBUG) console.debug("[Voice] Ignored error:", e);
-      }
-      try {
-        conn.inAudioCall?.close();
-      } catch (e) {
-        if (DEBUG) console.debug("[Voice] Ignored error:", e);
-      }
-      try {
-        conn.inScreenCall?.close();
-      } catch (e) {
-        if (DEBUG) console.debug("[Voice] Ignored error:", e);
-      }
-      try {
-        conn.inCameraCall?.close();
-      } catch (e) {
-        if (DEBUG) console.debug("[Voice] Ignored error:", e);
-      }
+    for (const id of this._peers.keys()) {
+      this._detachPeer(id);
     }
     this._peers.clear();
 

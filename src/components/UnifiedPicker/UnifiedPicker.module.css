@@ -147,49 +147,9 @@
   margin: 4px 0;
 }
 
-.emojiSectionLabel {
-  color: var(--text-dim);
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.5px;
-  margin-bottom: 6px;
-  text-transform: uppercase;
-}
-
 .emojiContent {
   flex: 1;
   overflow-y: auto;
-}
-
-.emojiGridContainer {
-  display: flex;
-  height: 100%;
-}
-
-.emojiGrid {
-  display: grid;
-  gap: 2px;
-  grid-template-columns: repeat(8, 1fr);
-  margin-bottom: 8px;
-}
-
-.emojiButton {
-  align-items: center;
-  background: transparent;
-  border: none;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  display: flex;
-  font-size: 20px;
-  height: 32px;
-  justify-content: center;
-  padding: 0;
-  transition: background 0.15s;
-  width: 32px;
-}
-
-.emojiButton:hover {
-  background: var(--surface-hover);
 }
 
 .twemojiPickerImg {
@@ -202,7 +162,7 @@
   line-height: 1;
 }
 
-.emojiCatBtn .twemojiPickerImg {
+.twemojiPickerImg {
   height: 22px;
   width: 22px;
 }
@@ -238,13 +198,6 @@
   font-size: 12px;
   color: var(--text-dim);
   opacity: 0.7;
-}
-
-.gifPanel {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  overflow: hidden;
 }
 
 .gifSectionLabel {
@@ -342,23 +295,6 @@
   to {
     transform: rotate(360deg);
   }
-}
-
-.gifEmpty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  color: var(--text-dim);
-  gap: 8px;
-  padding: 20px;
-  text-align: center;
-}
-
-.gifEmpty p {
-  font-size: 14px;
-  margin: 0;
 }
 
 /* Mobile styles */

@@ -351,10 +351,6 @@ export function startChannelLoad(channelId: string, imageUrls: string[]): Promis
   });
 }
 
-export function isChannelLoading(channelId: string): boolean {
-  return channelLoadingState.has(channelId);
-}
-
 let cleanupScheduled = false;
 
 export function scheduleCleanup(): void {

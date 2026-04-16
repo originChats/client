@@ -303,23 +303,6 @@
   white-space: nowrap;
 }
 
-.channelUserPanelStatus {
-  align-items: center;
-  color: var(--text-dim);
-  display: flex;
-  font-size: 11px;
-  gap: 3px;
-  line-height: 1.2;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.channelUserPanelStatus.muted {
-  font-style: italic;
-  opacity: 0.45;
-}
-
 .channelUserPanelStatusDot {
   border: 3px solid var(--surface-light);
   border-radius: 50%;
@@ -345,22 +328,12 @@
   border-radius: var(--radius-df);
 }
 
-.channelUserPanelStatusEmoji {
-  flex-shrink: 0;
-  font-size: 12px;
-}
-
 .channelUserPanelStatusText {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.channelUserPanelActions {
-  display: flex;
-  flex-shrink: 0;
-  gap: 2px;
-}
 
 .channelUserPanelBtn {
   align-items: center;
@@ -431,7 +404,7 @@
   color: var(--text);
 }
 
-.voiceChannelUser.speaking .voiceChannelUserAvatar {
+.voiceChannelUser .voiceChannelUserAvatar {
   box-shadow: 0 0 0 2px var(--success);
 }
 

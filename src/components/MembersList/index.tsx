@@ -5,7 +5,6 @@ import {
   users,
   currentChannel,
   currentThread,
-  messages,
   rolesByServer,
   DM_SERVER_URL,
   hasCapability,

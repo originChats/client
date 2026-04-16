@@ -2,8 +2,6 @@ import { useCallback, useEffect, useRef, useState } from "preact/hooks";
 import { Fragment, type h } from "preact";
 import { useSignalEffect } from "@preact/signals";
 import { parseEmojisInContainer, emojiImgUrl } from "../../lib/emoji";
-import { VirtualMessageContainer } from "../VirtualMessageList";
-import { useMessageWindowing } from "../../hooks/useMessageWindowing";
 import { SkeletonMessageList } from "../Skeleton";
 import styles from "./MessageArea.module.css";
 import { addUniversalContextMenuItems } from "../../lib/link-context-menu";

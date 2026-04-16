@@ -37,8 +37,6 @@ export { handleMessagesGet } from "./message/s_get";
 export {
   handleMessagesAround,
   setPendingJump,
-  setPendingOlderLoad,
-  setPendingNewerLoad,
 } from "./message/s_around";
 export { handleMessagesSearch } from "./message/s_search";
 export { handleMessagesPinned } from "./message/s_pinned";

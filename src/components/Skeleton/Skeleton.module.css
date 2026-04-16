@@ -34,20 +34,6 @@
   border-radius: 4px;
 }
 
-.skeletonText.short {
-  width: 40%;
-}
-
-.skeletonText.medium {
-  width: 70%;
-}
-
-.skeletonButton {
-  height: 38px;
-  width: 120px;
-  border-radius: var(--radius-md);
-}
-
 .skeletonListItem {
   display: flex;
   gap: 12px;
