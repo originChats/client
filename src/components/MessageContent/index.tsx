@@ -292,7 +292,7 @@ function MessageContentInner({
     <>
       <div
         ref={messageTextRef}
-        className={`${styles.messageText}${isMentioned ? ` ${styles.mentioned}` : ""}${isEmojiOnly && !isReply ? ` ${styles.emojiOnly}` : ""}${isReply ? ` ${styles.replyContent}` : ""}`}
+        className={`${styles.messageText}${isMentioned ? ` ${styles.mentioned}` : ""}${isEmojiOnly && !isReply ? ` emojiOnly` : ""}${isReply ? ` ${styles.replyContent}` : ""}`}
         style={isTenorOnly ? { display: "none" } : undefined}
         dangerouslySetInnerHTML={{ __html: html }}
       />

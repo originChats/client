@@ -9727,6 +9727,22 @@ body,
   overflow-y: auto;
 }
 
+.custom-emoji {
+  width: var(--size-icon-md);
+  vertical-align: middle;
+  height: var(--size-icon-md);
+}
+
+.emojiOnly {
+  line-height: 1.2;
+  img {
+    height: 48px;
+    width: auto;
+    max-width: 60px;
+    vertical-align: middle;
+  }
+}
+
 .emoji-button {
   align-items: center;
   background: transparent;
