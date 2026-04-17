@@ -10,7 +10,7 @@ import {
   DM_SERVER_URL,
 } from "../../../state";
 import { finishMessageFetch, markChannelAsRead, markThreadAsRead } from "../../ws-sender";
-import { selectChannel } from "../../selectors";
+import { selectChannel } from "../../actions";
 import { getMessageKey, setMessages, mergeAndSortMessages } from "../../message-utils";
 
 export function handleMessagesGet(msg: MessagesGet, sUrl: string): void {

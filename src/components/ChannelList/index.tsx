@@ -483,7 +483,7 @@ export function ChannelList() {
 
             if (isVoice) {
               return (
-                <div key={channel.name} className={styles.voiceChannelWrapper}>
+                <div key={`${sUrl}:${channel.name}`} className={styles.voiceChannelWrapper}>
                   <div
                     className={`${styles.channelItem}${voice.currentChannel === channel.name ? ` ${styles.active}` : ""}`}
                     onClick={() => handleChannelClick(channel)}
@@ -558,7 +558,7 @@ export function ChannelList() {
               };
 
               return (
-                <div key={channel.name}>
+                <div key={`${sUrl}:${channel.name}`}>
                   <div
                     className={`${styles.channelItem}${!voiceChannelActive && isForumSelected ? ` ${styles.active}` : ""}`}
                     data-channel-name={channel.name}
@@ -599,7 +599,7 @@ export function ChannelList() {
 
                       return (
                         <div
-                          key={thread.id}
+                          key={`${sUrl}:thread:${thread.id}`}
                           className={`${styles.channelItem} ${styles.threadItem}${!voiceChannelActive && currentThread.value?.id === thread.id ? ` ${styles.active}` : ""}${threadHasUnread ? ` ${styles.hasUnread}` : ""}`}
                           onClick={(e: any) => {
                             e.stopPropagation();
@@ -631,7 +631,7 @@ export function ChannelList() {
 
             return (
               <div
-                key={channel.name}
+                key={`${sUrl}:${channel.name}`}
                 className={`${styles.channelItem}${!voiceChannelActive && currentChannel.value?.name === channel.name ? ` ${styles.active}` : ""}${hasUnread ? ` ${styles.hasUnread}` : ""}${isMuted ? ` ${styles.muted}` : ""}`}
                 data-channel-name={channel.name}
                 onClick={() => handleChannelClick(channel)}
