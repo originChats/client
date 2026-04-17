@@ -19,8 +19,6 @@ import { MessageContent } from "../MessageContent";
 import styles from "./MembersList.module.css";
 
 function MembersListInner() {
-  renderMembersSignal.value;
-
   const { showUserMenu, closeUserMenu, userMenu } = useUserContextMenu();
 
   const isDM = serverUrl.value === DM_SERVER_URL;

@@ -22,9 +22,9 @@ import {
   showDiscoveryModal,
   mobileSidebarOpen,
   showContextMenu,
-  renderGuildSidebarSignal,
   showInfo,
 } from "../../lib/ui-signals";
+import { unreadState } from "../../lib/state";
 import { Icon, ServerIcon } from "../Icon";
 import { UserAvatar } from "../UserAvatar";
 import { reloadServerIcon } from "../../utils";
@@ -36,7 +36,9 @@ const ITEM_HEIGHT = 48;
 const DRAG_THRESHOLD = 30;
 
 export function GuildSidebar() {
-  void renderGuildSidebarSignal.value;
+  // Subscribe to unread state changes for reactive updates
+  const _pings = unreadState.pings.value;
+  const _unreads = unreadState.unreads.value;
 
   const [drag, setDrag] = useState<{
     index: number;

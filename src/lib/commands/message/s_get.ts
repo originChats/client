@@ -11,7 +11,12 @@ import {
 } from "../../../state";
 import { finishMessageFetch, markChannelAsRead, markThreadAsRead } from "../../ws-sender";
 import { selectChannel } from "../../actions";
-import { getMessageKey, setMessages, mergeAndSortMessages, normalizeReactions } from "../../message-utils";
+import {
+  getMessageKey,
+  setMessages,
+  mergeAndSortMessages,
+  normalizeReactions,
+} from "../../message-utils";
 
 export function handleMessagesGet(msg: MessagesGet, sUrl: string): void {
   const messageKey = getMessageKey(msg);

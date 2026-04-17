@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "preact/hooks";
 import { Fragment, type h } from "preact";
+import { memo } from "preact/compat";
 import { useSignalEffect } from "@preact/signals";
 import {
   parseEmojisInContainer,
@@ -477,7 +478,7 @@ function RightPanelMessageCard({
   );
 }
 
-function RightPanel() {
+function RightPanelInner() {
   const [searchQuery, setSearchQuery] = useState("");
   const panelView = rightPanelView.value;
   const isDMServer = serverUrl.value === DM_SERVER_URL;
@@ -839,6 +840,8 @@ function RightPanel() {
 
   return null;
 }
+
+const RightPanel = memo(RightPanelInner);
 
 // ─── Blocked message collapse banner ─────────────────────────────────────────
 
@@ -1491,8 +1494,8 @@ export function MessageArea() {
     // Intercept Tab/Enter on a slash autocomplete item before the hook's
     // built-in selectItem runs (which would insert text instead of opening
     // the slash command UI).
-    if (autocomplete.state.active && (e.key === "Tab" || e.key === "Enter") && !e.shiftKey) {
-      const item = autocomplete.state.items[autocomplete.state.selectedIndex];
+    if (autocomplete.state.value.active && (e.key === "Tab" || e.key === "Enter") && !e.shiftKey) {
+      const item = autocomplete.state.value.items[autocomplete.state.value.selectedIndex];
       if (item?.type === "slash") {
         e.preventDefault();
         const sUrl = serverUrl.value;
@@ -2817,11 +2820,11 @@ export function MessageArea() {
             {/* Autocomplete is only shown in normal (non-slash) mode */}
             {!activeSlashCmd && (
               <InputAutocomplete
-                state={autocomplete.state}
+                state={autocomplete.state.value}
                 onSelect={(index) => {
                   // If the user selects a slash command from the autocomplete,
                   // activate the slash command input instead of inserting text.
-                  const item = autocomplete.state.items[index];
+                  const item = autocomplete.state.value.items[index];
                   if (item?.type === "slash") {
                     const sUrl = serverUrl.value;
                     const cmd = (slashCommandsByServer.value[sUrl] || []).find(

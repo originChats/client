@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "preact/hooks";
+import { useSignal } from "@preact/signals";
 import { TwemojiText } from "../TwemojiText";
 import {
   users,
@@ -110,7 +111,6 @@ function detectTrigger(text: string, cursorPos: number): TriggerInfo | null {
       };
     }
   }
-
   return null;
 }
 
@@ -140,7 +140,6 @@ function searchUsers(query: string): AutocompleteItem[] {
     }
     if (results.length >= 10) break;
   }
-
   return results;
 }
 
@@ -161,7 +160,6 @@ function searchChannels(query: string): AutocompleteItem[] {
     }
     if (results.length >= 10) break;
   }
-
   return results;
 }
 
@@ -181,13 +179,11 @@ function searchRoles(query: string): AutocompleteItem[] {
     }
     if (results.length >= 10) break;
   }
-
   return results;
 }
 
 function searchEmojis(query: string): AutocompleteItem[] {
   const q = query.toLowerCase();
-
   const allEmojis = emojiCache.getAllEmojis();
   const results: AutocompleteItem[] = [];
 
@@ -208,15 +204,12 @@ function searchEmojis(query: string): AutocompleteItem[] {
 
     if (results.length >= 15) break;
   }
-
   return results;
 }
 
 function searchCustomEmojis(query: string): AutocompleteItem[] {
   const q = query.toLowerCase();
-
   const results = emojiCache.searchCustomEmojis(q, 15);
-
   return results.map((emoji) => ({
     type: "emoji" as const,
     label: emoji.name,
@@ -246,17 +239,20 @@ function searchSlashCommands(query: string): AutocompleteItem[] {
       });
     }
   }
-
   return results;
 }
 
 export function useInputAutocomplete(inputId: string) {
-  const [state, setState] = useState<AutocompleteState>(INITIAL_STATE);
-  const stateRef = useRef(state);
-  stateRef.current = state;
+  const stateSignal = useSignal<AutocompleteState>(INITIAL_STATE);
+  const stateRef = useRef(stateSignal.value);
+
+  // Keep ref in sync with signal
+  useEffect(() => {
+    stateRef.current = stateSignal.value;
+  });
 
   const close = useCallback(() => {
-    setState(INITIAL_STATE);
+    stateSignal.value = INITIAL_STATE;
   }, []);
 
   const handleInput = useCallback(() => {
@@ -265,6 +261,7 @@ export function useInputAutocomplete(inputId: string) {
 
     const cursorPos = input.selectionStart;
     const text = input.value;
+
     const trigger = detectTrigger(text, cursorPos);
 
     if (!trigger) {
@@ -273,6 +270,7 @@ export function useInputAutocomplete(inputId: string) {
     }
 
     let items: AutocompleteItem[];
+
     switch (trigger.type) {
       case "user":
         items = [...searchUsers(trigger.query), ...searchRoles(trigger.query)];
@@ -306,10 +304,13 @@ export function useInputAutocomplete(inputId: string) {
 
           const aKey = a.hexcode || `${a.serverUrl}:${a.label}`;
           const bKey = b.hexcode || `${b.serverUrl}:${b.label}`;
+
           const aRecent = recentSet.has(aKey);
           const bRecent = recentSet.has(bKey);
+
           if (aRecent && !bRecent) return -1;
           if (!aRecent && bRecent) return 1;
+
           return recent.indexOf(aKey) - recent.indexOf(bKey);
         };
 
@@ -326,14 +327,14 @@ export function useInputAutocomplete(inputId: string) {
       return;
     }
 
-    setState({
+    stateSignal.value = {
       active: true,
       type: trigger.type,
       query: trigger.query,
       triggerStart: trigger.triggerStart,
       items,
       selectedIndex: 0,
-    });
+    };
   }, [inputId, close]);
 
   const selectItem = useCallback(
@@ -357,8 +358,8 @@ export function useInputAutocomplete(inputId: string) {
       const before = input.value.substring(0, current.triggerStart);
       const after = input.value.substring(input.selectionStart);
       const insertion = item.insertText.endsWith(" ") ? item.insertText : item.insertText + " ";
-      input.value = before + insertion + after;
 
+      input.value = before + insertion + after;
       const newCursorPos = before.length + insertion.length;
       input.setSelectionRange(newCursorPos, newCursorPos);
       input.focus();
@@ -375,45 +376,44 @@ export function useInputAutocomplete(inputId: string) {
 
       if (e.key === "ArrowDown") {
         e.preventDefault();
-        setState((prev) => ({
-          ...prev,
-          selectedIndex: Math.min(prev.selectedIndex + 1, prev.items.length - 1),
-        }));
+        stateSignal.value = {
+          ...stateSignal.value,
+          selectedIndex: Math.min(
+            stateSignal.value.selectedIndex + 1,
+            stateSignal.value.items.length - 1
+          ),
+        };
         return true;
       }
-
       if (e.key === "ArrowUp") {
         e.preventDefault();
-        setState((prev) => ({
-          ...prev,
-          selectedIndex: Math.max(prev.selectedIndex - 1, 0),
-        }));
+        stateSignal.value = {
+          ...stateSignal.value,
+          selectedIndex: Math.max(stateSignal.value.selectedIndex - 1, 0),
+        };
         return true;
       }
-
       if (e.key === "Tab" || e.key === "Enter") {
         e.preventDefault();
         selectItem(current.selectedIndex);
         return true;
       }
-
       if (e.key === "Escape") {
         e.preventDefault();
         close();
         return true;
       }
-
       return false;
     },
     [selectItem, close]
   );
 
   const setSelectedIndex = useCallback((index: number) => {
-    setState((prev) => ({ ...prev, selectedIndex: index }));
+    stateSignal.value = { ...stateSignal.value, selectedIndex: index };
   }, []);
 
   return {
-    state,
+    state: stateSignal,
     handleInput,
     handleKeyDown,
     selectItem,
@@ -448,7 +448,6 @@ export function InputAutocomplete({ state, onSelect, onHover }: InputAutocomplet
   if (!state.active || state.items.length === 0) return null;
 
   // ── Non-slash types: original flat layout ────────────────────────────────
-
   if (state.type !== "slash") {
     const typeLabel =
       state.type === "user"
@@ -545,6 +544,7 @@ export function InputAutocomplete({ state, onSelect, onHover }: InputAutocomplet
     icon?: string;
     items: { item: AutocompleteItem; globalIndex: number }[];
   }[] = [];
+
   for (const { item: visItem, globalIndex } of visibleItems.map((item, _) => {
     const globalIndex = state.items.indexOf(item);
     return { item, globalIndex };
@@ -574,7 +574,9 @@ export function InputAutocomplete({ state, onSelect, onHover }: InputAutocomplet
           {allUsers.map(({ username, icon }) => (
             <button
               key={username}
-              className={`autocomplete-slash-sidebar-btn${activeUser === username ? " active" : ""}`}
+              className={`autocomplete-slash-sidebar-btn${
+                activeUser === username ? " active" : ""
+              }`}
               title={username}
               onMouseDown={(e) => {
                 e.preventDefault();
@@ -608,7 +610,9 @@ export function InputAutocomplete({ state, onSelect, onHover }: InputAutocomplet
               {items.map(({ item, globalIndex }) => (
                 <div
                   key={`slash-${item.label}`}
-                  className={`autocomplete-item${globalIndex === state.selectedIndex ? " selected" : ""}`}
+                  className={`autocomplete-item${
+                    globalIndex === state.selectedIndex ? " selected" : ""
+                  }`}
                   onMouseDown={(e) => {
                     e.preventDefault();
                     onSelect(globalIndex);

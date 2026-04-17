@@ -38,7 +38,6 @@ import {
 } from "../../lib/actions";
 import { markChannelAsRead } from "../../lib/ws-sender";
 import {
-  renderChannelsSignal,
   showSettingsModal,
   showServerSettingsModal,
   showChannelEditModal,
@@ -49,6 +48,7 @@ import {
   showThreadPanel,
   channelListWidth,
 } from "../../lib/ui-signals";
+import { unreadState } from "../../lib/state";
 import { Icon } from "../Icon";
 import { voiceManager, voiceState } from "../../voice";
 import { openUserPopout } from "../UserPopout";
@@ -69,23 +69,14 @@ import type { Channel } from "../../types";
 const collapsedForumChannels = signal<Set<string>>(new Set());
 
 export function ChannelList() {
-  const [, forceUpdate] = useReducer((n) => n + 1, 0);
   const channelsListRef = useRef<HTMLDivElement>(null);
   const [hasUnreadsAbove, setHasUnreadsAbove] = useState(false);
   const [hasUnreadsBelow, setHasUnreadsBelow] = useState(false);
 
   useSignalEffect(() => {
-    renderChannelsSignal.value; // subscribe to channel changes
-    voiceState.value; // re-render when voice state changes
-    showVoiceCallView.value; // re-render when call view opens/closes
-    showThreadPanel.value; // re-render when thread panel changes
-    serverUrl.value; // re-render when server changes
-    forceUpdate(undefined);
-    requestAnimationFrame(() => {
-      if (channelsListRef.current) {
-        parseEmojisInContainer(channelsListRef.current);
-      }
-    });
+    // Subscribe to unread state for reactive ping/unread badges
+    unreadState.pings.value;
+    unreadState.unreads.value;
   });
 
   const isDM = serverUrl.value === DM_SERVER_URL;

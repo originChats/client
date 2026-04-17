@@ -93,7 +93,16 @@ export abstract class OriginFSBase {
     return [...entry];
   }
 
-  protected buildEntry(params: {type:string; name:string; location:string; data:any; created:number; edited:number; size:number; uuid:string}): any[] {
+  protected buildEntry(params: {
+    type: string;
+    name: string;
+    location: string;
+    data: any;
+    created: number;
+    edited: number;
+    size: number;
+    uuid: string;
+  }): any[] {
     const entry = new Array(ENTRY_SIZE);
     entry[IDX.TYPE] = params.type;
     entry[IDX.NAME] = params.name;

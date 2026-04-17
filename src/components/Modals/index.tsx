@@ -2080,13 +2080,8 @@ export function AccountModal({ username }: { username: string }) {
   const handleToggleFollow = async () => {
     setFollowWorking(true);
     try {
-      await toggleFollowUser(
-        username,
-        isFollowing,
-        setIsFollowing,
-        setProfile,
-        profile,
-        (e) => showUIError(e, "Failed to update follow status", { autoDismissMs: 3000 })
+      await toggleFollowUser(username, isFollowing, setIsFollowing, setProfile, profile, (e) =>
+        showUIError(e, "Failed to update follow status", { autoDismissMs: 3000 })
       );
     } finally {
       setFollowWorking(false);

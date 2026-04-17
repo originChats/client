@@ -6,7 +6,12 @@ import {
   reachedNewestByServer,
 } from "../../../state";
 import { finishMessageFetch } from "../../ws-sender";
-import { getMessageKey, setMessages, mergeAndSortMessages, normalizeReactions } from "../../message-utils";
+import {
+  getMessageKey,
+  setMessages,
+  mergeAndSortMessages,
+  normalizeReactions,
+} from "../../message-utils";
 import { renderMessagesSignal } from "../../ui-signals";
 
 const pendingJumpByServer: Record<string, { messageId: string; channel: string } | null> = {};
