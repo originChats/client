@@ -1,9 +1,4 @@
-import {
-  ENTRY_SIZE,
-  IDX,
-  parsePathComponents,
-  OriginFSBase,
-} from "./lib/origin-fs-base";
+import { ENTRY_SIZE, IDX, parsePathComponents, OriginFSBase } from "./lib/origin-fs-base";
 
 const BASE_URL = "https://api.rotur.dev";
 

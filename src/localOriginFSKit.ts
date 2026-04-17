@@ -1,8 +1,4 @@
-import {
-  IDX,
-  parsePathComponents,
-  OriginFSBase,
-} from "./lib/origin-fs-base";
+import { IDX, parsePathComponents, OriginFSBase } from "./lib/origin-fs-base";
 
 const DB_NAME = "localOriginFS";
 const DB_VERSION = 1;
