@@ -4,20 +4,10 @@ const DB_NAME = "localOriginFS";
 const DB_VERSION = 1;
 const STORE_NAME = "files";
 
-function openDB(): Promise<IDBDatabase> {
-  return new Promise((resolve, reject) => {
-    const req = indexedDB.open(DB_NAME, DB_VERSION);
-    req.onupgradeneeded = (e) => {
-      const db = (e.target as IDBOpenDBRequest).result;
-      if (!db.objectStoreNames.contains(STORE_NAME)) {
-        db.createObjectStore(STORE_NAME, { keyPath: "path" });
-      }
-    };
-    req.onsuccess = (e) => {
-      resolve((e.target as IDBOpenDBRequest).result);
-    };
-    req.onerror = () => reject(req.error);
-  });
+import { openDB } from "./fsCommon";
+
+function openDBWrapper(): Promise<IDBDatabase> {
+  return openDB(DB_NAME, DB_VERSION, STORE_NAME);
 }
 
 export class LocalOriginFSClass extends OriginFSBase {
@@ -27,7 +17,7 @@ export class LocalOriginFSClass extends OriginFSBase {
     if (this.loaded) {
       return;
     }
-    const db = await openDB();
+    const db = await openDBWrapper();
     return new Promise((resolve, reject) => {
       const tx = db.transaction(STORE_NAME, "readonly");
       const store = tx.objectStore(STORE_NAME);
@@ -48,7 +38,7 @@ export class LocalOriginFSClass extends OriginFSBase {
   }
 
   async writeEntry(path: string, entry: any, op: "put" | "delete" = "put"): Promise<void> {
-    const db = await openDB();
+    const db = await openDBWrapper();
     return new Promise((resolve, reject) => {
       const tx = db.transaction(STORE_NAME, "readwrite");
       const store = tx.objectStore(STORE_NAME);

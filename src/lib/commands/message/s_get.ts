@@ -11,7 +11,7 @@ import {
 } from "../../../state";
 import { finishMessageFetch, markChannelAsRead, markThreadAsRead } from "../../ws-sender";
 import { selectChannel } from "../../actions";
-import { getMessageKey, setMessages, mergeAndSortMessages } from "../../message-utils";
+import { getMessageKey, setMessages, mergeAndSortMessages, normalizeReactions } from "../../message-utils";
 
 export function handleMessagesGet(msg: MessagesGet, sUrl: string): void {
   const messageKey = getMessageKey(msg);
@@ -22,14 +22,7 @@ export function handleMessagesGet(msg: MessagesGet, sUrl: string): void {
 
   const existingMsgs = messagesByServer.value[sUrl]?.[messageKey] || [];
 
-  const newMessages = (msg.messages || []).map((m) => {
-    const normalised: Record<string, string[]> = {};
-    if (m.reactions && typeof m.reactions === "object")
-      for (const [emoji, reactors] of Object.entries(m.reactions)) {
-        normalised[emoji] = reactors;
-      }
-    return { ...m, reactions: normalised };
-  });
+  const newMessages = normalizeReactions(msg.messages || []);
 
   const sortedMsgs = mergeAndSortMessages(existingMsgs, newMessages);
 

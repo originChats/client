@@ -29,6 +29,7 @@ import { isCrackedAccount } from "../../utils";
 import { UserAvatar } from "../UserAvatar";
 import { useDisplayName } from "../../lib/useDisplayName";
 import { getProfile as fetchRoturProfile, followUser, unfollowUser } from "../../lib/rotur-api";
+import { toggleFollowUser } from "../../lib/follow";
 import styles from "./ProfileCard.module.css";
 
 function useProfile(username: string) {
@@ -88,31 +89,14 @@ function useProfile(username: string) {
   }, [username]);
 
   const toggleFollow = async () => {
-    try {
-      if (isFollowing) {
-        await unfollowUser(username);
-        setIsFollowing(false);
-        roturFollowing.value = new Set([...roturFollowing.value].filter((u) => u !== username));
-        if (profile) {
-          setProfile({
-            ...profile,
-            followers: Math.max(0, (profile.followers || 1) - 1),
-          });
-        }
-      } else {
-        await followUser(username);
-        setIsFollowing(true);
-        roturFollowing.value = new Set([...roturFollowing.value, username]);
-        if (profile) {
-          setProfile({
-            ...profile,
-            followers: (profile.followers || 0) + 1,
-          });
-        }
-      }
-    } catch (err) {
-      console.error("Failed to toggle follow:", err);
-    }
+    await toggleFollowUser(
+      username,
+      isFollowing,
+      setIsFollowing,
+      setProfile,
+      profile,
+      console.error
+    );
   };
 
   return { profile, loading, isFollowing, toggleFollow };

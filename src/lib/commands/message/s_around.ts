@@ -6,7 +6,7 @@ import {
   reachedNewestByServer,
 } from "../../../state";
 import { finishMessageFetch } from "../../ws-sender";
-import { getMessageKey, setMessages, mergeAndSortMessages } from "../../message-utils";
+import { getMessageKey, setMessages, mergeAndSortMessages, normalizeReactions } from "../../message-utils";
 import { renderMessagesSignal } from "../../ui-signals";
 
 const pendingJumpByServer: Record<string, { messageId: string; channel: string } | null> = {};
@@ -53,14 +53,7 @@ export function handleMessagesAround(msg: MessagesAround, sUrl: string): void {
     newerLoadPendingByServer[sUrl].delete(messageKey);
   }
 
-  const newMessages = (msg.messages || []).map((m) => {
-    const normalised: Record<string, string[]> = {};
-    if (m.reactions && typeof m.reactions === "object")
-      for (const [emoji, reactors] of Object.entries(m.reactions)) {
-        normalised[emoji] = reactors;
-      }
-    return { ...m, reactions: normalised };
-  });
+  const newMessages = normalizeReactions(msg.messages || []);
 
   const sortedMsgs = mergeAndSortMessages(existingMsgs, newMessages);
 

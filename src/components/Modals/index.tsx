@@ -80,6 +80,7 @@ import {
   unfollowUser,
   getStanding,
 } from "../../lib/rotur-api";
+import { toggleFollowUser } from "../../lib/follow";
 
 interface DiscoveryServer {
   name: string;
@@ -2079,25 +2080,14 @@ export function AccountModal({ username }: { username: string }) {
   const handleToggleFollow = async () => {
     setFollowWorking(true);
     try {
-      if (isFollowing) {
-        await unfollowUser(username);
-        setIsFollowing(false);
-        roturFollowing.value = new Set([...roturFollowing.value].filter((u) => u !== username));
-        if (profile)
-          setProfile({
-            ...profile,
-            followers: Math.max(0, (profile.followers || 1) - 1),
-          });
-      } else {
-        await followUser(username);
-        setIsFollowing(true);
-        roturFollowing.value = new Set([...roturFollowing.value, username]);
-        if (profile) setProfile({ ...profile, followers: (profile.followers || 0) + 1 });
-      }
-    } catch (e) {
-      showUIError(e, "Failed to update follow status", {
-        autoDismissMs: 3000,
-      });
+      await toggleFollowUser(
+        username,
+        isFollowing,
+        setIsFollowing,
+        setProfile,
+        profile,
+        (e) => showUIError(e, "Failed to update follow status", { autoDismissMs: 3000 })
+      );
     } finally {
       setFollowWorking(false);
     }

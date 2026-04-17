@@ -114,6 +114,18 @@ export function insertMessage(serverUrl: string, key: string, message: any): voi
   renderMessagesSignal.value++;
 }
 
+export function normalizeReactions(messages: any[]): any[] {
+  return messages.map((m) => {
+    const normalised: Record<string, string[]> = {};
+    if (m.reactions && typeof m.reactions === "object") {
+      for (const [emoji, reactors] of Object.entries(m.reactions)) {
+        normalised[emoji] = reactors as string[];
+      }
+    }
+    return { ...m, reactions: normalised };
+  });
+}
+
 export function mergeAndSortMessages(existing: any[], incoming: any[]): any[] {
   const all = [...existing, ...incoming];
   const uniqueMap = new Map(all.map((m) => [m.id, m]));

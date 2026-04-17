@@ -129,15 +129,16 @@ export class OriginFSClientClass extends OriginFSBase {
     const { dir, name, ext } = parsePathComponents(path);
     await this.createFolders(dir);
     const uuid = await this.generateUUID();
-    const entry = new Array(ENTRY_SIZE);
-    entry[IDX.TYPE] = ext;
-    entry[IDX.NAME] = name;
-    entry[IDX.LOCATION] = this.formatPath(dir);
-    entry[IDX.DATA] = data;
-    entry[IDX.CREATED] = now;
-    entry[IDX.EDITED] = now;
-    entry[IDX.SIZE] = data.length;
-    entry[IDX.UUID] = uuid;
+    const entry = this.buildEntry({
+      type: ext,
+      name,
+      location: this.formatPath(dir),
+      data,
+      created: now,
+      edited: now,
+      size: data.length,
+      uuid,
+    });
     this.entries[uuid] = entry;
     this.index[path] = uuid;
     this.dirty.push({ command: "UUIDa", uuid, dta: entry });
@@ -150,15 +151,16 @@ export class OriginFSClientClass extends OriginFSBase {
     const { dir, name } = parsePathComponents(path);
     await this.createFolders(dir);
     const uuid = await this.generateUUID();
-    const entry = new Array(ENTRY_SIZE);
-    entry[IDX.TYPE] = ".folder";
-    entry[IDX.NAME] = name;
-    entry[IDX.LOCATION] = this.formatPath(dir);
-    entry[IDX.DATA] = [];
-    entry[IDX.CREATED] = now;
-    entry[IDX.EDITED] = now;
-    entry[IDX.SIZE] = 0;
-    entry[IDX.UUID] = uuid;
+    const entry = this.buildEntry({
+      type: ".folder",
+      name,
+      location: this.formatPath(dir),
+      data: [],
+      created: now,
+      edited: now,
+      size: 0,
+      uuid,
+    });
     this.entries[uuid] = entry;
     this.index[path] = uuid;
     this.dirty.push({ command: "UUIDa", uuid, dta: entry });

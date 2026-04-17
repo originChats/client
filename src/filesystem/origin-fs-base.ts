@@ -93,6 +93,19 @@ export abstract class OriginFSBase {
     return [...entry];
   }
 
+  protected buildEntry(params: {type:string; name:string; location:string; data:any; created:number; edited:number; size:number; uuid:string}): any[] {
+    const entry = new Array(ENTRY_SIZE);
+    entry[IDX.TYPE] = params.type;
+    entry[IDX.NAME] = params.name;
+    entry[IDX.LOCATION] = params.location;
+    entry[IDX.DATA] = params.data;
+    entry[IDX.CREATED] = params.created;
+    entry[IDX.EDITED] = params.edited;
+    entry[IDX.SIZE] = params.size;
+    entry[IDX.UUID] = params.uuid;
+    return entry;
+  }
+
   async generateUUID(): Promise<string> {
     const data = randomString(16) + Date.now().toString() + this.username;
     return await md5(data);
@@ -176,15 +189,16 @@ export abstract class OriginFSBase {
     const { dir, name, ext } = parsePathComponents(path);
     await this.createFolders(dir);
     const uuid = await this.generateUUID();
-    const entry = new Array(ENTRY_SIZE);
-    entry[IDX.TYPE] = ext;
-    entry[IDX.NAME] = name;
-    entry[IDX.LOCATION] = this.formatPath(dir);
-    entry[IDX.DATA] = data;
-    entry[IDX.CREATED] = now;
-    entry[IDX.EDITED] = now;
-    entry[IDX.SIZE] = data.length;
-    entry[IDX.UUID] = uuid;
+    const entry = this.buildEntry({
+      type: ext,
+      name,
+      location: this.formatPath(dir),
+      data,
+      created: now,
+      edited: now,
+      size: data.length,
+      uuid,
+    });
     this.entries[uuid] = entry;
     this.index[path] = uuid;
     await this.writeEntry(path, entry);
@@ -197,15 +211,16 @@ export abstract class OriginFSBase {
     const { dir, name } = parsePathComponents(path);
     await this.createFolders(dir);
     const uuid = await this.generateUUID();
-    const entry = new Array(ENTRY_SIZE);
-    entry[IDX.TYPE] = ".folder";
-    entry[IDX.NAME] = name;
-    entry[IDX.LOCATION] = this.formatPath(dir);
-    entry[IDX.DATA] = [];
-    entry[IDX.CREATED] = now;
-    entry[IDX.EDITED] = now;
-    entry[IDX.SIZE] = 0;
-    entry[IDX.UUID] = uuid;
+    const entry = this.buildEntry({
+      type: ".folder",
+      name,
+      location: this.formatPath(dir),
+      data: [],
+      created: now,
+      edited: now,
+      size: 0,
+      uuid,
+    });
     this.entries[uuid] = entry;
     this.index[path] = uuid;
     await this.writeEntry(path, entry);
