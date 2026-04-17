@@ -1,4 +1,5 @@
-import { ENTRY_SIZE, IDX, parsePathComponents, OriginFSBase } from "./lib/origin-fs-base";
+import { ENTRY_SIZE, IDX, parsePathComponents, OriginFSBase } from "./origin-fs-base";
+import { prepareFolderEntries } from "./fsHelpers";
 
 const BASE_URL = "https://api.rotur.dev";
 
@@ -108,30 +109,16 @@ export class OriginFSClientClass extends OriginFSBase {
   }
 
   async createFolders(dir: string): Promise<void> {
-    dir = dir.replace(/\/$/, "");
-    if (!dir || dir === "/") {
-      return;
-    }
-    const parts = dir.split("/").filter((p) => p);
-    for (let i = 1; i <= parts.length; i++) {
-      let subPath = "/" + parts.slice(0, i).join("/");
-      subPath = subPath.toLowerCase();
-      if (!this.index[subPath]) {
-        const now = Date.now();
-        const uuid = await this.generateUUID();
-        const entry = new Array(ENTRY_SIZE);
-        entry[IDX.TYPE] = ".folder";
-        entry[IDX.NAME] = parts[i - 1];
-        entry[IDX.LOCATION] = this.formatPath(parts.slice(0, i - 1).join("/"));
-        entry[IDX.DATA] = [];
-        entry[IDX.CREATED] = now;
-        entry[IDX.EDITED] = now;
-        entry[IDX.SIZE] = 0;
-        entry[IDX.UUID] = uuid;
-        this.entries[uuid] = entry;
-        this.index[subPath] = uuid;
-        this.dirty.push({ command: "UUIDa", uuid, dta: entry });
-      }
+    const entries = await prepareFolderEntries(
+      dir,
+      this.index,
+      this.generateUUID.bind(this),
+      this.formatPath.bind(this),
+    );
+    for (const { subPath, entry, uuid } of entries) {
+      this.entries[uuid] = entry;
+      this.index[subPath] = uuid;
+      this.dirty.push({ command: "UUIDa", uuid, dta: entry });
     }
   }
 

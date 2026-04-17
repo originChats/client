@@ -1,4 +1,4 @@
-import { IDX, parsePathComponents, OriginFSBase } from "./lib/origin-fs-base";
+import { IDX, parsePathComponents, OriginFSBase } from "./origin-fs-base";
 
 const DB_NAME = "localOriginFS";
 const DB_VERSION = 1;
@@ -120,7 +120,7 @@ export class LocalOriginFSClass extends OriginFSBase {
 
   async commit(): Promise<void> {
     // Local storage commits immediately on each write
-    // This is a no-op for compatibility with OriginFSClientClass
+    // This is a no‑op for compatibility with OriginFSClientClass
   }
 }
 

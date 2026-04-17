@@ -53,6 +53,8 @@ export function parsePathComponents(path: string): {
   return { dir, name, ext };
 }
 
+import { prepareFolderEntries } from "./fsHelpers";
+
 export abstract class OriginFSBase {
   index: Record<string, string> = {};
   entries: Record<string, any> = {};
@@ -69,7 +71,7 @@ export abstract class OriginFSBase {
     } else {
       p = "";
     }
-    p = ("/" + p).replace(/\/+/g, "/").replace(/\/$/, "") || "/";
+    p = ("/" + p).replace(/\/+/, "/").replace(/\/$/, "") || "/";
     return p;
   }
 
@@ -83,7 +85,7 @@ export abstract class OriginFSBase {
 
   formatPath(dir: string): string {
     const basePath = `origin/(c) users/${this.username}/`;
-    const formatted = dir.replace(/^\/|\/$/g, "");
+    const formatted = dir.replace(/^\//, "").replace(/\/$/, "");
     return (basePath + formatted).replace(/\/$/, "");
   }
 
@@ -97,7 +99,7 @@ export abstract class OriginFSBase {
   }
 
   joinPath(...elements: string[]): string {
-    let joined = elements.join("/").replace(/\/+/g, "/").replace(/\/$/, "");
+    let joined = elements.join("/").replace(/\/+/, "/").replace(/\/$/, "");
     if (!joined.startsWith("/")) {
       joined = "/" + joined;
     }
@@ -154,30 +156,16 @@ export abstract class OriginFSBase {
   }
 
   async createFolders(dir: string): Promise<void> {
-    dir = dir.replace(/\/$/, "");
-    if (!dir || dir === "/") {
-      return;
-    }
-    const parts = dir.split("/").filter((p) => p);
-    for (let i = 1; i <= parts.length; i++) {
-      let subPath = "/" + parts.slice(0, i).join("/");
-      subPath = subPath.toLowerCase();
-      if (!this.index[subPath]) {
-        const now = Date.now();
-        const uuid = await this.generateUUID();
-        const entry = new Array(ENTRY_SIZE);
-        entry[IDX.TYPE] = ".folder";
-        entry[IDX.NAME] = parts[i - 1];
-        entry[IDX.LOCATION] = this.formatPath(parts.slice(0, i - 1).join("/"));
-        entry[IDX.DATA] = [];
-        entry[IDX.CREATED] = now;
-        entry[IDX.EDITED] = now;
-        entry[IDX.SIZE] = 0;
-        entry[IDX.UUID] = uuid;
-        this.entries[uuid] = entry;
-        this.index[subPath] = uuid;
-        await this.writeEntry(subPath, entry);
-      }
+    const entries = await prepareFolderEntries(
+      dir,
+      this.index,
+      this.generateUUID.bind(this),
+      this.formatPath.bind(this),
+    );
+    for (const { subPath, entry, uuid } of entries) {
+      this.entries[uuid] = entry;
+      this.index[subPath] = uuid;
+      await this.writeEntry(subPath, entry);
     }
   }
 

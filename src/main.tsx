@@ -52,8 +52,8 @@ import {
   loadFolders,
   loadFriendNicknames,
 } from "./lib/persistence";
-import { OriginFSClientClass } from "./originFSKit";
-import { LocalOriginFSClass } from "./localOriginFSKit";
+import { OriginFSClientClass } from "./filesystem/originFSKit";
+import { LocalOriginFSClass } from "./filesystem/localOriginFSKit";
 import {
   connectToServer,
   setupVisibilityHandler,
