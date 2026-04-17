@@ -659,6 +659,11 @@ function RightPanel() {
             <Icon name="Search" size={16} />
           </button>
         </div>
+        {!loading && results && results.length > 0 && (
+          <div className="right-panel-search-count">
+            {results.length} result{results.length === 1 ? "" : "s"}
+          </div>
+        )}
         <div className={`right-panel-content ${styles.rightPanelContentMessages}`}>
           {!canSearch ? (
             <div className="right-panel-unsupported">

@@ -1308,6 +1308,7 @@ p {
 
   .right-panel.open {
     display: flex;
+    flex-direction: column;
     background: var(--surface);
     bottom: 0;
     left: 0;
@@ -1315,6 +1316,8 @@ p {
     right: 0;
     top: 0;
     z-index: 102;
+    min-width: 100%;
+    height: 100vh;
   }
 
   .dm-profile-panel {
@@ -1377,8 +1380,6 @@ p {
   /* inline right panel inside flow (overridden above to be fixed) */
   .main-content-area > .members-list {
     border-left: none;
-
-    min-width: 0;
   }
 }
 
@@ -9073,7 +9074,6 @@ body,
   width: 24px;
 }
 
-.members-list .right-panel-search-input,
 .members-list .right-panel-header {
   display: none;
 }
@@ -9132,6 +9132,16 @@ body,
   100% {
     background: transparent;
   }
+}
+
+.right-panel-search-input {
+  display: none;
+}
+
+.right-panel-search-count {
+  padding: 4px 16px;
+  font-size: 14px;
+  color: var(--text-dim);
 }
 
 @media (min-width: 769px) {
@@ -9396,10 +9406,16 @@ body,
   .right-panel-content {
     max-width: 100%;
     padding: 0;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
   }
 
-  /* ============= MOBILE RIGHT PANEL COMMON IMPROVEMENTS ============= */
   .right-panel-header {
+    display: flex !important;
+    align-items: center;
+    justify-content: space-between;
     padding: 16px;
     font-size: 18px;
     gap: 10px;
@@ -9412,9 +9428,25 @@ body,
 
   .right-panel-close {
     display: flex;
+    align-items: center;
+    justify-content: center;
     margin-left: auto;
-    padding: 8px;
-    border-radius: 8px;
+    padding: 0;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background-color: var(--surface-light);
+    width: 30px;
+    height: 30px;
+    cursor: pointer;
+    transition: background 0.15s ease;
+  }
+
+  .right-panel-close:hover {
+    background: var(--surface-hover);
+  }
+
+  .right-panel-close svg {
+    color: var(--text);
   }
 
   .right-panel-close svg {
@@ -9423,18 +9455,35 @@ body,
   }
 
   .right-panel-search-input {
+    display: flex;
+    align-items: center;
     padding: 12px 16px;
     gap: 10px;
+    width: 100%;
   }
 
   .right-panel-search-input input {
+    flex: 1;
     font-size: 16px;
     padding: 12px 14px;
     border-radius: 10px;
+    min-height: 0;
+    background: var(--input-bg, var(--surface));
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+
+  .right-panel-search-input input::placeholder {
+    color: var(--text-dim);
   }
 
   .search-submit-btn {
-    padding: 12px 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    padding: 0;
     border-radius: 10px;
   }
 
@@ -9516,9 +9565,20 @@ body,
     height: 32px;
   }
 
-  /* Inbox card wrapper for proper structure */
   .inbox-ping-card-wrapper {
     display: contents;
+  }
+
+  .members-list.right-panel.open {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+  }
+
+  .members-list.right-panel.open .right-panel-content {
+    flex: 1;
+    overflow-y: auto;
+    min-width: 100%;
   }
 
   /* Inbox card click indicator */
