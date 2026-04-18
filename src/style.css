@@ -4492,6 +4492,48 @@ a {
   }
 }
 
+.embed-fallback {
+  background: var(--surface-light);
+  border-radius: 6px;
+  color: inherit;
+  display: block;
+  max-width: 480px;
+  padding: 12px 14px;
+  text-decoration: none;
+  border-left: 3px solid var(--border);
+  transition: background 0.15s;
+}
+.embed-fallback:hover {
+  background: var(--surface-lighter, var(--surface-light));
+}
+.embed-fallback__header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+.embed-fallback__favicon {
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+.embed-fallback__site {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+.embed-fallback__icon {
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+.embed-fallback__url {
+  font-size: 13px;
+  color: var(--text);
+  word-break: break-all;
+  line-height: 1.4;
+}
+
 /* GitHub Embed Styles */
 .gh-embed {
   background: var(--surface-light);

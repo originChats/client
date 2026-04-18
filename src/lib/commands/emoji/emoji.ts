@@ -10,16 +10,7 @@ export function handleEmojiGetAll(msg: EmojiGetAll, sUrl: string): void {
   for (const [id, e] of Object.entries(emojis)) {
     mapped[id] = { id, name: e.name, fileName: e.fileName };
   }
-
-  if (!customEmojisByServer.value[sUrl]) {
-    customEmojisByServer.value = {
-      ...customEmojisByServer.value,
-      [sUrl]: mapped,
-    };
-  } else {
-    customEmojisByServer.value[sUrl] = mapped;
-  }
-
+  customEmojisByServer.set(sUrl, mapped);
   emojiCache.invalidateCustomEmojiCache();
   invalidateCustomEmojiIndex();
 }
@@ -31,16 +22,14 @@ export function handleEmojiAdd(msg: EmojiAdd, sUrl: string): void {
       name: msg.name,
       fileName: msg.fileName || `${msg.id}`,
     };
-
-    if (!customEmojisByServer.value[sUrl]) {
-      customEmojisByServer.value = {
-        ...customEmojisByServer.value,
-        [sUrl]: { [newEmoji.id]: newEmoji },
-      };
+    if (!customEmojisByServer.has(sUrl)) {
+      customEmojisByServer.set(sUrl, { [newEmoji.id]: newEmoji });
     } else {
-      customEmojisByServer.value[sUrl][newEmoji.id] = newEmoji;
+      customEmojisByServer.update(sUrl, (current) => ({
+        ...current,
+        [newEmoji.id]: newEmoji,
+      }));
     }
-
     emojiCache.invalidateCustomEmojiCache();
     invalidateCustomEmojiIndex();
   }
@@ -48,23 +37,32 @@ export function handleEmojiAdd(msg: EmojiAdd, sUrl: string): void {
 
 export function handleEmojiDelete(msg: EmojiDelete, sUrl: string): void {
   if (msg.deleted) {
-    const serverEmojis = customEmojisByServer.value[sUrl];
-    if (serverEmojis) {
-      delete serverEmojis[String(msg.id)];
-      emojiCache.invalidateCustomEmojiCache();
-      invalidateCustomEmojiIndex();
-    }
+    customEmojisByServer.update(sUrl, (serverEmojis) => {
+      if (!serverEmojis) return serverEmojis;
+      const next = { ...serverEmojis };
+      delete next[String(msg.id)];
+      return next;
+    });
+    emojiCache.invalidateCustomEmojiCache();
+    invalidateCustomEmojiIndex();
   }
 }
 
 export function handleEmojiUpdate(msg: EmojiUpdate, sUrl: string): void {
   if (msg.updated && msg.id !== undefined) {
-    const existing = customEmojisByServer.value[sUrl]?.[String(msg.id)];
-    if (existing) {
-      if (msg.name) existing.name = msg.name;
-      if (msg.fileName) existing.fileName = msg.fileName;
-      emojiCache.invalidateCustomEmojiCache();
-      invalidateCustomEmojiIndex();
-    }
+    customEmojisByServer.update(sUrl, (serverEmojis) => {
+      const existing = serverEmojis?.[String(msg.id)];
+      if (!existing) return serverEmojis;
+      return {
+        ...serverEmojis,
+        [String(msg.id)]: {
+          ...existing,
+          ...(msg.name ? { name: msg.name } : {}),
+          ...(msg.fileName ? { fileName: msg.fileName } : {}),
+        },
+      };
+    });
+    emojiCache.invalidateCustomEmojiCache();
+    invalidateCustomEmojiIndex();
   }
 }

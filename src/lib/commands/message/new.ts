@@ -25,6 +25,7 @@ import {
   renderMessagesSignal,
   renderGuildSidebarSignal,
   missedMessagesSignal,
+  missedMessagesAppearSignal,
 } from "../../ui-signals";
 import { wsSend } from "../../ws-sender";
 import { playPingSound } from "../../audio";
@@ -58,18 +59,18 @@ function isPinged(
 
 function getMyRoles(sUrl: string, username: string): string[] {
   return (
-    usersByServer.value[sUrl]?.[username.toLowerCase()]?.roles?.map((r) => r.toLowerCase()) || []
+    usersByServer.read(sUrl)?.[username.toLowerCase()]?.roles?.map((r) => r.toLowerCase()) || []
   );
 }
 
 function updateLastMessage(sUrl: string, channel: string, timestamp: number) {
-  const chList = channelsByServer.value[sUrl];
+  const chList = channelsByServer.read(sUrl);
   if (!chList) return;
   const idx = chList.findIndex((c: Channel) => c.name === channel);
   if (idx === -1 || !timestamp) return;
   const updated = [...chList];
   updated[idx] = { ...updated[idx], last_message: timestamp };
-  channelsByServer.value = { ...channelsByServer.value, [sUrl]: updated };
+  channelsByServer.set(sUrl, updated);
   if (sUrl === DM_SERVER_URL) renderChannelsSignal.value++;
 }
 
@@ -83,16 +84,16 @@ function ensureDMServer(channel: string, user: string, timestamp: number) {
 }
 
 function persistReadTime(sUrl: string, channel: string, timestamp: number) {
-  readTimesByServer.value = {
-    ...readTimesByServer.value,
-    [sUrl]: { ...(readTimesByServer.value[sUrl] ?? {}), [channel]: timestamp },
-  };
+  readTimesByServer.update(sUrl, (times) => ({
+    ...(times || {}),
+    [channel]: timestamp,
+  }));
   const key = `${sUrl}:${channel}`;
   if (readTimeTimers[key]) clearTimeout(readTimeTimers[key]);
   readTimeTimers[key] = setTimeout(() => {
     delete readTimeTimers[key];
     dbReadTimes
-      .set(sUrl, readTimesByServer.value[sUrl] ?? {})
+      .set(sUrl, readTimesByServer.read(sUrl) ?? {})
       .catch((e) => console.warn("[message_new] Failed to persist read time:", e));
   }, 1000);
 }
@@ -118,7 +119,7 @@ function handlePingNotifications(
   );
 
   if (msg.thread_id && (pinged.user || rolePinged || pinged.reply)) {
-    const caps = serverCapabilitiesByServer.value[sUrl] ?? [];
+    const caps = serverCapabilitiesByServer.read(sUrl) ?? [];
     if (caps.includes("thread_join"))
       wsSend({ cmd: "thread_join", thread_id: msg.thread_id }, sUrl);
   }
@@ -146,7 +147,7 @@ function handlePingNotifications(
 export function handleMessageNew(msg: MessageNew, sUrl: string): void {
   const isThread = !!msg.thread_id;
   const key = getMessageKey(msg);
-  const myUsername = currentUserByServer.value[sUrl]?.username || "";
+  const myUsername = currentUserByServer.read(sUrl)?.username || "";
   const isOwn = msg.message.user === myUsername;
   const isCurrentServer = sUrl === serverUrl.value;
   const isCurrentChannel =
@@ -164,19 +165,13 @@ export function handleMessageNew(msg: MessageNew, sUrl: string): void {
     if (isAtBottom) {
       messages.append(sUrl, key, msg.message as Message);
       if (!reachedNewestByServer[sUrl]) reachedNewestByServer[sUrl] = new Set();
-      reachedNewestByServer[sUrl].add(key);
-    } else {
-      const current = missedMessagesCount.value;
-      const serverCounts = current[sUrl] || {};
+      const serverCounts = missedMessagesCount.read(sUrl);
       const wasZero = !serverCounts[key] || serverCounts[key] === 0;
       const newCount = (serverCounts[key] || 0) + 1;
-      missedMessagesCount.value = {
-        ...current,
-        [sUrl]: {
-          ...serverCounts,
-          [key]: newCount,
-        },
-      };
+      missedMessagesCount.update(sUrl, (counts) => ({
+        ...counts,
+        [key]: newCount,
+      }));
       missedMessagesSignal.value++;
       if (wasZero) missedMessagesAppearSignal.value++;
     }
@@ -217,7 +212,7 @@ export function handleMessageNew(msg: MessageNew, sUrl: string): void {
     handlePingNotifications(msg, sUrl, channelToClear, myUsername);
   }
 
-  const typing = typingUsersByServer.value[sUrl]?.[msg.channel];
+  const typing = typingUsersByServer.read(sUrl)?.[msg.channel];
   if (typing) (typing as Map<string, number>).delete(msg.message.user);
 
   renderMessagesSignal.value++;

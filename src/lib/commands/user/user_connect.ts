@@ -3,22 +3,19 @@ import { usersByServer } from "../../../state";
 import { renderMembersSignal } from "../../ui-signals";
 
 export function handleUserConnect(msg: UserConnect, sUrl: string): void {
-  if (!usersByServer.value[sUrl]) {
-    usersByServer.value = { ...usersByServer.value, [sUrl]: {} };
+  if (!usersByServer.read(sUrl)) {
+    usersByServer.set(sUrl, {});
   }
   const key = msg.user.username?.toLowerCase();
   if (key) {
-    usersByServer.value = {
-      ...usersByServer.value,
-      [sUrl]: {
-        ...usersByServer.value[sUrl],
-        [key]: {
-          ...usersByServer.value[sUrl][key],
-          ...msg.user,
-          status: { status: "online", text: "" },
-        },
+    usersByServer.update(sUrl, (serverUsers) => ({
+      ...serverUsers,
+      [key]: {
+        ...serverUsers[key],
+        ...msg.user,
+        status: { status: "online", text: "" },
       },
-    };
+    }));
     renderMembersSignal.value++;
   }
 }

@@ -75,7 +75,7 @@ function MessageContentInner({
   const messageTextRef = useRef<HTMLDivElement>(null);
 
   const { html, embedLinks, isMentioned, isEmojiOnly } = useMemo(() => {
-    const rolesMap = rolesByServer.value[serverUrl.value] || {};
+    const rolesMap = rolesByServer.read(serverUrl.value) || {};
     const roleColors: Record<string, string> = {};
     for (const [name, role] of Object.entries(rolesMap)) {
       if (role.color) {

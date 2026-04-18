@@ -46,7 +46,7 @@ function useProfile(username: string) {
     setIsFollowing(roturFollowing.value.has(username.toLowerCase()));
 
     if (isCrackedAccount(username)) {
-      const serverUsers = usersByServer.value[serverUrl.value] || {};
+      const serverUsers = usersByServer.read(serverUrl.value) || {};
       const serverUser = serverUsers[username.toLowerCase()];
       if (serverUser) {
         setProfile({
@@ -104,7 +104,7 @@ function useProfile(username: string) {
 
 export function getUserStatus(username: string): string {
   const sUrl = serverUrl.value;
-  const usersMap = usersByServer.value[sUrl] || {};
+  const usersMap = usersByServer.read(sUrl) || {};
   const lower = username.toLowerCase();
   for (const [key, u] of Object.entries(usersMap)) {
     if (key.toLowerCase() === lower) {
@@ -117,7 +117,7 @@ export function getUserStatus(username: string): string {
 export function getUserRoles(username: string): string[] {
   const sUrl = serverUrl.value;
   if (sUrl === DM_SERVER_URL) return [];
-  const usersMap = usersByServer.value[sUrl] || {};
+  const usersMap = usersByServer.read(sUrl) || {};
   const lower = username.toLowerCase();
   for (const [key, u] of Object.entries(usersMap)) {
     if (key.toLowerCase() === lower) {
@@ -159,7 +159,7 @@ function getMutualServers(username: string): Server[] {
 
   for (const server of servers.value) {
     const sUrl = server.url;
-    const usersMap = usersByServer.value[sUrl];
+    const usersMap = usersByServer.read(sUrl);
     if (!usersMap) continue;
     if (usersMap[lower]) {
       mutuals.push(server);
@@ -309,7 +309,7 @@ export function UserProfileCard({
   const joinedDate = profile?.created ? formatJoinDate(profile.created) : null;
 
   const sUrl = serverUrl.value;
-  const serverRoles = sUrl ? rolesByServer.value[sUrl] || {} : {};
+  const serverRoles = sUrl ? rolesByServer.read(sUrl) || {} : {};
 
   const getRoleColor = (roleName: string): string | null => {
     const role = serverRoles[roleName];
@@ -346,7 +346,7 @@ export function UserProfileCard({
             <UserAvatar
               username={profile.username}
               nickname={
-                usersByServer.value[serverUrl.value]?.[profile.username?.toLowerCase()]?.nickname
+                usersByServer.read(serverUrl.value)?.[profile.username?.toLowerCase()]?.nickname
               }
               pfp={profile.pfp}
               alt={profile.username}
@@ -467,7 +467,7 @@ export function UserProfileCard({
             <UserAvatar
               username={profile.username}
               nickname={
-                usersByServer.value[serverUrl.value]?.[profile.username?.toLowerCase()]?.nickname
+                usersByServer.read(serverUrl.value)?.[profile.username?.toLowerCase()]?.nickname
               }
               pfp={profile.pfp}
               alt={profile.username}

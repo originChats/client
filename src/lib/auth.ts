@@ -32,7 +32,7 @@ export async function enablePushForServer(sUrl: string): Promise<void> {
     return;
   }
 
-  const caps = serverCapabilitiesByServer.value[sUrl] ?? [];
+  const caps = serverCapabilitiesByServer.read(sUrl) ?? [];
   if (!caps.includes("push_get_vapid")) {
     console.warn(`[Push] ${sUrl} does not support push notifications.`);
     return;

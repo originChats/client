@@ -68,7 +68,7 @@ function MembersListInner() {
     memberList = memberList.filter((m) => thread.participants?.includes(m.username));
   }
 
-  const rolesMap = rolesByServer.value[serverUrl.value] || {};
+  const rolesMap = rolesByServer.read(serverUrl.value) || {};
   const hoistedRoles = Object.entries(rolesMap)
     .filter(([, role]) => role.hoisted === true)
     .map(([name, role], i) => ({

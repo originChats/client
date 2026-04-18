@@ -225,7 +225,9 @@ function App() {
       for (const server of loadedServers) {
         localReadTimes[server.url] = await dbReadTimes.get(server.url);
       }
-      readTimesByServer.value = localReadTimes;
+      for (const [sUrl, times] of Object.entries(localReadTimes)) {
+        readTimesByServer.set(sUrl, times);
+      }
 
       showLoginChoiceModal.value = true;
       setIsLoading(false);
@@ -303,7 +305,9 @@ function App() {
       });
     }
 
-    readTimesByServer.value = localReadTimes;
+    for (const [sUrl, times] of Object.entries(localReadTimes)) {
+      readTimesByServer.set(sUrl, times);
+    }
 
     // Load notification settings from OriginFS and merge with IDB values.
     // Cloud entries win for keys not already set locally (same strategy as read times).
@@ -380,7 +384,7 @@ function App() {
         const waitForChannel = () =>
           new Promise<void>((resolve) => {
             const check = () => {
-              const chs = channelsByServer.value[normalized] ?? [];
+              const chs = channelsByServer.read(normalized) ?? [];
               const text = chs.find((c) => c.type === "text" || c.type === "voice");
               if (text) {
                 selectChannel(text);

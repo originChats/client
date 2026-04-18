@@ -3,11 +3,11 @@ import type { Role } from "../types";
 
 function getUserPermissions(serverUrl: string): string[] {
   const myServerUser =
-    usersByServer.value[serverUrl]?.[currentUser.value?.username?.toLowerCase() || ""];
+    usersByServer.read(serverUrl)?.[currentUser.value?.username?.toLowerCase() || ""];
 
   if (!myServerUser?.roles) return [];
 
-  const roles = rolesByServer.value[serverUrl];
+  const roles = rolesByServer.read(serverUrl);
   if (!roles) return [];
 
   const allPermissions: string[] = [];
@@ -49,7 +49,7 @@ function hasAnyPermission(serverUrl: string, perms: string[]): boolean {
 
 export function isServerOwner(serverUrl: string): boolean {
   const myServerUser =
-    usersByServer.value[serverUrl]?.[currentUser.value?.username?.toLowerCase() || ""];
+    usersByServer.read(serverUrl)?.[currentUser.value?.username?.toLowerCase() || ""];
   return myServerUser?.roles?.includes("owner") ?? false;
 }
 

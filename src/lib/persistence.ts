@@ -40,7 +40,10 @@ export async function loadReadTimes(): Promise<Record<string, Record<string, num
 }
 
 export async function saveReadTimes(): Promise<void> {
-  await saveJsonFile("read_times.json", readTimesByServer.value);
+  await saveJsonFile(
+    "read_times.json",
+    Object.fromEntries(readTimesByServer.keys().map((k) => [k, readTimesByServer.read(k)]))
+  );
 }
 
 export async function loadNotifSettings(): Promise<{

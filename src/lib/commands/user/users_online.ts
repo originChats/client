@@ -3,7 +3,7 @@ import { usersByServer } from "../../../state";
 import { renderMembersSignal } from "../../ui-signals";
 
 export function handleUsersOnline(msg: UsersOnline, sUrl: string): void {
-  if (!usersByServer.value[sUrl]) usersByServer.value = { ...usersByServer.value, [sUrl]: {} };
+  if (!usersByServer.has(sUrl)) usersByServer.set(sUrl, {});
   const onlineUsernames = new Set<string>();
   for (const user of msg.users) {
     const key = user.username?.toLowerCase();
@@ -12,17 +12,28 @@ export function handleUsersOnline(msg: UsersOnline, sUrl: string): void {
     const statusObj = user.status;
     const newStatus =
       typeof statusObj === "object" ? statusObj : { status: "online" as const, text: "" };
-    if (usersByServer.value[sUrl]?.[key]) {
-      usersByServer.value[sUrl][key].status = newStatus;
+    const existing = usersByServer.read(sUrl)[key];
+    if (existing) {
+      usersByServer.update(sUrl, (serverUsers) => ({
+        ...serverUsers,
+        [key]: { ...serverUsers[key], status: newStatus },
+      }));
     }
   }
-  for (const key of Object.keys(usersByServer.value[sUrl] || {})) {
+  const serverUsers = usersByServer.read(sUrl);
+  let needsOfflineUpdate = false;
+  const updatedUsers = { ...serverUsers };
+  for (const key of Object.keys(serverUsers)) {
     if (!onlineUsernames.has(key)) {
-      usersByServer.value[sUrl][key].status = {
-        status: "offline",
-        text: "",
-      };
+      if (updatedUsers[key]?.status?.status !== "offline") {
+        updatedUsers[key] = { ...updatedUsers[key], status: { status: "offline", text: "" } };
+        needsOfflineUpdate = true;
+      }
     }
   }
+  if (needsOfflineUpdate) {
+    usersByServer.set(sUrl, updatedUsers);
+  }
+
   renderMembersSignal.value++;
 }

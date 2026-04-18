@@ -73,12 +73,6 @@ export function ChannelList() {
   const [hasUnreadsAbove, setHasUnreadsAbove] = useState(false);
   const [hasUnreadsBelow, setHasUnreadsBelow] = useState(false);
 
-  useSignalEffect(() => {
-    // Subscribe to unread state for reactive ping/unread badges
-    unreadState.pings.value;
-    unreadState.unreads.value;
-  });
-
   const isDM = serverUrl.value === DM_SERVER_URL;
   const hasToken = !!token.value;
   const rawChs = channels.value;
@@ -97,7 +91,7 @@ export function ChannelList() {
   const voice = voiceState.value;
   const isInVoice = !!voice.currentChannel;
   const sUrl = serverUrl.value;
-  const myUsername = currentUserByServer.value[sUrl]?.username;
+  const myUsername = currentUserByServer.read(sUrl)?.username;
   const { showThreadMenu, closeThreadMenu, threadMenu } = useThreadContextMenu();
 
   // When the voice call view is open for a dedicated voice channel (not a chat
@@ -426,9 +420,9 @@ export function ChannelList() {
           )}
           {!isDM &&
             (() => {
-              const caps = serverCapabilitiesByServer.value[sUrl] ?? [];
+              const caps = serverCapabilitiesByServer.read(sUrl) ?? [];
               if (!caps.includes("self_roles_list")) return null;
-              const allRoles = rolesByServer.value[sUrl] ?? {};
+              const allRoles = rolesByServer.read(sUrl) ?? {};
               const selfAssignableRoles = Object.entries(allRoles).filter(
                 ([, role]) => (role as any).self_assignable === true
               );
@@ -517,7 +511,7 @@ export function ChannelList() {
 
             const isForum = channel.type === "forum";
             const forumThreads = isForum
-              ? threadsByServer.value[serverUrl.value]?.[channel.name] || []
+              ? threadsByServer.read(serverUrl.value)?.[channel.name] || []
               : [];
 
             const visibleThreads = forumThreads.filter((t: any) => {
@@ -531,7 +525,7 @@ export function ChannelList() {
               const isThreadSelected = currentThread.value?.id !== undefined;
               const isForumSelected = !isThreadSelected && ch?.name === channel.name;
 
-              const newThreadCount = newThreadCounts.value[serverUrl.value]?.[channel.name] || 0;
+              const newThreadCount = newThreadCounts.read(serverUrl.value)?.[channel.name] || 0;
 
               const channelKey = `${serverUrl.value}:${channel.name}`;
               const isCollapsed = collapsedForumChannels.value.has(channelKey);
@@ -729,17 +723,15 @@ export function ChannelList() {
   );
 }
 
-// ── User panel ────────────────────────────────────────────────────────────────
-
 function UserPanel() {
   const sUrl = serverUrl.value;
-  const username = currentUserByServer.value[sUrl]?.username;
+  const username = currentUserByServer.read(sUrl)?.username;
   const displayName = useDisplayName(username || "");
   const [showStatusSelector, setShowStatusSelector] = useState(false);
 
   if (!username) return null;
 
-  const caps = serverCapabilitiesByServer.value[sUrl] ?? [];
+  const caps = serverCapabilitiesByServer.read(sUrl) ?? [];
   const supportsStatus = caps.includes("status_set");
 
   const statusColorMap: Record<string, string> = {

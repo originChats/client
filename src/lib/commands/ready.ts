@@ -14,21 +14,17 @@ import { wsSend } from "../ws-sender";
 import { enablePushForServer } from "../auth";
 
 export function handleReady(msg: Ready, sUrl: string): void {
-  currentUserByServer.value = {
-    ...currentUserByServer.value,
-    [sUrl]: msg.user,
-  };
-  if (!usersByServer.value[sUrl]) usersByServer.value = { ...usersByServer.value, [sUrl]: {} };
-  usersByServer.value = {
-    ...usersByServer.value,
-    [sUrl]: {
-      ...usersByServer.value[sUrl],
-      [msg.user.username?.toLowerCase()]: {
-        ...msg.user,
-        status: msg.user.status,
-      },
+  currentUserByServer.set(sUrl, msg.user);
+
+  if (!usersByServer.has(sUrl)) usersByServer.set(sUrl, {});
+  usersByServer.update(sUrl, (serverUsers) => ({
+    ...serverUsers,
+    [msg.user.username?.toLowerCase()]: {
+      ...msg.user,
+      status: msg.user.status,
     },
-  };
+  }));
+
   if (msg.user.status) {
     statusState.updateFromReady(sUrl, msg.user.username, msg.user.status);
     myStatus.value = {
@@ -39,7 +35,7 @@ export function handleReady(msg: Ready, sUrl: string): void {
       savedStatusText.value = msg.user.status.text;
     }
   } else if (savedStatusText.value !== undefined) {
-    const caps = serverCapabilitiesByServer.value[sUrl] || [];
+    const caps = serverCapabilitiesByServer.read(sUrl);
     if (caps.includes("status_set")) {
       wsSend(
         {
@@ -59,7 +55,7 @@ export function handleReady(msg: Ready, sUrl: string): void {
     }
   }
 
-  const caps = serverCapabilitiesByServer.value[sUrl] || [];
+  const caps = serverCapabilitiesByServer.read(sUrl);
   if (caps.includes("unreads_get")) {
     wsSend({ cmd: "unreads_get" }, sUrl);
   } else {

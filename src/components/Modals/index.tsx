@@ -143,10 +143,10 @@ export function SettingsModal() {
         setSaveMsg("Saved!");
         showInfo("Profile picture updated", { autoDismissMs: 2000 });
         if (user?.username) {
-          const currentUserInServer = currentUserByServer.value[serverUrl.value];
+          const currentUserInServer = currentUserByServer.read(serverUrl.value);
           if (currentUserInServer) {
             currentUserInServer.pfp = value;
-            currentUserByServer.value = { ...currentUserByServer.value };
+            currentUserByServer.update(serverUrl.value, (u) => (u ? { ...u } : u));
           }
           if (profile) {
             setProfile({ ...profile, pfp: value });

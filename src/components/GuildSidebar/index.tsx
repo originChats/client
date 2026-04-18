@@ -36,10 +36,6 @@ const ITEM_HEIGHT = 48;
 const DRAG_THRESHOLD = 30;
 
 export function GuildSidebar() {
-  // Subscribe to unread state changes for reactive updates
-  const _pings = unreadState.pings.value;
-  const _unreads = unreadState.unreads.value;
-
   const [drag, setDrag] = useState<{
     index: number;
     url: string;

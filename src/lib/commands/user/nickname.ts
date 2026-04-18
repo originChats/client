@@ -7,17 +7,17 @@ type NicknameMsg = NicknameUpdate | NicknameRemove;
 
 function handleNicknameChange(msg: NicknameMsg, sUrl: string, remove: boolean): void {
   const uKey = normalizeUsername(msg.username);
-  if (usersByServer.value[sUrl]?.[uKey]) {
-    const user = usersByServer.value[sUrl][uKey];
+  const serverUsers = usersByServer.read(sUrl);
+  if (serverUsers?.[uKey]) {
+    const user = serverUsers[uKey];
     if (remove) {
-      const updated = { ...user };
-      delete updated.nickname;
-      usersByServer.value[sUrl][uKey] = updated;
+      const { nickname: _, ...rest } = user;
+      usersByServer.update(sUrl, (current) => ({ ...current, [uKey]: rest as typeof user }));
     } else {
-      usersByServer.value[sUrl][uKey] = {
-        ...user,
-        nickname: (msg as NicknameUpdate).nickname,
-      };
+      usersByServer.update(sUrl, (current) => ({
+        ...current,
+        [uKey]: { ...user, nickname: (msg as NicknameUpdate).nickname },
+      }));
     }
     renderMembersSignal.value++;
     renderMessagesSignal.value++;
@@ -31,12 +31,11 @@ export const handleNicknameRemove = (msg: NicknameRemove, sUrl: string) =>
 
 export function handleUserUpdate(msg: UserUpdate, sUrl: string): void {
   const uKey = normalizeUsername(msg.user);
-  const serverUsers = usersByServer.value[sUrl];
+  const serverUsers = usersByServer.read(sUrl);
   if (!serverUsers?.[uKey]) return;
 
   const user = serverUsers[uKey];
   const updated = { ...user };
-
   if (msg.nickname !== undefined) {
     if (msg.nickname === null) {
       delete updated.nickname;
@@ -44,28 +43,24 @@ export function handleUserUpdate(msg: UserUpdate, sUrl: string): void {
       updated.nickname = msg.nickname;
     }
   }
-
   if (msg.username !== undefined) {
     updated.username = msg.username;
   }
 
-  usersByServer.value[sUrl][uKey] = updated;
-
+  // Handle username rename
   if (msg.username && msg.username !== msg.user) {
     const newKey = normalizeUsername(msg.username);
     if (newKey !== uKey) {
-      usersByServer.value = {
-        ...usersByServer.value,
-        [sUrl]: {
-          ...usersByServer.value[sUrl],
-          [newKey]: updated,
-        },
-      };
-      const currentServerUsers = usersByServer.value[sUrl];
-      if (currentServerUsers) {
-        delete currentServerUsers[uKey];
-      }
+      usersByServer.update(sUrl, (current) => {
+        const next = { ...current, [newKey]: updated };
+        delete next[uKey];
+        return next;
+      });
+    } else {
+      usersByServer.update(sUrl, (current) => ({ ...current, [uKey]: updated }));
     }
+  } else {
+    usersByServer.update(sUrl, (current) => ({ ...current, [uKey]: updated }));
   }
 
   renderMembersSignal.value++;

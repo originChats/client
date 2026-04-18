@@ -23,11 +23,10 @@ import { wsSend } from "../ws-sender";
 import { DEFAULT_PERMISSIONS } from "../../state";
 
 export function handleHandshake(msg: Handshake, sUrl: string): void {
-  if (!channelsByServer.value[sUrl])
-    channelsByServer.value = { ...channelsByServer.value, [sUrl]: [] };
+  if (!channelsByServer.has(sUrl)) channelsByServer.set(sUrl, []);
   if (!messagesByServer.value[sUrl])
     messagesByServer.value = { ...messagesByServer.value, [sUrl]: {} };
-  if (!usersByServer.value[sUrl]) usersByServer.value = { ...usersByServer.value, [sUrl]: {} };
+  if (!usersByServer.read(sUrl)) usersByServer.set(sUrl, {});
   serverValidatorKeys[sUrl] = msg.val.validator_key;
 
   // these are the capabilities all servers can be expected to support
@@ -45,10 +44,10 @@ export function handleHandshake(msg: Handshake, sUrl: string): void {
     "users_list",
   ];
 
-  serverCapabilitiesByServer.value = {
-    ...serverCapabilitiesByServer.value,
-    [sUrl]: Array.isArray(msg.val.capabilities) ? msg.val.capabilities : DEFAULT_CAPABILITIES,
-  };
+  serverCapabilitiesByServer.set(
+    sUrl,
+    Array.isArray(msg.val.capabilities) ? msg.val.capabilities : DEFAULT_CAPABILITIES
+  );
 
   if (msg.val.roles && Array.isArray(msg.val.roles)) {
     const permissions = msg.val.roles.flatMap((r) => r.permissions || []);
@@ -56,24 +55,18 @@ export function handleHandshake(msg: Handshake, sUrl: string): void {
       const defaultPerm = DEFAULT_PERMISSIONS.find((p) => p.id === id);
       return defaultPerm || { id, name: id, description: "", category: "Other" };
     });
-    serverPermissionsByServer.value = {
-      ...serverPermissionsByServer.value,
-      [sUrl]: uniquePerms,
-    };
+    serverPermissionsByServer.set(sUrl, uniquePerms);
   }
 
   if (msg.val.attachments) {
     const att = msg.val.attachments;
-    attachmentConfigByServer.value = {
-      ...attachmentConfigByServer.value,
-      [sUrl]: {
-        enabled: att.enabled ?? true,
-        max_size: att.max_size,
-        allowed_types: att.allowed_types,
-        max_attachments_per_user: att.max_attachments_per_user ?? 10,
-        permanent_tiers: att.permanent_tiers ?? [],
-      },
-    };
+    attachmentConfigByServer.set(sUrl, {
+      enabled: att.enabled ?? true,
+      max_size: att.max_size,
+      allowed_types: att.allowed_types,
+      max_attachments_per_user: att.max_attachments_per_user ?? 10,
+      permanent_tiers: att.permanent_tiers ?? [],
+    });
   }
 
   if (msg.val.server) {
@@ -102,10 +95,7 @@ export function handleHandshake(msg: Handshake, sUrl: string): void {
 
   const rawAuthMode = msg.val.auth_mode;
   const authMode = rawAuthMode ?? "rotur";
-  serverAuthModeByServer.value = {
-    ...serverAuthModeByServer.value,
-    [sUrl]: authMode,
-  };
+  serverAuthModeByServer.set(sUrl, authMode);
 
   renderGuildSidebarSignal.value++;
 

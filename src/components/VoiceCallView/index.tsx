@@ -20,7 +20,7 @@ export function VoiceCallView({ embedded = false }: VoiceCallViewProps) {
   const state = voiceState.value;
   const [fullscreenVideo, setFullscreenVideo] = useState<FullscreenVideo | null>(null);
 
-  const myUsername = currentUserByServer.value[serverUrl.value]?.username || "You";
+  const myUsername = currentUserByServer.read(serverUrl.value)?.username || "You";
 
   const {
     currentChannel: channel,

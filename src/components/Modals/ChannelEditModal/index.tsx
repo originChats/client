@@ -66,8 +66,8 @@ export function ChannelEditModal() {
 
   const sUrl = serverUrl.value;
   const channelName = showChannelEditModal.value;
-  const myUsername = currentUserByServer.value[sUrl]?.username?.toLowerCase();
-  const myServerUser = usersByServer.value[sUrl]?.[myUsername || ""];
+  const myUsername = currentUserByServer.read(sUrl)?.username?.toLowerCase();
+  const myServerUser = usersByServer.read(sUrl)?.[myUsername || ""];
   const isOwner = myServerUser?.roles?.includes("owner");
 
   const channel = channels.value.find((c) => c.name === channelName);
@@ -101,7 +101,7 @@ export function ChannelEditModal() {
 
   useEffect(() => {
     if (!sUrl || !channelName) return;
-    const serverCapabilities = serverCapabilitiesByServer.value[sUrl] || [];
+    const serverCapabilities = serverCapabilitiesByServer.read(sUrl) || [];
     if (!serverCapabilities.includes("webhook_list")) return;
     webhooksLoading.value = { ...webhooksLoading.value, [sUrl]: true };
     wsSend({ cmd: "webhook_list", channel: channelName }, sUrl);
@@ -208,7 +208,7 @@ export function ChannelEditModal() {
     showInfo("Webhook URL copied to clipboard");
   };
 
-  const availableRoles = Object.entries(rolesByServer.value[sUrl] || {}).map(
+  const availableRoles = Object.entries(rolesByServer.read(sUrl) || {}).map(
     ([name, role]: [string, Role]) => ({
       ...role,
       name,

@@ -65,7 +65,7 @@ import {
   translatedMessages,
   translatingMessageId,
   renderMessagesSignal,
-  missedMessagesSignal,
+  missedMessagesAppearSignal,
 } from "../../lib/ui-signals";
 import { voiceState, voiceManager } from "../../voice";
 import { dmVoiceStates } from "../../lib/commands/voice/voice";
@@ -82,7 +82,8 @@ import { loadShortcodes } from "../../lib/shortcodes";
 function transformCustomEmojisToUrls(text: string): string {
   return text.replace(/:[\w][\w-]*:/g, (match) => {
     const name = match.slice(1, -1);
-    for (const [sUrl, emojis] of Object.entries(customEmojisByServer.value)) {
+    for (const sUrl of customEmojisByServer.keys()) {
+      const emojis = customEmojisByServer.read(sUrl);
       for (const emoji of Object.values(emojis)) {
         if (emoji.name === name) {
           return `originChats:<emoji>//${sUrl}/${emoji.id}`;
@@ -125,7 +126,7 @@ import type { SlashCommandArgs } from "../SlashCommandInput";
 import { useScrollLock } from "../UserProfile/useScrollLock";
 import { PollCreateModal } from "../PollCreateModal";
 import type { Message, SlashCommand } from "../../types";
-import { avatarUrl, isCrackedAccount } from "../../utils";
+import { avatarUrl } from "../../utils";
 import { UserAvatar } from "../UserAvatar";
 import { useDisplayName, getDisplayName } from "../../lib/useDisplayName";
 import { SwipeableMessage } from "./SwipeableMessage";
@@ -282,7 +283,7 @@ async function sendMessage() {
   if (!currentChannel.value) return;
 
   const thread = currentThread.value;
-  const myUsername = currentUserByServer.value[serverUrl.value]?.username;
+  const myUsername = currentUserByServer.read(serverUrl.value)?.username;
   const isThread = currentChannel.value?.type === "thread";
   if (isThread && thread && hasCapability("thread_join")) {
     const isParticipant = thread.participants?.includes(myUsername || "");
@@ -370,8 +371,9 @@ function groupMessages(messages: Message[]): MessageGroup[] {
     const isPending = (msg as any)._pending;
     const shouldStartNewGroup =
       !currentGroup ||
+      isPending ||
       msg.user !== currentGroup.head.user ||
-      (msg.timestamp - currentGroup.head.timestamp >= 300 && !isPending) ||
+      msg.timestamp - currentGroup.head.timestamp >= 300 ||
       !!msg.reply_to;
 
     if (shouldStartNewGroup) {
@@ -1124,8 +1126,11 @@ export function MessageArea() {
     // Clear reached states, missed messages, and request fresh messages
     reachedOldestByServer[sUrl]?.delete(messageKey);
     reachedNewestByServer[sUrl]?.delete(messageKey);
-    if (missedMessagesCount[sUrl]) {
-      missedMessagesCount[sUrl][messageKey] = 0;
+    if (missedMessagesCount.read(sUrl)) {
+      missedMessagesCount.update(sUrl, (counts) => ({
+        ...counts,
+        [messageKey]: 0,
+      }));
     }
 
     wsSend(
@@ -1277,18 +1282,17 @@ export function MessageArea() {
     wsSend({ cmd: "typing", channel: currentChannel.value.name });
   }, []);
 
-  // Update typing indicators when signal changes
-  useSignalEffect(() => {
-    // Subscribe to the typing signal to get reactivity
-    typingUsersByServer.value;
-    const sUrl = serverUrl.value;
-    const chName = currentChannel.value?.name;
-    if (!sUrl || !chName) {
-      setTypingUsers([]);
-      return;
-    }
-    const serverTyping = typingUsersByServer.value[sUrl];
+  const typingSubRef = useRef<{
+    unsub: (() => void) | null;
+    sUrl: string;
+    chName: string;
+    prevUsernames: string;
+  }>({ unsub: null, sUrl: "", chName: "", prevUsernames: "" });
+
+  const computeTypingUsers = useCallback((sUrl: string, chName: string) => {
+    const serverTyping = typingUsersByServer.read(sUrl);
     if (!serverTyping || !serverTyping[chName]) {
+      typingSubRef.current.prevUsernames = "";
       setTypingUsers([]);
       return;
     }
@@ -1308,7 +1312,7 @@ export function MessageArea() {
       } else {
         newMap.set(user, expiry);
         if (user !== myName) {
-          const serverUser = usersByServer.value[sUrl]?.[user.toLowerCase()];
+          const serverUser = usersByServer.read(sUrl)?.[user.toLowerCase()];
           typingList.push({
             username: user,
             displayName: getDisplayName(user),
@@ -1318,26 +1322,66 @@ export function MessageArea() {
       }
     }
     if (hasExpired) {
-      typingUsersByServer.value = {
-        ...typingUsersByServer.value,
-        [sUrl]: {
-          ...typingUsersByServer.value[sUrl],
-          [chName]: newMap,
-        },
-      };
+      typingUsersByServer.update(sUrl, (current) => ({
+        ...current,
+        [chName]: newMap,
+      }));
     }
-    setTypingUsers(typingList);
-  });
+    const usernames = typingList.map((t) => t.username).join(",");
+    if (usernames !== typingSubRef.current.prevUsernames) {
+      typingSubRef.current.prevUsernames = usernames;
+      setTypingUsers(typingList);
+    }
+  }, []);
 
-  // Periodic cleanup of expired typing indicators (every 2 seconds)
+  useEffect(() => {
+    const sUrl = serverUrl.value;
+    const chName = currentChannel.value?.name;
+    if (typingSubRef.current.unsub) typingSubRef.current.unsub();
+    typingSubRef.current.sUrl = sUrl || "";
+    typingSubRef.current.chName = chName || "";
+    typingSubRef.current.prevUsernames = "";
+
+    if (sUrl && chName) computeTypingUsers(sUrl, chName);
+    else setTypingUsers([]);
+
+    const typingSignal = typingUsersByServer.get(sUrl || "");
+    const unsub = typingSignal.subscribe(() => {
+      const cur = typingSubRef.current;
+      if (!cur.sUrl || !cur.chName) return;
+      const serverTyping = typingUsersByServer.read(cur.sUrl);
+      if (!serverTyping) {
+        if (cur.prevUsernames !== "") {
+          cur.prevUsernames = "";
+          setTypingUsers([]);
+        }
+        return;
+      }
+      const currentMap = serverTyping[cur.chName];
+      if (!currentMap || (currentMap as Map<string, number>).size === 0) {
+        if (cur.prevUsernames !== "") {
+          cur.prevUsernames = "";
+          setTypingUsers([]);
+        }
+        return;
+      }
+      computeTypingUsers(cur.sUrl, cur.chName);
+    });
+    typingSubRef.current.unsub = unsub;
+
+    return () => {
+      unsub();
+      typingSubRef.current.unsub = null;
+    };
+  }, [serverUrl.value, currentChannel.value?.name, computeTypingUsers]);
+
   useEffect(() => {
     const interval = setInterval(() => {
-      const sUrl = serverUrl.value;
-      const chName = currentChannel.value?.name;
-      if (!sUrl || !chName) return;
-      const serverTyping = typingUsersByServer.value[sUrl];
-      if (!serverTyping || !serverTyping[chName]) return;
-      const map = serverTyping[chName] as Map<string, number>;
+      const cur = typingSubRef.current;
+      if (!cur.sUrl || !cur.chName) return;
+      const serverTyping = typingUsersByServer.read(cur.sUrl);
+      if (!serverTyping || !serverTyping[cur.chName]) return;
+      const map = serverTyping[cur.chName] as Map<string, number>;
       const now = Date.now();
       let hasExpired = false;
       for (const [, expiry] of map.entries()) {
@@ -1346,24 +1390,10 @@ export function MessageArea() {
           break;
         }
       }
-      if (hasExpired) {
-        const newMap = new Map<string, number>();
-        for (const [user, expiry] of map.entries()) {
-          if (expiry >= now) {
-            newMap.set(user, expiry);
-          }
-        }
-        typingUsersByServer.value = {
-          ...typingUsersByServer.value,
-          [sUrl]: {
-            ...typingUsersByServer.value[sUrl],
-            [chName]: newMap,
-          },
-        };
-      }
+      if (hasExpired) computeTypingUsers(cur.sUrl, cur.chName);
     }, 2000);
     return () => clearInterval(interval);
-  }, []);
+  }, [computeTypingUsers]);
 
   // Handle typing indicator exit animation
   useEffect(() => {
@@ -1396,9 +1426,7 @@ export function MessageArea() {
     loadShortcodes();
   }, []);
 
-  // Reset scroll lock and snap to bottom on channel switch
   useSignalEffect(() => {
-    renderMessagesSignal.value;
     const channelName = currentChannel.value?.name;
     const isChannelSwitch = lastChannelRef.current !== channelName;
     lastChannelRef.current = channelName || null;
@@ -1406,7 +1434,6 @@ export function MessageArea() {
       setLoadingOlder(false);
       resetForChannel();
 
-      // Start loading images for the new channel
       const ch = currentChannel.value;
       if (ch && !SPECIAL_CHANNELS.has(ch.name)) {
         const msgs =
@@ -1438,26 +1465,24 @@ export function MessageArea() {
     }
   });
 
+  const emojiParseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   useSignalEffect(() => {
-    // Subscribe to both signals so twemoji re-runs on new messages AND on
-    // channel switches (even when the message signal value hasn't changed,
-    // e.g. switching to a cached channel).
     renderMessagesSignal.value;
     currentChannel.value;
     blockedUsers.value;
     blockedMessageDisplay.value;
     pendingMessages.versionSignal.value;
-    missedMessagesSignal.value;
+    missedMessagesAppearSignal.value;
 
-    // Schedule after the current paint so the new channel's DOM is in place.
-    requestAnimationFrame(() => {
+    if (emojiParseTimerRef.current) clearTimeout(emojiParseTimerRef.current);
+    emojiParseTimerRef.current = setTimeout(() => {
+      emojiParseTimerRef.current = null;
       const messagesContainer = document.getElementById("messages");
       if (!messagesContainer) return;
-
       parseEmojisInContainer(messagesContainer);
-
       highlightCodeInContainer(messagesContainer);
-    });
+    }, 32);
   });
 
   const currentMessages = currentChannel.value
@@ -1472,12 +1497,10 @@ export function MessageArea() {
       ? currentThread.value.id
       : currentChannel.value?.name || "";
 
-  // Check if we have newer messages to load
   const sUrl = serverUrl.value;
   const hasReachedNewest = reachedNewestByServer[sUrl]?.has(messageKey);
-  const missedCount = missedMessagesCount[sUrl]?.[messageKey] || 0;
+  const missedCount = missedMessagesCount.read(sUrl)?.[messageKey] || 0;
 
-  // Merge pending messages with current messages
   const pendingForChannel = pendingMessages.get(serverUrl.value, messageKey);
   const messagesWithPending = [...currentMessages];
   for (const pm of pendingForChannel) {
@@ -1485,21 +1508,17 @@ export function MessageArea() {
       messagesWithPending.push(pm);
     }
   }
-  // Sort by timestamp
   messagesWithPending.sort((a, b) => a.timestamp - b.timestamp);
 
   const messageGroups = groupMessages(messagesWithPending);
 
   const handleKeyDown = (e: h.JSX.TargetedKeyboardEvent<HTMLTextAreaElement>) => {
-    // Intercept Tab/Enter on a slash autocomplete item before the hook's
-    // built-in selectItem runs (which would insert text instead of opening
-    // the slash command UI).
     if (autocomplete.state.value.active && (e.key === "Tab" || e.key === "Enter") && !e.shiftKey) {
       const item = autocomplete.state.value.items[autocomplete.state.value.selectedIndex];
       if (item?.type === "slash") {
         e.preventDefault();
         const sUrl = serverUrl.value;
-        const cmd = (slashCommandsByServer.value[sUrl] || []).find((c) => c.name === item.label);
+        const cmd = (slashCommandsByServer.read(sUrl) || []).find((c) => c.name === item.label);
         if (cmd) {
           const input = document.getElementById("message-input") as HTMLTextAreaElement | null;
           if (input) {
@@ -1514,8 +1533,6 @@ export function MessageArea() {
       }
     }
 
-    // Let autocomplete consume other key events (arrows, escape, enter/tab on
-    // non-slash items) first.
     if (autocomplete.handleKeyDown(e as unknown as KeyboardEvent)) return;
 
     if (e.key === "Enter" && !e.shiftKey) {
@@ -1558,7 +1575,7 @@ export function MessageArea() {
 
   const handleFileUpload = async (files: File[]) => {
     const sUrl = serverUrl.value;
-    const attachmentConfig = attachmentConfigByServer.value[sUrl];
+    const attachmentConfig = attachmentConfigByServer.read(sUrl);
     const useNativeUpload = hasCapability("attachment_upload");
 
     if (useNativeUpload) {
@@ -1873,7 +1890,7 @@ export function MessageArea() {
 
       const navigate = () => {
         if (threadId) {
-          const allThreads = threadsByServer.value[targetServerUrl || serverUrl.value] || {};
+          const allThreads = threadsByServer.read(targetServerUrl || serverUrl.value) || {};
           for (const channelThreads of Object.values(allThreads)) {
             const thread = channelThreads.find((t) => t.id === threadId);
             if (thread) {
@@ -2076,7 +2093,7 @@ export function MessageArea() {
     console.log("Attachment name:", att.name);
     console.log("Attachment URL:", att.url);
     const sUrl = serverUrl.value;
-    const currentRoles = rolesByServer.value[sUrl] || {};
+    const currentRoles = rolesByServer.read(sUrl) || {};
     const myUsername = currentUser.value?.username?.toLowerCase();
     const userRoles = users.value[myUsername || ""]?.roles || [];
     const isAdminOrOwner = userRoles.some((roleName) => {
@@ -2149,11 +2166,10 @@ export function MessageArea() {
   };
 
   const handleReaction = (msg: Message, emoji: string) => {
-    // Read live state so the toggle is always accurate, even after rapid clicks
     const channelMsgs = messages.value[messageKey] || [];
     const liveMsg = channelMsgs.find((m) => m.id === msg.id);
     const liveUsers: string[] = (liveMsg?.reactions?.[emoji] ?? []) as string[];
-    const hasReacted = liveUsers.includes(currentUser.value?.username);
+    const hasReacted = liveUsers.includes(currentUser.value?.username ?? "");
     const isThread = currentChannel.value?.type === "thread" && currentThread.value;
     wsSend(
       {
@@ -2211,7 +2227,7 @@ export function MessageArea() {
   };
 
   const getUserColor = (username: string): string | undefined => {
-    const u = usersByServer.value[serverUrl.value]?.[username?.toLowerCase()];
+    const u = usersByServer.read(serverUrl.value)?.[username?.toLowerCase()];
     return u?.color || undefined;
   };
 
@@ -2480,7 +2496,7 @@ export function MessageArea() {
       <div className="message-reactions">
         {Object.entries(reactions).map(([emoji, users]) => {
           if (!users || users.length === 0) return null;
-          const hasReacted = users.includes(currentUser.value?.username);
+          const hasReacted = users.includes(currentUser.value?.username ?? "");
           const previewUsers = users.slice(0, 2);
           const overflow = users.length - previewUsers.length;
           return (
@@ -2544,7 +2560,7 @@ export function MessageArea() {
   const voice = voiceState.value;
   const inCallHere = isChatChannel && voice.currentChannel === ch?.name;
   const rawDmCallUsers = isDM && ch ? dmVoiceStates.get(ch.name) : undefined;
-  const myUsername = currentUserByServer.value[serverUrl.value]?.username;
+  const myUsername = currentUserByServer.read(serverUrl.value)?.username;
   const dmCallUsers = rawDmCallUsers?.filter((u) => u.username !== myUsername);
   const hasIncomingDmCall = isDM && dmCallUsers && dmCallUsers.length > 0 && !inCallHere;
 
@@ -2553,7 +2569,7 @@ export function MessageArea() {
     if (!ch) return true;
     const sendPerms = (ch as any).permissions?.send;
     if (!sendPerms) return true;
-    const myUsername = currentUserByServer.value[serverUrl.value]?.username;
+    const myUsername = currentUserByServer.read(serverUrl.value)?.username;
     const myRoles = users.value[myUsername?.toLowerCase() || ""]?.roles || [];
     if (myUsername === "admin") return true;
     return sendPerms.some(
@@ -2678,9 +2694,11 @@ export function MessageArea() {
               <button
                 className={styles.missedMessagesBtn}
                 onClick={() => {
-                  // Clear missed count and jump to bottom
-                  if (missedMessagesCount[sUrl]) {
-                    missedMessagesCount[sUrl][messageKey] = 0;
+                  if (missedMessagesCount.read(sUrl)) {
+                    missedMessagesCount.update(sUrl, (counts) => ({
+                      ...counts,
+                      [messageKey]: 0,
+                    }));
                   }
                   jumpToBottom();
                 }}
@@ -2817,21 +2835,17 @@ export function MessageArea() {
             onDragOver={handleDragOver as any}
             onDrop={handleDrop as any}
           >
-            {/* Autocomplete is only shown in normal (non-slash) mode */}
             {!activeSlashCmd && (
               <InputAutocomplete
                 state={autocomplete.state.value}
                 onSelect={(index) => {
-                  // If the user selects a slash command from the autocomplete,
-                  // activate the slash command input instead of inserting text.
                   const item = autocomplete.state.value.items[index];
                   if (item?.type === "slash") {
                     const sUrl = serverUrl.value;
-                    const cmd = (slashCommandsByServer.value[sUrl] || []).find(
+                    const cmd = (slashCommandsByServer.read(sUrl) || []).find(
                       (c) => c.name === item.label
                     );
                     if (cmd) {
-                      // Clear the /name text the user typed
                       const input = document.getElementById(
                         "message-input"
                       ) as HTMLTextAreaElement | null;
@@ -2999,8 +3013,9 @@ export function MessageArea() {
                   accept={
                     hasCapability("attachment_upload")
                       ? (() => {
-                          const types =
-                            attachmentConfigByServer.value[serverUrl.value]?.allowed_types;
+                          const types = attachmentConfigByServer.read(
+                            serverUrl.value
+                          )?.allowed_types;
                           if (types && types.includes("*")) return "*/*";
                           return mimeTypeToAcceptString(types || ["image/*", "video/*"]);
                         })()
@@ -3420,7 +3435,7 @@ function ReactionUserItem({ username }: { username: string }) {
 
 function IncomingDMCall({ users }: { users: { username: string; muted?: boolean }[] }) {
   const ch = currentChannel.value;
-  const myUsername = currentUserByServer.value[serverUrl.value]?.username;
+  const myUsername = currentUserByServer.read(serverUrl.value)?.username;
 
   const handleJoin = () => {
     if (ch) {

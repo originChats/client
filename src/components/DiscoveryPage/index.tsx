@@ -56,7 +56,7 @@ export function DiscoveryPage() {
   const [featuredIndex, setFeaturedIndex] = useState(0);
 
   const getServerStats = (url: string) => {
-    const usersMap = usersByServer.value[url] || {};
+    const usersMap = usersByServer.read(url) || {};
     const allUsers = Object.values(usersMap);
     const totalUsers = allUsers.length;
     const onlineUsers = allUsers.filter((u) => u.status && u.status.status !== "offline").length;

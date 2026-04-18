@@ -28,6 +28,7 @@ import {
   autoIdleOnUnfocus,
   savedStatusText,
   isSpecialChannel,
+  unreadState,
 } from "../state";
 import {
   renderGuildSidebarSignal,
@@ -163,7 +164,7 @@ export function jumpToMessageAround(
   messageId: string,
   threadId?: string
 ): boolean {
-  const caps = serverCapabilitiesByServer.value[sUrl] || [];
+  const caps = serverCapabilitiesByServer.read(sUrl) || [];
   const hasAround = caps.includes("messages_around");
   if (!hasAround) return false;
 
@@ -223,57 +224,35 @@ function closeWebSocketInternal(url: string): void {
 }
 
 function clearServerState(sUrl: string): void {
-  channelsByServer.value = Object.fromEntries(
-    Object.entries(channelsByServer.value).filter(([key]) => key !== sUrl)
-  );
+  channelsByServer.delete(sUrl);
 
   messagesByServer.value = Object.fromEntries(
     Object.entries(messagesByServer.value).filter(([key]) => key !== sUrl)
   );
 
-  threadsByServer.value = Object.fromEntries(
-    Object.entries(threadsByServer.value).filter(([key]) => key !== sUrl)
-  );
+  threadsByServer.delete(sUrl);
 
-  threadMessagesByServer.value = Object.fromEntries(
-    Object.entries(threadMessagesByServer.value).filter(([key]) => key !== sUrl)
-  );
+  threadMessagesByServer.delete(sUrl);
 
-  usersByServer.value = Object.fromEntries(
-    Object.entries(usersByServer.value).filter(([key]) => key !== sUrl)
-  );
+  usersByServer.delete(sUrl);
 
-  currentUserByServer.value = Object.fromEntries(
-    Object.entries(currentUserByServer.value).filter(([key]) => key !== sUrl)
-  );
+  currentUserByServer.delete(sUrl);
 
-  rolesByServer.value = Object.fromEntries(
-    Object.entries(rolesByServer.value).filter(([key]) => key !== sUrl)
-  );
+  rolesByServer.delete(sUrl);
 
-  slashCommandsByServer.value = Object.fromEntries(
-    Object.entries(slashCommandsByServer.value).filter(([key]) => key !== sUrl)
-  );
+  slashCommandsByServer.delete(sUrl);
 
-  typingUsersByServer.value = Object.fromEntries(
-    Object.entries(typingUsersByServer.value).filter(([key]) => key !== sUrl)
-  );
+  typingUsersByServer.delete(sUrl);
 
-  serverCapabilitiesByServer.value = Object.fromEntries(
-    Object.entries(serverCapabilitiesByServer.value).filter(([key]) => key !== sUrl)
-  );
+  serverCapabilitiesByServer.delete(sUrl);
 
-  serverAuthModeByServer.value = Object.fromEntries(
-    Object.entries(serverAuthModeByServer.value).filter(([key]) => key !== sUrl)
-  );
+  serverAuthModeByServer.delete(sUrl);
 
   delete loadedChannelsByServer[sUrl];
   delete reachedOldestByServer[sUrl];
   delete pendingReplyFetchesByServer[sUrl];
 
-  readTimesByServer.value = Object.fromEntries(
-    Object.entries(readTimesByServer.value).filter(([key]) => key !== sUrl)
-  );
+  readTimesByServer.delete(sUrl);
 
   if (pendingCrackedCredentials.value?.serverUrl === sUrl) {
     pendingCrackedCredentials.value = null;
@@ -816,7 +795,7 @@ export function setupVisibilityHandler(): void {
             const currentText = myStatus.value.text;
             myStatus.value = { status: "idle", text: currentText };
             for (const sUrl of Object.keys(wsConnections)) {
-              const caps = serverCapabilitiesByServer.value[sUrl] || [];
+              const caps = serverCapabilitiesByServer.read(sUrl) || [];
               if (caps.includes("status_set")) {
                 wsSend(
                   {
@@ -840,7 +819,7 @@ export function setupVisibilityHandler(): void {
           autoIdleActive = false;
           myStatus.value = { status: "online", text: savedStatusText.value };
           for (const sUrl of Object.keys(wsConnections)) {
-            const caps = serverCapabilitiesByServer.value[sUrl] || [];
+            const caps = serverCapabilitiesByServer.read(sUrl) || [];
             if (caps.includes("status_set")) {
               wsSend(
                 {
@@ -856,6 +835,12 @@ export function setupVisibilityHandler(): void {
       }
     }
     if (!document.hidden) {
+      const sUrl = serverUrl.value;
+      const ch = currentChannel.value;
+      if (sUrl && ch && !isSpecialChannel(ch.name, sUrl)) {
+        const key = currentThread.value ? `thread:${currentThread.value.id}` : ch.name;
+        unreadState.clearChannel(sUrl, key);
+      }
       refreshCurrentChannel();
     }
   };

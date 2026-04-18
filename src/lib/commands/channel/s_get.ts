@@ -13,7 +13,7 @@ import { renderChannelsSignal } from "../../ui-signals";
 import { selectChannel } from "../../actions";
 
 export function handleChannelsGet(msg: { val: Channel[] }, sUrl: string): void {
-  channelsByServer.value = { ...channelsByServer.value, [sUrl]: msg.val };
+  channelsByServer.set(sUrl, msg.val);
 
   const forumThreads: Record<string, Thread[]> = {};
   for (const channel of msg.val) {
@@ -22,10 +22,7 @@ export function handleChannelsGet(msg: { val: Channel[] }, sUrl: string): void {
     }
   }
   if (Object.keys(forumThreads).length > 0) {
-    threadsByServer.value = {
-      ...threadsByServer.value,
-      [sUrl]: forumThreads,
-    };
+    threadsByServer.set(sUrl, forumThreads);
   }
 
   renderChannelsSignal.value++;
@@ -37,15 +34,15 @@ export function handleChannelsGet(msg: { val: Channel[] }, sUrl: string): void {
   if (
     serverUrl.value === sUrl &&
     !currentChannel.value &&
-    channelsByServer.value[sUrl]?.length > 0 &&
+    channelsByServer.read(sUrl).length > 0 &&
     sUrl !== DM_SERVER_URL
   ) {
-    selectChannel(channelsByServer.value[sUrl][0]);
+    selectChannel(channelsByServer.read(sUrl)[0]);
   }
 
-  if (serverUrl.value === sUrl && lastChannelByServer.value[sUrl]) {
-    const lastChannelName = lastChannelByServer.value[sUrl];
-    const channelList = channelsByServer.value[sUrl] || [];
+  if (serverUrl.value === sUrl && lastChannelByServer.read(sUrl)) {
+    const lastChannelName = lastChannelByServer.read(sUrl);
+    const channelList = channelsByServer.read(sUrl);
     const targetChannel = channelList.find((c) => c.name === lastChannelName);
     if (targetChannel) {
       selectChannel(targetChannel);

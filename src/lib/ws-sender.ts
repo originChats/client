@@ -41,7 +41,7 @@ function markChannelOrThreadAsRead(
   sUrl?: string
 ): boolean {
   const url = sUrl || serverUrl.value;
-  const caps = serverCapabilitiesByServer.value[url] || [];
+  const caps = serverCapabilitiesByServer.read(url) || [];
 
   // Only send unreads_ack if server supports it
   if (!caps.includes("unreads_ack")) {
@@ -69,7 +69,7 @@ export function markThreadAsRead(threadId: string, messageId?: string, sUrl?: st
 
 function getUnreadCount(channelName: string, sUrl?: string): boolean {
   const url = sUrl || serverUrl.value;
-  const caps = serverCapabilitiesByServer.value[url] || [];
+  const caps = serverCapabilitiesByServer.read(url) || [];
 
   if (!caps.includes("unreads_count")) {
     return false;
@@ -80,7 +80,7 @@ function getUnreadCount(channelName: string, sUrl?: string): boolean {
 
 function getThreadUnreadCount(threadId: string, sUrl?: string): boolean {
   const url = sUrl || serverUrl.value;
-  const caps = serverCapabilitiesByServer.value[url] || [];
+  const caps = serverCapabilitiesByServer.read(url) || [];
 
   if (!caps.includes("unreads_count")) {
     return false;
@@ -91,7 +91,7 @@ function getThreadUnreadCount(threadId: string, sUrl?: string): boolean {
 
 function getAllUnreads(sUrl?: string): boolean {
   const url = sUrl || serverUrl.value;
-  const caps = serverCapabilitiesByServer.value[url] || [];
+  const caps = serverCapabilitiesByServer.read(url) || [];
 
   if (!caps.includes("unreads_get")) {
     return false;

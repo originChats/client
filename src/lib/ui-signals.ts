@@ -110,15 +110,11 @@ export const renderChannelsSignal = signal(0);
 export const renderMessagesSignal = signal(0);
 export const renderMembersSignal = signal(0);
 export const missedMessagesSignal = signal(0);
-const renderVoiceSignal = signal(0);
+export const missedMessagesAppearSignal = signal(0);
 export const showSettingsModal = signal(false);
 export const showAccountModal = signal<string | null>(null);
 export const showDiscoveryModal = signal(false);
 export const showServerSettingsModal = signal(false);
-const serverSettingsSection = signal<
-  "overview" | "channels" | "roles" | "members" | "bans" | "emojis"
->("overview");
-const serverSettingsUserEdit = signal<string | null>(null);
 export const currentDMTab = signal<"friends" | "requests" | "blocked" | "groups">("friends");
 
 export const showVoiceCallView = signal(false);

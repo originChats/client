@@ -6,6 +6,7 @@ import { Icon } from "../Icon";
 import { favGifs as dbFavGifs } from "../../lib/db";
 import { emojiImgUrl } from "../../lib/emoji";
 import { emojiCache, type EmojiEntry, type CustomEmojiItem } from "../../lib/emoji-data-cache";
+import type { CustomEmoji } from "../../types";
 import {
   MemoVirtualizedEmojiGrid,
   standardEmojiToItem,
@@ -325,7 +326,10 @@ function EmojiPanel({
 
   const customEmojiData = useMemo(() => {
     const result = new Map<string, CustomEmojiItem[]>();
-    const emojiData = customEmojisByServer.value;
+    const emojiData: Record<string, Record<string, CustomEmoji>> = {};
+    for (const sUrl of customEmojisByServer.keys()) {
+      emojiData[sUrl] = customEmojisByServer.read(sUrl);
+    }
 
     for (const [sUrl, emojis] of Object.entries(emojiData)) {
       const server = servers.value.find((s) => s.url === sUrl);

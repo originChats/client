@@ -28,8 +28,8 @@ export function RolesTab() {
   const myUsername = currentUser.value?.username;
 
   useSignalEffect(() => {
-    const allRoles = rolesByServer.value[sUrl] || {};
-    const serverUsers = usersByServer.value[sUrl] || {};
+    const allRoles = rolesByServer.read(sUrl) || {};
+    const serverUsers = usersByServer.read(sUrl) || {};
     const myRoles = myUsername ? serverUsers[myUsername.toLowerCase()]?.roles || [] : [];
 
     const selfAssignable: RoleWithStatus[] = Object.entries(allRoles)
@@ -58,7 +58,7 @@ export function RolesTab() {
         prev.map((r) => (r.name === roleName ? { ...r, assigned: !currentlyAssigned } : r))
       );
 
-      const serverUsers = usersByServer.value[sUrl] || {};
+      const serverUsers = usersByServer.read(sUrl) || {};
       const lowerUser = myUsername?.toLowerCase() || "";
       const user = serverUsers[lowerUser];
       if (user) {
@@ -72,10 +72,7 @@ export function RolesTab() {
             user.roles = user.roles.filter((r) => r !== roleName);
           }
         }
-        usersByServer.value = {
-          ...usersByServer.value,
-          [sUrl]: { ...serverUsers },
-        };
+        usersByServer.set(sUrl, { ...serverUsers });
       }
 
       if (currentlyAssigned) {

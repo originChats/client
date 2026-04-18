@@ -1,4 +1,5 @@
 import { signal, computed, effect } from "@preact/signals";
+import { ServerSignalStore } from "./lib/server-signal-store";
 import type {
   Channel,
   ServerUser,
@@ -7,7 +8,6 @@ import type {
   ServerFolder,
   DMServer,
   Role,
-  SelfAssignableRole,
   RoturAccount,
   SlashCommand,
   RoturGroup,
@@ -34,7 +34,6 @@ export function isSpecialChannel(name: string, url: string): boolean {
   return SPECIAL_CHANNELS.has(name) && url === DM_SERVER_URL;
 }
 export const serverUrl = signal(DM_SERVER_URL);
-const priorityServer = signal<string | null>(null);
 export const currentChannel = signal<Channel | null>(null);
 export const currentThread = signal<Thread | null>(null);
 export const servers = signal<Server[]>([]);
@@ -47,11 +46,11 @@ export const friendNicknames = signal<Record<string, string>>({});
 export const replyTo = signal<Message | null>(null);
 export const replyPing = signal<boolean>(true);
 
-export const channelsByServer = signal<Record<string, Channel[]>>({});
-export const threadsByServer = signal<Record<string, Record<string, Thread[]>>>({});
-export const threadMessagesByServer = signal<Record<string, Record<string, Message[]>>>({});
+export const channelsByServer = new ServerSignalStore<Channel[]>(() => []);
+export const threadsByServer = new ServerSignalStore<Record<string, Thread[]>>(() => ({}));
+export const threadMessagesByServer = new ServerSignalStore<Record<string, Message[]>>(() => ({}));
 
-export const newThreadCounts = signal<Record<string, Record<string, number>>>({});
+export const newThreadCounts = new ServerSignalStore<Record<string, number>>(() => ({}));
 
 export { messagesByServer } from "./lib/state/messages";
 import { messagesByServer } from "./lib/state/messages";
@@ -59,19 +58,18 @@ import { messagesByServer } from "./lib/state/messages";
 export const loadedChannelsByServer: Record<string, Set<string>> = {};
 export const reachedOldestByServer: Record<string, Set<string>> = {};
 export const reachedNewestByServer: Record<string, Set<string>> = {};
-export const missedMessagesCount: Record<string, Record<string, number>> = {};
-export const usersByServer = signal<Record<string, Record<string, ServerUser>>>({});
-export const currentUserByServer = signal<Record<string, RoturAccount>>({});
-export const rolesByServer = signal<Record<string, Record<string, Role>>>({});
-const selfAssignableRolesByServer = signal<Record<string, SelfAssignableRole[]>>({});
-export const slashCommandsByServer = signal<Record<string, SlashCommand[]>>({});
-export const readTimesByServer = signal<Record<string, Record<string, number>>>({});
-export const lastChannelByServer = signal<Record<string, string>>({});
+export const missedMessagesCount = new ServerSignalStore<Record<string, number>>(() => ({}));
+export const usersByServer = new ServerSignalStore<Record<string, ServerUser>>(() => ({}));
+export const currentUserByServer = new ServerSignalStore<RoturAccount | undefined>(() => undefined);
+export const rolesByServer = new ServerSignalStore<Record<string, Role>>(() => ({}));
+export const slashCommandsByServer = new ServerSignalStore<SlashCommand[]>(() => []);
+export const readTimesByServer = new ServerSignalStore<Record<string, number>>(() => ({}));
+export const lastChannelByServer = new ServerSignalStore<string>(() => "");
 
 import { unreadState } from "./lib/state";
-const unreadByChannel = unreadState.unreads;
-const unreadPings = unreadState.pings;
-export const typingUsersByServer = signal<Record<string, Record<string, Map<string, number>>>>({});
+export const typingUsersByServer = new ServerSignalStore<Record<string, Map<string, number>>>(
+  () => ({})
+);
 
 export function getServerPingCount(sUrl: string): number {
   return unreadState.getServerPing(sUrl);
@@ -99,14 +97,6 @@ export function clearServerPings(sUrl: string): void {
 
 export function hasChannelUnreads(sUrl: string, channelName: string): boolean {
   return unreadState.hasUnreads(sUrl, channelName);
-}
-
-function isChannelUnreadByLastMessage(
-  sUrl: string,
-  channelName: string,
-  lastMessageId?: string
-): boolean {
-  return unreadState.isChannelUnreadByLastMessage(sUrl, channelName, lastMessageId);
 }
 
 interface PingMessage {
@@ -139,14 +129,14 @@ export const serverValidatorKeys: Record<string, string> = {};
 
 type AuthMode = "rotur" | "cracked" | "cracked-only";
 
-export const serverAuthModeByServer = signal<Record<string, AuthMode>>({});
+export const serverAuthModeByServer = new ServerSignalStore<AuthMode>(() => "rotur" as AuthMode);
 
 /**
  * Capabilities advertised by each server in their handshake payload.
  * Servers that don't send a capabilities array are stored as an empty array,
  * so callers can treat missing capabilities as "not supported".
  */
-export const serverCapabilitiesByServer = signal<Record<string, string[]>>({});
+export const serverCapabilitiesByServer = new ServerSignalStore<string[]>(() => []);
 
 interface ServerPermission {
   id: string;
@@ -155,7 +145,7 @@ interface ServerPermission {
   category: string;
 }
 
-export const serverPermissionsByServer = signal<Record<string, ServerPermission[]>>({});
+export const serverPermissionsByServer = new ServerSignalStore<ServerPermission[]>(() => []);
 
 export const DEFAULT_PERMISSIONS: ServerPermission[] = [
   {
@@ -348,12 +338,11 @@ interface AttachmentConfig {
   permanent_tiers: string[];
 }
 
-export const attachmentConfigByServer = signal<Record<string, AttachmentConfig>>({});
-const authRetries: Record<string, number> = {};
-const authRetryTimeouts: Record<string, number> = {};
+export const attachmentConfigByServer = new ServerSignalStore<AttachmentConfig | undefined>(
+  () => undefined
+);
 export const reconnectAttempts: Record<string, number> = {};
 export const reconnectTimeouts: Record<string, number> = {};
-const pendingReplyTimeouts: Record<string, number> = {};
 
 /**
  * Set to the username being added via `dm add` while we wait for the DMS
@@ -379,19 +368,19 @@ export function getOriginFS() {
   return originFS;
 }
 
-export const channels = computed(() => channelsByServer.value[serverUrl.value] || []);
+export const channels = computed(() => channelsByServer.get(serverUrl.value).value);
 export const messages = computed(() => messagesByServer.value[serverUrl.value] || {});
-export const users = computed(() => usersByServer.value[serverUrl.value] || {});
-export const currentUser = computed(() => currentUserByServer.value[serverUrl.value]);
+export const users = computed(() => usersByServer.get(serverUrl.value).value);
+export const currentUser = computed(() => currentUserByServer.get(serverUrl.value).value);
 export const currentServer = computed(() => servers.value.find((s) => s.url === serverUrl.value));
-export const slashCommands = computed(() => slashCommandsByServer.value[serverUrl.value] || []);
+export const slashCommands = computed(() => slashCommandsByServer.get(serverUrl.value).value);
 
 /**
  * Capabilities for the currently viewed server.
  * Returns an empty array if the server hasn't sent (or doesn't support) capabilities.
  */
 export const serverCapabilities = computed(
-  () => serverCapabilitiesByServer.value[serverUrl.value] ?? []
+  () => serverCapabilitiesByServer.get(serverUrl.value).value
 );
 
 /**
@@ -403,44 +392,26 @@ export function hasCapability(cap: string): boolean {
   return serverCapabilities.value.includes(cap);
 }
 
-function setChannelsForServer(url: string, ch: Channel[]) {
-  channelsByServer.value = { ...channelsByServer.value, [url]: ch };
-}
-
-function setThreadsForServer(url: string, threads: Record<string, Thread[]>) {
-  threadsByServer.value = { ...threadsByServer.value, [url]: threads };
-}
-
 export function addThreadToChannel(url: string, channelName: string, thread: Thread) {
-  const current = threadsByServer.value[url] || {};
+  const current = threadsByServer.read(url);
   const channelThreads = current[channelName] || [];
-  threadsByServer.value = {
-    ...threadsByServer.value,
-    [url]: {
-      ...current,
-      [channelName]: [...channelThreads, thread],
-    },
-  };
-  const currentCounts = newThreadCounts.value[url] || {};
-  newThreadCounts.value = {
-    ...newThreadCounts.value,
-    [url]: {
-      ...currentCounts,
-      [channelName]: (currentCounts[channelName] || 0) + 1,
-    },
-  };
+  threadsByServer.update(url, (current) => ({
+    ...current,
+    [channelName]: [...channelThreads, thread],
+  }));
+  newThreadCounts.update(url, (currentCounts) => ({
+    ...currentCounts,
+    [channelName]: (currentCounts[channelName] || 0) + 1,
+  }));
 }
 
 export function removeThreadFromChannel(url: string, channelName: string, threadId: string) {
-  const current = threadsByServer.value[url] || {};
+  const current = threadsByServer.read(url);
   const channelThreads = current[channelName] || [];
-  threadsByServer.value = {
-    ...threadsByServer.value,
-    [url]: {
-      ...current,
-      [channelName]: channelThreads.filter((t) => t.id !== threadId),
-    },
-  };
+  threadsByServer.update(url, (current) => ({
+    ...current,
+    [channelName]: channelThreads.filter((t) => t.id !== threadId),
+  }));
 }
 
 export function updateThreadInChannel(
@@ -449,105 +420,37 @@ export function updateThreadInChannel(
   threadId: string,
   update: Partial<Thread>
 ) {
-  const current = threadsByServer.value[url] || {};
+  const current = threadsByServer.read(url);
   const channelThreads = current[channelName] || [];
   const idx = channelThreads.findIndex((t) => t.id === threadId);
   if (idx !== -1) {
     const updated = [...channelThreads];
     updated[idx] = { ...updated[idx], ...update };
-    threadsByServer.value = {
-      ...threadsByServer.value,
-      [url]: {
-        ...current,
-        [channelName]: updated,
-      },
-    };
+    threadsByServer.update(url, (current) => ({
+      ...current,
+      [channelName]: updated,
+    }));
   }
 }
 
 export function clearNewThreadCount(url: string, channelName: string) {
-  const currentCounts = newThreadCounts.value[url] || {};
+  const currentCounts = newThreadCounts.read(url);
   if (currentCounts[channelName]) {
     const { [channelName]: _, ...rest } = currentCounts;
-    newThreadCounts.value = {
-      ...newThreadCounts.value,
-      [url]: rest,
-    };
+    newThreadCounts.set(url, rest);
   }
-}
-
-function setThreadMessagesForServer(url: string, threadId: string, msgs: Message[]) {
-  threadMessagesByServer.value = {
-    ...threadMessagesByServer.value,
-    [url]: {
-      ...threadMessagesByServer.value[url],
-      [threadId]: msgs,
-    },
-  };
-}
-
-function setMessagesForServer(url: string, msgs: Record<string, Message[]>) {
-  messagesByServer.value = { ...messagesByServer.value, [url]: msgs };
-}
-
-function setUsersForServer(url: string, usrs: Record<string, ServerUser>) {
-  usersByServer.value = { ...usersByServer.value, [url]: usrs };
-}
-
-function setCurrentUserForServer(url: string, user: RoturAccount) {
-  currentUserByServer.value = { ...currentUserByServer.value, [url]: user };
-}
-
-function addMessage(channelName: string, msg: Message) {
-  const current = messagesByServer.value[serverUrl.value] || {};
-  const channelMsgs = current[channelName] || [];
-  messagesByServer.value = {
-    ...messagesByServer.value,
-    [serverUrl.value]: {
-      ...current,
-      [channelName]: [...channelMsgs, msg],
-    },
-  };
-}
-
-function updateMessage(channelName: string, msgId: string, update: Partial<Message>) {
-  const current = messagesByServer.value[serverUrl.value] || {};
-  const channelMsgs = current[channelName] || [];
-  const idx = channelMsgs.findIndex((m) => m.id === msgId);
-  if (idx !== -1) {
-    const updated = [...channelMsgs];
-    updated[idx] = { ...updated[idx], ...update };
-    messagesByServer.value = {
-      ...messagesByServer.value,
-      [serverUrl.value]: {
-        ...current,
-        [channelName]: updated,
-      },
-    };
-  }
-}
-
-function addUser(url: string, username: string, user: ServerUser) {
-  const current = usersByServer.value[url] || {};
-  usersByServer.value = {
-    ...usersByServer.value,
-    [url]: { ...current, [username.toLowerCase()]: user },
-  };
 }
 
 export const DEFAULT_SERVERS: Server[] = [];
 
 export const recentEmojis = signal<string[]>([]);
 
-export const customEmojisByServer = signal<Record<string, Record<string, CustomEmoji>>>({});
+export const customEmojisByServer = new ServerSignalStore<Record<string, CustomEmoji>>(() => ({}));
 
-/** Cached custom statuses keyed by username (fetched on demand). */
 export const roturStatuses = signal<Record<string, RoturStatusUpdate>>({});
 
-/** Groups the current user belongs to. */
 export const roturMyGroups = signal<RoturGroup[]>([]);
 
-/** Usernames that the current user follows on Rotur. */
 export const roturFollowing = signal<Set<string>>(new Set());
 
 export const sendTypingIndicators = signal<boolean>(true);

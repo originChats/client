@@ -7,11 +7,13 @@ export function Icon({
   size = 20,
   color,
   fill,
+  className,
 }: {
   name: string;
   size?: number;
   color?: string;
   fill?: string | boolean;
+  className?: string;
 }) {
   const IconComponent = (lucide as any)[name];
   if (!IconComponent) return null;
@@ -20,6 +22,7 @@ export function Icon({
       size={size}
       color={color}
       fill={fill === true || fill === "currentColor" ? "currentColor" : undefined}
+      className={className}
     />
   );
 }

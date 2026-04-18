@@ -97,10 +97,7 @@ export function selectChannel(channel: {
   clearOtherChannels(sUrl, channel.name);
   messageState.setCurrentChannel(sUrl, channel.name);
 
-  lastChannelByServer.value = {
-    ...lastChannelByServer.value,
-    [sUrl]: channel.name,
-  };
+  lastChannelByServer.set(sUrl, channel.name);
   try {
     dbSession.set(`lastChannel_${sUrl}`, channel.name);
   } catch {
@@ -186,7 +183,7 @@ export async function switchServer(url: string): Promise<boolean> {
       selectHomeChannel();
     } else {
       const saved = await dbSession.get<string>(`lastChannel_${url}`, "");
-      const chs = channelsByServer.value[url] || [];
+      const chs = channelsByServer.read(url);
       if (chs.length > 0) {
         const textChannels = chs.filter(
           (c) => c.type === "text" || c.type === "voice" || c.type === "category"
@@ -210,7 +207,7 @@ export async function switchServer(url: string): Promise<boolean> {
       selectHomeChannel();
     } else {
       const saved = await dbSession.get<string>(`lastChannel_${url}`, "");
-      const chs = channelsByServer.value[url] || [];
+      const chs = channelsByServer.read(url);
       if (chs.length > 0) {
         const target = (saved && chs.find((c) => c.name === saved)) || chs[0];
         if (target) selectChannel(target);
@@ -225,22 +222,19 @@ export async function switchServer(url: string): Promise<boolean> {
 
 function markChannelAsReadInternal(channelName: string): void {
   const sUrl = serverUrl.value;
-  if (!readTimesByServer.value[sUrl]) {
-    readTimesByServer.value = { ...readTimesByServer.value, [sUrl]: {} };
+  if (!readTimesByServer.read(sUrl)) {
+    readTimesByServer.set(sUrl, {});
   }
   const currentTime = Date.now() / 1000;
-  readTimesByServer.value = {
-    ...readTimesByServer.value,
-    [sUrl]: {
-      ...readTimesByServer.value[sUrl],
-      [channelName]: currentTime,
-    },
-  };
+  readTimesByServer.update(sUrl, (times) => ({
+    ...times,
+    [channelName]: currentTime,
+  }));
 
   clearChannelPings(sUrl, channelName);
 
   try {
-    dbReadTimes.set(sUrl, readTimesByServer.value[sUrl] || {});
+    dbReadTimes.set(sUrl, readTimesByServer.read(sUrl) || {});
   } catch (e) {
     console.warn("[markChannelAsRead] Failed to save read times:", e);
   }
@@ -252,24 +246,19 @@ function markChannelAsReadInternal(channelName: string): void {
 
 export function markServerAsRead(sUrl: string): void {
   console.log(`[markServerAsRead] Marking server ${sUrl} as read`);
-  const serverChannels = channelsByServer.value[sUrl] || [];
+  const serverChannels = channelsByServer.read(sUrl);
   const currentTime = Date.now() / 1000;
 
-  const newReadTimes = { ...readTimesByServer.value };
-  if (!newReadTimes[sUrl]) {
-    newReadTimes[sUrl] = {};
-  }
-
+  const serverReadTimes = { ...(readTimesByServer.read(sUrl) || {}) };
   serverChannels.forEach((channel) => {
-    newReadTimes[sUrl][channel.name] = currentTime;
+    serverReadTimes[channel.name] = currentTime;
   });
-
-  readTimesByServer.value = newReadTimes;
+  readTimesByServer.set(sUrl, serverReadTimes);
 
   clearServerPings(sUrl);
 
   try {
-    dbReadTimes.set(sUrl, readTimesByServer.value[sUrl] || {});
+    dbReadTimes.set(sUrl, readTimesByServer.read(sUrl) || {});
   } catch (e) {
     console.warn("[markServerAsRead] Failed to save read times:", e);
   }
@@ -289,25 +278,16 @@ export function removeServer(sUrl: string): void {
 
   saveServers().catch((err) => console.error("[removeServer] Failed to save servers:", err));
 
-  const newChannels = { ...channelsByServer.value };
-  delete newChannels[sUrl];
-  channelsByServer.value = newChannels;
+  channelsByServer.delete(sUrl);
 
   const newMessages = { ...messagesByServer.value };
   delete newMessages[sUrl];
   messagesByServer.value = newMessages;
 
-  const newUsers = { ...usersByServer.value };
-  delete newUsers[sUrl];
-  usersByServer.value = newUsers;
+  usersByServer.delete(sUrl);
+  currentUserByServer.delete(sUrl);
 
-  const newCurrentUser = { ...currentUserByServer.value };
-  delete newCurrentUser[sUrl];
-  currentUserByServer.value = newCurrentUser;
-
-  const newReadTimes = { ...readTimesByServer.value };
-  delete newReadTimes[sUrl];
-  readTimesByServer.value = newReadTimes;
+  readTimesByServer.delete(sUrl);
 
   unreadState.clearServer(sUrl);
 
@@ -338,7 +318,7 @@ export async function openDMWith(username: string): Promise<void> {
   if (serverUrl.value !== DM_SERVER_URL) {
     await switchServer(DM_SERVER_URL);
   }
-  const dmChannels = channelsByServer.value[DM_SERVER_URL] || [];
+  const dmChannels = channelsByServer.read(DM_SERVER_URL);
   const existingChannel = dmChannels.find(
     (ch) => ch.display_name?.toLowerCase() === username.toLowerCase()
   );
@@ -462,7 +442,7 @@ function selectChannelFromUrl(channelName: string | null, threadId: string | nul
   }
 
   const sUrl = serverUrl.value;
-  const serverChannels = channelsByServer.value[sUrl];
+  const serverChannels = channelsByServer.read(sUrl);
   const channel = serverChannels?.find((c) => c.name === channelName);
 
   if (!channel) return;
@@ -470,7 +450,7 @@ function selectChannelFromUrl(channelName: string | null, threadId: string | nul
   if (channel.type === "forum") {
     selectChannel(channel);
     if (threadId) {
-      const forumThreads = threadsByServer.value[sUrl]?.[channelName] || [];
+      const forumThreads = threadsByServer.read(sUrl)?.[channelName] || [];
       const thread = forumThreads.find((t) => t.id === threadId);
       if (thread) {
         selectThread(thread);
@@ -525,7 +505,7 @@ export function setStatus(status: "online" | "idle" | "dnd" | "offline", text?: 
   myStatus.value = { status: status as "online" | "idle" | "dnd", text };
   savedStatusText.value = text;
   for (const sUrl of Object.keys(wsConnections)) {
-    const caps = serverCapabilitiesByServer.value[sUrl] || [];
+    const caps = serverCapabilitiesByServer.read(sUrl) || [];
     if (caps.includes("status_set")) {
       wsSend({ cmd: "status_set", status, text }, sUrl);
     }

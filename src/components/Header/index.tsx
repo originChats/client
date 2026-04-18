@@ -64,7 +64,7 @@ export function Header() {
   const canInbox = caps.includes("pings_get");
   const supportsJoinLeave = hasCapability("thread_join") && hasCapability("thread_leave");
 
-  const myUsername = currentUserByServer.value[serverUrl.value]?.username;
+  const myUsername = currentUserByServer.read(serverUrl.value)?.username;
   const isThreadParticipant = thread?.participants?.includes(myUsername || "");
 
   const serverPingTotal = servers.value.reduce((sum, s) => sum + getServerPingCount(s.url), 0);

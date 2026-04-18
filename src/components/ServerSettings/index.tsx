@@ -290,16 +290,16 @@ export function ServerSettingsModal() {
   }, []);
 
   useEffect(() => {
-    const emojis = customEmojisByServer.value[serverUrl.value];
+    const emojis = customEmojisByServer.read(serverUrl.value);
     if (emojis) {
       setServerEmojis(Object.values(emojis));
     } else {
       setServerEmojis([]);
     }
-  }, [customEmojisByServer.value]);
+  }, [customEmojisByServer.get(serverUrl.value).value]);
 
   useEffect(() => {
-    const roles = rolesByServer.value[serverUrl.value];
+    const roles = rolesByServer.read(serverUrl.value);
     if (roles) {
       setServerRoles(
         Object.entries(roles).map(([roleName, role]) => ({
@@ -308,7 +308,7 @@ export function ServerSettingsModal() {
         }))
       );
     }
-  }, [rolesByServer.value]);
+  }, [rolesByServer.get(serverUrl.value).value]);
 
   useEffect(() => {
     const banned = bannedUsersByServer.value[serverUrl.value];
@@ -326,8 +326,9 @@ export function ServerSettingsModal() {
     return role?.color ?? null;
   };
 
-  const myServerUser =
-    usersByServer.value[serverUrl.value]?.[currentUser.value?.username?.toLowerCase() || ""];
+  const myServerUser = usersByServer.read(serverUrl.value)?.[
+    currentUser.value?.username?.toLowerCase() || ""
+  ];
   const owner = isServerOwner(serverUrl.value);
   const canChannels = canManageChannels(serverUrl.value);
   const canRoles = canManageRoles(serverUrl.value);

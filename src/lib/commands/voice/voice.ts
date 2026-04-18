@@ -17,7 +17,7 @@ function _vcUpdateChannelState(
   channelName: string,
   updater: (prev: VoiceUser[]) => VoiceUser[]
 ): void {
-  const chList = channelsByServer.value[sUrl];
+  const chList = channelsByServer.read(sUrl);
   if (!chList) return;
   const idx = chList.findIndex((c: Channel) => c.name === channelName);
   if (idx === -1) return;
@@ -25,12 +25,12 @@ function _vcUpdateChannelState(
   const next = updater(prev);
   const updatedList = [...chList];
   updatedList[idx] = { ...updatedList[idx], voice_state: next };
-  channelsByServer.value = { ...channelsByServer.value, [sUrl]: updatedList };
+  channelsByServer.set(sUrl, updatedList);
 }
 
 export function handleVoiceJoin(msg: VoiceJoin, sUrl: string): void {
   voiceManager.onJoined(msg.channel, (msg.participants || []) as any);
-  const selfUsername = currentUserByServer.value[sUrl]?.username;
+  const selfUsername = currentUserByServer.read(sUrl)?.username;
   _vcUpdateChannelState(sUrl, msg.channel, () => {
     const serverList = (msg.participants || []) as VoiceUser[];
     if (selfUsername && !serverList.find((u) => u.username === selfUsername)) {
@@ -96,7 +96,7 @@ export function handleVoiceUserUpdated(msg: VoiceUserUpdated, sUrl: string): voi
 }
 
 export function handleVoiceLeave(msg: VoiceLeave, sUrl: string): void {
-  const myUsername = currentUserByServer.value[sUrl]?.username;
+  const myUsername = currentUserByServer.read(sUrl)?.username;
   if (myUsername && msg.channel) {
     _vcUpdateChannelState(sUrl, msg.channel, (prev) =>
       prev.filter((u) => u.username !== myUsername)

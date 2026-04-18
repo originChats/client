@@ -39,7 +39,7 @@ export function ThreadPanel() {
 
   const ch = currentChannel.value;
   const isForum = ch?.type === "forum";
-  const threads = isForum ? threadsByServer.value[serverUrl.value]?.[ch.name] || [] : [];
+  const threads = isForum ? threadsByServer.read(serverUrl.value)?.[ch.name] || [] : [];
 
   const supportsJoinLeave = hasCapability("thread_join") && hasCapability("thread_leave");
 
@@ -65,7 +65,7 @@ export function ThreadPanel() {
         (t) => !prevThreadsRef.current.threads.some((pt) => pt.id === t.id)
       );
       if (newThread) {
-        const myUsername = currentUserByServer.value[serverUrl.value]?.username;
+        const myUsername = currentUserByServer.read(serverUrl.value)?.username;
         if (myUsername) {
           pendingMessages.add(serverUrl.value, newThread.id, {
             user: myUsername,
@@ -127,7 +127,7 @@ export function ThreadPanel() {
     leaveThread(threadId);
   };
 
-  const myUsername = currentUserByServer.value[serverUrl.value]?.username;
+  const myUsername = currentUserByServer.read(serverUrl.value)?.username;
 
   const formatTimestamp = (timestamp: number): string => formatThreadTime(timestamp);
 
@@ -294,7 +294,7 @@ export function ThreadPanel() {
 function ThreadView() {
   const thread = currentThread.value;
   const supportsJoinLeave = hasCapability("thread_join") && hasCapability("thread_leave");
-  const myUsername = currentUserByServer.value[serverUrl.value]?.username;
+  const myUsername = currentUserByServer.read(serverUrl.value)?.username;
   const isParticipant = thread?.participants?.includes(myUsername || "");
 
   useSignalEffect(() => {

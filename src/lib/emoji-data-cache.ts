@@ -1,4 +1,5 @@
 import { customEmojisByServer, servers, serverUrl } from "../state";
+import type { CustomEmoji } from "../types";
 
 export interface EmojiEntry {
   label: string;
@@ -351,7 +352,10 @@ class EmojiDataCache {
       return this.customEmojiCache;
     }
 
-    const currentCustomEmojis = customEmojisByServer.value;
+    const currentCustomEmojis: Record<string, Record<string, CustomEmoji>> = {};
+    for (const sUrl of customEmojisByServer.keys()) {
+      currentCustomEmojis[sUrl] = customEmojisByServer.read(sUrl);
+    }
     const currentServers = servers.value;
 
     const result = new Map<string, CustomEmojiItem[]>();

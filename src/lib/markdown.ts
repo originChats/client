@@ -57,7 +57,8 @@ let customEmojiNameIndex: Map<string, { sUrl: string; emoji: CustomEmoji }> | nu
 function getCustomEmojiIndex(): Map<string, { sUrl: string; emoji: CustomEmoji }> {
   if (!customEmojiNameIndex) {
     customEmojiNameIndex = new Map();
-    for (const [sUrl, emojis] of Object.entries(customEmojisByServer.value)) {
+    for (const sUrl of customEmojisByServer.keys()) {
+      const emojis = customEmojisByServer.read(sUrl);
       for (const emoji of Object.values(emojis)) {
         customEmojiNameIndex.set(emoji.name.toLowerCase(), { sUrl, emoji });
       }
@@ -247,7 +248,7 @@ export function parseMarkdown(
 
   // Restore custom emoji placeholders as actual <img> tags
   for (const { placeholder, sUrl, emojiId } of customEmojiPlaceholders) {
-    const emojis = customEmojisByServer.value[sUrl];
+    const emojis = customEmojisByServer.read(sUrl);
     let emoji: CustomEmoji | undefined;
     if (emojis) {
       emoji = emojis[emojiId];
@@ -355,7 +356,7 @@ export function parseMarkdown(
       const serverDisplay = server?.name || linkServerUrl;
 
       if (linkThreadId) {
-        const allThreads = threadsByServer.value[linkServerUrl] || {};
+        const allThreads = threadsByServer.read(linkServerUrl) || {};
         let threadName: string | null = null;
         for (const channelThreads of Object.values(allThreads)) {
           const thread = channelThreads.find((t) => t.id === linkThreadId);

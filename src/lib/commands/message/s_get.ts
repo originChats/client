@@ -60,7 +60,7 @@ export function handleMessagesGet(msg: MessagesGet, sUrl: string): void {
     sortedMsgs.length > 0 &&
     sUrl !== DM_SERVER_URL
   ) {
-    const channels = channelsByServer.value[sUrl] || [];
+    const channels = channelsByServer.read(sUrl);
     if (channels.length > 0) selectChannel(channels[0]);
   }
 }

@@ -164,7 +164,7 @@ function searchChannels(query: string): AutocompleteItem[] {
 }
 
 function searchRoles(query: string): AutocompleteItem[] {
-  const rolesMap = rolesByServer.value[serverUrl.value] || {};
+  const rolesMap = rolesByServer.read(serverUrl.value) || {};
   const q = query.toLowerCase();
   const results: AutocompleteItem[] = [];
 

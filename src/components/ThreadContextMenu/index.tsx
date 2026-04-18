@@ -14,7 +14,7 @@ interface ThreadContextMenuProps {
 }
 
 export function ThreadContextMenu({ thread, x, y, onClose }: ThreadContextMenuProps) {
-  const myUsername = currentUserByServer.value[serverUrl.value]?.username;
+  const myUsername = currentUserByServer.read(serverUrl.value)?.username;
   const myRoles = users.value[myUsername?.toLowerCase() || ""]?.roles || [];
   const canManage =
     thread.created_by === myUsername || myUsername === "admin" || myRoles.includes("owner");
