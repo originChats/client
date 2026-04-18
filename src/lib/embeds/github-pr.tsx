@@ -1,6 +1,7 @@
 import { useState, useEffect } from "preact/hooks";
 import { proxyImageUrl, formatDate } from "./utils";
 import { Icon } from "../../components/Icon";
+import { EmbedFallback } from "./embed-fallback";
 
 interface GitHubPREmbedProps {
   owner: string;
@@ -31,12 +32,7 @@ export function GitHubPREmbed({ owner, repo, prNumber, originalUrl }: GitHubPREm
   }, [owner, repo, prNumber]);
 
   if (loading) return null;
-  if (!data)
-    return (
-      <a href={originalUrl} target="_blank" rel="noopener noreferrer">
-        {originalUrl}
-      </a>
-    );
+  if (!data) return <EmbedFallback originalUrl={originalUrl} type="github_pr" />;
 
   const authorAvatar = data.user?.avatar_url;
   const authorName = data.user?.login;

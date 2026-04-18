@@ -1,5 +1,6 @@
 import { useState, useEffect } from "preact/hooks";
 import { proxyImageUrl } from "./utils";
+import { EmbedFallback } from "./embed-fallback";
 
 interface WikipediaEmbedProps {
   articleTitle: string;
@@ -31,12 +32,7 @@ export function WikipediaEmbed({ articleTitle, lang, originalUrl }: WikipediaEmb
   }, [articleTitle, lang]);
 
   if (loading) return null;
-  if (!data)
-    return (
-      <a href={originalUrl} target="_blank" rel="noopener noreferrer">
-        {originalUrl}
-      </a>
-    );
+  if (!data) return <EmbedFallback originalUrl={originalUrl} type="wikipedia" />;
 
   return (
     <a href={originalUrl} target="_blank" rel="noopener noreferrer" className="wiki-embed">

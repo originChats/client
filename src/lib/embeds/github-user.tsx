@@ -1,6 +1,7 @@
 import { useState, useEffect } from "preact/hooks";
 import { proxyImageUrl, formatNumber } from "./utils";
 import { Icon } from "../../components/Icon";
+import { EmbedFallback } from "./embed-fallback";
 
 interface GitHubUserEmbedProps {
   username: string;
@@ -26,12 +27,7 @@ export function GitHubUserEmbed({ username, originalUrl }: GitHubUserEmbedProps)
   }, [username]);
 
   if (loading) return null;
-  if (!data)
-    return (
-      <a href={originalUrl} target="_blank" rel="noopener noreferrer">
-        {originalUrl}
-      </a>
-    );
+  if (!data) return <EmbedFallback originalUrl={originalUrl} type="github_user" />;
 
   const isOrg = data.type === "Organization";
 

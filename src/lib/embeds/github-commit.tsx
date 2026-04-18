@@ -1,6 +1,7 @@
 import { useState, useEffect } from "preact/hooks";
 import { proxyImageUrl, formatDate } from "./utils";
 import { Icon } from "../../components/Icon";
+import { EmbedFallback } from "./embed-fallback";
 
 interface GitHubCommitEmbedProps {
   owner: string;
@@ -27,12 +28,7 @@ export function GitHubCommitEmbed({ owner, repo, sha, originalUrl }: GitHubCommi
   }, [owner, repo, sha]);
 
   if (loading) return null;
-  if (!data)
-    return (
-      <a href={originalUrl} target="_blank" rel="noopener noreferrer">
-        {originalUrl}
-      </a>
-    );
+  if (!data) return <EmbedFallback originalUrl={originalUrl} type="github_commit" />;
 
   const authorAvatar = data.author?.avatar_url || data.committer?.avatar_url;
   const authorName = data.commit.author.name;

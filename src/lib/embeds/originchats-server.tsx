@@ -1,6 +1,7 @@
 import { useState, useEffect } from "preact/hooks";
 import { proxyImageUrl, formatNumber } from "./utils";
 import { Icon } from "../../components/Icon";
+import { EmbedFallback } from "./embed-fallback";
 import { servers } from "../../state";
 
 interface OriginChatsServerEmbedProps {
@@ -31,12 +32,7 @@ export function OriginChatsServerEmbed({ serverHost, originalUrl }: OriginChatsS
   }, [serverHost]);
 
   if (loading) return null;
-  if (!data)
-    return (
-      <a href={originalUrl} target="_blank" rel="noopener noreferrer">
-        {originalUrl}
-      </a>
-    );
+  if (!data) return <EmbedFallback originalUrl={originalUrl} type="originchats_server" />;
 
   const server = data.server;
   const stats = data.stats || {};

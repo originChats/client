@@ -1,6 +1,7 @@
 import { useState, useEffect } from "preact/hooks";
 import { proxyImageUrl, formatNumber, formatDate } from "./utils";
 import { Icon } from "../../components/Icon";
+import { EmbedFallback } from "./embed-fallback";
 
 interface MistWarpEmbedProps {
   projectId: string;
@@ -31,12 +32,7 @@ export function MistWarpEmbed({ projectId, originalUrl }: MistWarpEmbedProps) {
   }, [projectId]);
 
   if (loading) return null;
-  if (!data)
-    return (
-      <a href={originalUrl} target="_blank" rel="noopener noreferrer">
-        {originalUrl}
-      </a>
-    );
+  if (!data) return <EmbedFallback originalUrl={originalUrl} type="mistwarp" />;
 
   const thumbUrl =
     data.images?.["282x218"] ||

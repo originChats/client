@@ -1,5 +1,6 @@
 import { useState, useEffect } from "preact/hooks";
 import { proxyImageUrl } from "./utils";
+import { EmbedFallback } from "./embed-fallback";
 
 interface SteamEmbedProps {
   appId: string;
@@ -31,12 +32,7 @@ export function SteamEmbed({ appId, originalUrl }: SteamEmbedProps) {
   }, [appId]);
 
   if (loading) return null;
-  if (!data)
-    return (
-      <a href={originalUrl} target="_blank" rel="noopener noreferrer">
-        {originalUrl}
-      </a>
-    );
+  if (!data) return <EmbedFallback originalUrl={originalUrl} type="steam" />;
 
   const price = data.is_free ? "Free" : (data.price_overview?.final_formatted ?? null);
 

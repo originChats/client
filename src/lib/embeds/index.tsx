@@ -14,6 +14,7 @@ import { SteamEmbed } from "./steam";
 import { MistWarpEmbed } from "./mistwarp";
 import { OriginChatsServerEmbed } from "./originchats-server";
 import { LinkPreviewEmbed } from "./link-preview";
+import { EmbedFallback } from "./embed-fallback";
 
 interface EmbedProps {
   info: EmbedInfo;
@@ -86,10 +87,6 @@ export function Embed({ info }: EmbedProps) {
         />
       );
     default:
-      return (
-        <a href={info.url} target="_blank" rel="noopener noreferrer">
-          {info.url}
-        </a>
-      );
+      return <EmbedFallback originalUrl={info.url} type={info.type} />;
   }
 }
