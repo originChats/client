@@ -347,7 +347,7 @@ async function sendMessage() {
       pendingMessages.add(serverUrl.value, channelKey, {
         user: myUsername,
         content: msg.content,
-        timestamp: Date.now(),
+        timestamp: Math.floor(Date.now() / 1000),
         reply_to: msg.reply_to ? { id: msg.reply_to, user: "" } : undefined,
         attachments: attachmentsToSend.length > 0 ? attachmentsToSend : undefined,
       });
@@ -368,10 +368,8 @@ function groupMessages(messages: Message[]): MessageGroup[] {
   let currentGroup: MessageGroup | null = null;
 
   for (const msg of messages) {
-    const isPending = (msg as any)._pending;
     const shouldStartNewGroup =
       !currentGroup ||
-      isPending ||
       msg.user !== currentGroup.head.user ||
       msg.timestamp - currentGroup.head.timestamp >= 300 ||
       !!msg.reply_to;
@@ -1504,7 +1502,12 @@ export function MessageArea() {
   const pendingForChannel = pendingMessages.get(serverUrl.value, messageKey);
   const messagesWithPending = [...currentMessages];
   for (const pm of pendingForChannel) {
-    if (!messagesWithPending.some((m) => m.content === pm.content && m.user === pm.user)) {
+    const isDuplicate = messagesWithPending.some(
+      (m) =>
+        m.id === pm.id ||
+        (m.content === pm.content && m.user === pm.user && Math.abs(m.timestamp - pm.timestamp) < 5)
+    );
+    if (!isDuplicate) {
       messagesWithPending.push(pm);
     }
   }
@@ -2269,7 +2272,7 @@ export function MessageArea() {
 
       return (
         <SwipeableMessage
-          key={msg.id || msg.timestamp}
+          key={msg.id || (msg as any)._pendingKey || msg.timestamp}
           canEdit={isOwn}
           canReply={canReply}
           onReply={() => startReply(msg)}

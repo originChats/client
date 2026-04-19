@@ -8,7 +8,6 @@ type PendingKey = string;
 interface PendingMessage extends Message {
   _pending: boolean;
   _pendingKey: string;
-  _contentUserKey: string;
 }
 
 const _pendingByServer = signal<Record<ServerUrl, Record<ChannelKey, PendingMessage[]>>>({});
@@ -17,11 +16,7 @@ const _version = signal(0);
 let pendingNonce = 0;
 
 function generatePendingKey(content: string, user: string): string {
-  return `${user}:${Date.now()}:${++pendingNonce}:${content}`;
-}
-
-function getContentUserKey(content: string, user: string): string {
-  return `${user}:${content}`;
+  return `${user}:${Date.now()}:${++pendingNonce}:${content.length}`;
 }
 
 const PENDING_TIMEOUT_MS = 30000;
@@ -43,12 +38,10 @@ class PendingMessageStore {
 
   add(url: ServerUrl, channel: ChannelKey, msg: Message): string {
     const pendingKey = generatePendingKey(msg.content, msg.user);
-    const contentUserKey = getContentUserKey(msg.content, msg.user);
     const pendingMsg: PendingMessage = {
       ...msg,
       _pending: true,
       _pendingKey: pendingKey,
-      _contentUserKey: contentUserKey,
     };
 
     const serverMsgs = this.getServerMessages(url);
@@ -64,7 +57,7 @@ class PendingMessageStore {
 
     const timeoutKey = `${url}:${channel}:${pendingKey}`;
     const timeoutId = setTimeout(() => {
-      this.removeByKey(url, channel, msg.content, msg.user);
+      this.removeByPendingKey(url, channel, pendingKey);
       this.timeouts.delete(timeoutKey);
     }, PENDING_TIMEOUT_MS);
     this.timeouts.set(timeoutKey, timeoutId);
@@ -73,24 +66,22 @@ class PendingMessageStore {
     return pendingKey;
   }
 
-  removeByKey(url: ServerUrl, channel: ChannelKey, content: string, user: string): boolean {
-    const contentUserKey = getContentUserKey(content, user);
-
+  removeByPendingKey(url: ServerUrl, channel: ChannelKey, pendingKey: string): boolean {
     const serverMsgs = this.getServerMessages(url);
     const arr = serverMsgs[channel];
     if (!arr) return false;
 
-    const msgToRemove = arr.find((m) => m._contentUserKey === contentUserKey);
+    const msgToRemove = arr.find((m) => m._pendingKey === pendingKey);
     if (!msgToRemove) return false;
 
-    const timeoutKey = `${url}:${channel}:${msgToRemove._pendingKey}`;
+    const timeoutKey = `${url}:${channel}:${pendingKey}`;
     const timeoutId = this.timeouts.get(timeoutKey);
     if (timeoutId) {
       clearTimeout(timeoutId);
       this.timeouts.delete(timeoutKey);
     }
 
-    const filtered = arr.filter((m) => m._contentUserKey !== contentUserKey);
+    const filtered = arr.filter((m) => m._pendingKey !== pendingKey);
     if (filtered.length === arr.length) return false;
 
     _pendingByServer.value = {
@@ -103,6 +94,17 @@ class PendingMessageStore {
 
     this.sync();
     return true;
+  }
+
+  removeByKey(url: ServerUrl, channel: ChannelKey, content: string, user: string): boolean {
+    const serverMsgs = this.getServerMessages(url);
+    const arr = serverMsgs[channel];
+    if (!arr) return false;
+
+    const msgToRemove = arr.find((m) => m.user === user && m.content === content);
+    if (!msgToRemove) return false;
+
+    return this.removeByPendingKey(url, channel, msgToRemove._pendingKey);
   }
 
   confirmByKey(

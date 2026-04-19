@@ -70,7 +70,7 @@ export function ThreadPanel() {
           pendingMessages.add(serverUrl.value, newThread.id, {
             user: myUsername,
             content: pendingThreadMessage.content,
-            timestamp: Date.now(),
+            timestamp: Math.floor(Date.now() / 1000),
           });
         }
         wsSend(
