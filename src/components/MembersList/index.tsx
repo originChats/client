@@ -1,4 +1,5 @@
 import { useMemo } from "preact/hooks";
+import { canViewInChannel } from "../../lib/permissions-utils";
 import { memo } from "preact/compat";
 import {
   serverUrl,
@@ -32,13 +33,8 @@ function MembersListInner() {
     roles: string[];
   }>;
 
-  const viewRoles = currentChannel.value?.permissions?.view;
   memberList = Object.values(users.value)
-    .filter((u) => {
-      if (!viewRoles || viewRoles.length === 0) return true;
-      const userRoles = u.roles || [];
-      return viewRoles.some((r) => userRoles.includes(r));
-    })
+    .filter((u) => canViewInChannel(u.roles || [], currentChannel.value?.permissions?.view))
     .map((u) => ({
       username: u.username,
       nickname: u.nickname,

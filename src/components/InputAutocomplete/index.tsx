@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "preact/hooks";
+import { canViewInChannel } from "../../lib/permissions-utils";
 import { useSignal } from "@preact/signals";
 import { TwemojiText } from "../TwemojiText";
 import {
@@ -120,13 +121,10 @@ function searchUsers(query: string): AutocompleteItem[] {
   const results: AutocompleteItem[] = [];
 
   const channel = currentChannel.value;
-  const viewRoles = channel?.permissions?.view;
 
-  const eligibleUsers = Object.values(userMap).filter((u) => {
-    if (!viewRoles || viewRoles.length === 0) return true;
-    const userRoles = u.roles || [];
-    return viewRoles.some((r) => userRoles.includes(r));
-  });
+  const eligibleUsers = Object.values(userMap).filter((u) =>
+    canViewInChannel(u.roles || [], channel?.permissions?.view)
+  );
 
   for (const u of eligibleUsers) {
     const username = u.username;

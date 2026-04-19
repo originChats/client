@@ -198,23 +198,9 @@ function MessageContentInner({
       placeholder.removeAttribute("data-image-url");
       placeholder.dataset.processed = "true";
 
-      const img = document.createElement("img");
-      img.alt = "image";
-      img.className = "message-image";
-      img.dataset.imageUrl = url;
-      img.loading = "lazy";
-      const syncCached = getCachedImageSync(url);
-      img.src = syncCached || proxyImageUrl(url);
+      const img = createChatImage(url);
 
       placeholder.appendChild(img);
-
-      if (!syncCached) {
-        getCachedImage(url).then((cached) => {
-          if (cached && img.parentNode) {
-            img.src = cached;
-          }
-        });
-      }
     });
 
     const potentialLinks = messageText.querySelectorAll<HTMLAnchorElement>("a.potential-image");
@@ -233,26 +219,12 @@ function MessageContentInner({
       const wrapper = document.createElement("div");
       wrapper.className = "chat-image-wrapper";
 
-      const img = document.createElement("img");
-      img.alt = "image";
-      img.className = "message-image";
-      img.dataset.imageUrl = url;
-      img.loading = "lazy";
-      const syncCached = getCachedImageSync(url);
-      img.src = syncCached || proxyImageUrl(url);
+      const img = createChatImage(url);
 
       wrapper.appendChild(img);
       link.textContent = "";
       link.appendChild(wrapper);
       link.classList.remove("potential-image");
-
-      if (!syncCached) {
-        getCachedImage(url).then((cached) => {
-          if (cached && img.parentNode) {
-            img.src = cached;
-          }
-        });
-      }
     });
 
     const remoteEmojis = messageText.querySelectorAll<HTMLImageElement>("img.custom-emoji-remote");
@@ -315,3 +287,20 @@ function MessageContentInner({
 }
 
 export const MessageContent = memo(MessageContentInner);
+function createChatImage(url: string): HTMLImageElement {
+  const img = document.createElement("img");
+  img.alt = "image";
+  img.className = "message-image";
+  img.dataset.imageUrl = url;
+  img.loading = "lazy";
+  const syncCached = getCachedImageSync(url);
+  img.src = syncCached || proxyImageUrl(url);
+  if (!syncCached) {
+    getCachedImage(url).then((cached) => {
+      if (cached && img.parentNode) {
+        img.src = cached;
+      }
+    });
+  }
+  return img;
+}

@@ -741,7 +741,12 @@ document.body.classList.toggle("hide-edited-indicator", !showEditedIndicator.val
 // ─── Hydrate signals from IDB ─────────────────────────────────────────────────
 // Called once at app startup (before rendering) to load persisted settings.
 
-let _settingsLoaded = false;
+import {
+  markSettingsLoaded,
+  persistSimpleSignal,
+  persistJsonSignal,
+  persistNullableSignal,
+} from "./lib/persistence-effects";
 
 export async function initSettingsFromDb(): Promise<void> {
   const s = dbSettings;
@@ -799,158 +804,140 @@ export async function initSettingsFromDb(): Promise<void> {
   autoIdleOnUnfocus.value = await bool("autoIdleOnUnfocus", true);
   savedStatusText.value = await s.get<string | undefined>("savedStatusText", undefined);
 
-  _settingsLoaded = true;
+  markSettingsLoaded();
 }
 
 // ─── Persistence effects ───────────────────────────────────────────────────────
 // Guard: don't write defaults to IDB before initSettingsFromDb() has loaded them.
 
-effect(() => {
-  const v = recentEmojis.value;
-  if (_settingsLoaded) dbSettings.set("recentEmojis", v);
-});
-effect(() => {
-  const v = sendTypingIndicators.value;
-  if (_settingsLoaded) dbSettings.set("sendTypingIndicators", String(v));
-});
-effect(() => {
-  const v = dmMessageSound.value;
-  if (_settingsLoaded) dbSettings.set("dmMessageSound", String(v));
-});
-effect(() => {
-  const v = pingSound.value;
-  if (_settingsLoaded) dbSettings.set("pingSound", v);
-});
-effect(() => {
-  const v = pingVolume.value;
-  if (_settingsLoaded) dbSettings.set("pingVolume", String(v));
-});
-effect(() => {
-  const v = customPingSound.value;
-  if (_settingsLoaded) {
-    if (v) {
-      dbSettings.set("customPingSound", v);
-    } else {
-      dbSettings.del("customPingSound");
-    }
+persistSimpleSignal(
+  "recentEmojis",
+  () => recentEmojis.value,
+  (v) => JSON.stringify(v)
+);
+persistSimpleSignal("sendTypingIndicators", () => sendTypingIndicators.value);
+persistSimpleSignal("dmMessageSound", () => dmMessageSound.value);
+persistSimpleSignal("pingSound", () => pingSound.value);
+persistSimpleSignal(
+  "pingVolume",
+  () => pingVolume.value,
+  (v) => String(v)
+);
+persistNullableSignal(
+  "customPingSound",
+  () => customPingSound.value,
+  (v) => v
+);
+persistSimpleSignal("blockedMessageDisplay", () => blockedMessageDisplay.value);
+persistSimpleSignal(
+  "theme",
+  () => appTheme.value,
+  (v) => {
+    applyTheme(v);
   }
-});
-effect(() => {
-  const v = blockedMessageDisplay.value;
-  if (_settingsLoaded) dbSettings.set("blockedMessageDisplay", v);
-});
-
-effect(() => {
-  if (_settingsLoaded) dbSettings.set("theme", appTheme.value);
-  applyTheme(appTheme.value);
-});
-
-effect(() => {
-  if (_settingsLoaded) dbSettings.set("font", appFont.value);
-  applyFont(appFont.value);
-});
-
-effect(() => {
-  if (_settingsLoaded) dbSettings.set("avatarShape", avatarShape.value);
-  applyAvatarShape(avatarShape.value);
-});
-
-effect(() => {
-  if (_settingsLoaded) dbSettings.set("bubbleRadius", String(bubbleRadius.value));
-  applyBubbleRadius(bubbleRadius.value);
-});
-
-effect(() => {
-  if (_settingsLoaded) dbSettings.set("accentColor", accentColor.value);
-  applyAccentColor(accentColor.value);
-});
-
-effect(() => {
-  if (_settingsLoaded) dbSettings.set("pingHighlightColor", pingHighlightColor.value);
-  applyPingHighlightColor(pingHighlightColor.value);
-});
-
-effect(() => {
-  if (_settingsLoaded) dbSettings.set("messageFontSize", String(messageFontSize.value));
-  applyMessageFontSize(messageFontSize.value);
-});
-
-effect(() => {
-  if (_settingsLoaded) dbSettings.set("compactMode", String(compactMode.value));
-  applyCompactMode(compactMode.value);
-});
-
-effect(() => {
-  if (_settingsLoaded) dbSettings.set("showTimestamps", String(showTimestamps.value));
-  document.body.classList.toggle("hide-timestamps", !showTimestamps.value);
-});
-
-effect(() => {
-  const v = notificationPromptDismissed.value;
-  if (_settingsLoaded) dbSettings.set("notificationPromptDismissed", String(v));
-});
-
-effect(() => {
-  if (_settingsLoaded) dbSettings.set("showEdited", String(showEditedIndicator.value));
-  document.body.classList.toggle("hide-edited-indicator", !showEditedIndicator.value);
-});
-
-effect(() => {
-  if (_settingsLoaded) dbSettings.set("maxInlineImageWidth", String(maxInlineImageWidth.value));
-  applyMaxImageWidth(maxInlineImageWidth.value);
-});
-
-effect(() => {
-  if (_settingsLoaded) dbSettings.set("useSystemEmojis", String(useSystemEmojis.value));
-});
-
-effect(() => {
-  if (_settingsLoaded) dbSettings.set("hideScrollbars", String(hideScrollbars.value));
-  document.body.classList.toggle("hide-scrollbars", hideScrollbars.value);
-});
-
-effect(() => {
-  if (_settingsLoaded) dbSettings.set("hideAvatarBorders", String(hideAvatarBorders.value));
-  document.body.classList.toggle("hide-avatar-borders", hideAvatarBorders.value);
-});
-
-effect(() => {
-  if (_settingsLoaded) dbSettings.set("reduceMotion", String(reduceMotion.value));
-  document.body.classList.toggle("reduce-motion", reduceMotion.value);
-});
-
-effect(() => {
-  const v = micThreshold.value;
-  if (_settingsLoaded) dbSettings.set("micThreshold", String(v));
-});
-effect(() => {
-  const v = voiceVideoRes.value;
-  if (_settingsLoaded) dbSettings.set("vcRes", String(v));
-});
-effect(() => {
-  const v = voiceVideoFps.value;
-  if (_settingsLoaded) dbSettings.set("vcFps", String(v));
-});
-effect(() => {
-  if (_settingsLoaded) dbSettings.set("serverNotifSettings", serverNotifSettings.value);
-});
-effect(() => {
-  if (_settingsLoaded) dbSettings.set("channelNotifSettings", channelNotifSettings.value);
-});
-effect(() => {
-  if (_settingsLoaded) dbSettings.set("offlinePushSettings", offlinePushServers.value);
-});
-effect(() => {
-  const v = autoIdleOnUnfocus.value;
-  if (_settingsLoaded) dbSettings.set("autoIdleOnUnfocus", String(v));
-});
-effect(() => {
-  const v = savedStatusText.value;
-  if (_settingsLoaded) {
-    if (v === undefined) {
-      dbSettings.del("savedStatusText");
-    } else {
-      dbSettings.set("savedStatusText", v);
-    }
+);
+persistSimpleSignal(
+  "font",
+  () => appFont.value,
+  (v) => {
+    applyFont(v);
   }
-});
+);
+persistSimpleSignal(
+  "avatarShape",
+  () => avatarShape.value,
+  (v) => {
+    applyAvatarShape(v);
+  }
+);
+persistSimpleSignal(
+  "bubbleRadius",
+  () => bubbleRadius.value,
+  (v) => {
+    applyBubbleRadius(v);
+  }
+);
+persistSimpleSignal(
+  "accentColor",
+  () => accentColor.value,
+  (v) => {
+    applyAccentColor(v);
+  }
+);
+persistSimpleSignal(
+  "pingHighlightColor",
+  () => pingHighlightColor.value,
+  (v) => {
+    applyPingHighlightColor(v);
+  }
+);
+persistSimpleSignal(
+  "messageFontSize",
+  () => messageFontSize.value,
+  (v) => {
+    applyMessageFontSize(v);
+  }
+);
+persistSimpleSignal(
+  "compactMode",
+  () => compactMode.value,
+  (v) => {
+    applyCompactMode(v);
+  }
+);
+persistSimpleSignal(
+  "showTimestamps",
+  () => showTimestamps.value,
+  (v) => {
+    document.body.classList.toggle("hide-timestamps", !v);
+  }
+);
+persistSimpleSignal("notificationPromptDismissed", () => notificationPromptDismissed.value);
+persistSimpleSignal(
+  "showEdited",
+  () => showEditedIndicator.value,
+  (v) => {
+    document.body.classList.toggle("hide-edited-indicator", !v);
+  }
+);
+persistSimpleSignal(
+  "maxInlineImageWidth",
+  () => maxInlineImageWidth.value,
+  (v) => {
+    applyMaxImageWidth(v);
+  }
+);
+persistSimpleSignal("useSystemEmojis", () => useSystemEmojis.value);
+persistSimpleSignal(
+  "hideScrollbars",
+  () => hideScrollbars.value,
+  (v) => {
+    document.body.classList.toggle("hide-scrollbars", v);
+  }
+);
+persistSimpleSignal(
+  "hideAvatarBorders",
+  () => hideAvatarBorders.value,
+  (v) => {
+    document.body.classList.toggle("hide-avatar-borders", v);
+  }
+);
+persistSimpleSignal(
+  "reduceMotion",
+  () => reduceMotion.value,
+  (v) => {
+    document.body.classList.toggle("reduce-motion", v);
+  }
+);
+persistSimpleSignal("micThreshold", () => micThreshold.value);
+persistSimpleSignal("vcRes", () => voiceVideoRes.value);
+persistSimpleSignal("vcFps", () => voiceVideoFps.value);
+persistJsonSignal("serverNotifSettings", () => serverNotifSettings.value);
+persistJsonSignal("channelNotifSettings", () => channelNotifSettings.value);
+persistJsonSignal("offlinePushSettings", () => offlinePushServers.value);
+persistSimpleSignal("autoIdleOnUnfocus", () => autoIdleOnUnfocus.value);
+persistNullableSignal(
+  "savedStatusText",
+  () => savedStatusText.value,
+  (v) => v
+);

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "preact/hooks";
+import { useEscapeKey } from "../../hooks/useEscapeKey";
 import { Fragment, type h } from "preact";
 import { memo } from "preact/compat";
 import { useSignalEffect } from "@preact/signals";
@@ -239,30 +240,44 @@ function commitEditOrSend() {
   }
 }
 
+function buildSlashCommandArgs(
+  cmd: SlashCommand,
+  args: SlashCommandArgs
+): Record<string, string | number | boolean> {
+  const typedArgs: Record<string, string | number | boolean> = {};
+  for (const opt of cmd.options) {
+    const raw = args[opt.name];
+    if (raw === undefined || raw === "") continue;
+    if (opt.type === "int") typedArgs[opt.name] = parseInt(raw, 10);
+    else if (opt.type === "float") typedArgs[opt.name] = parseFloat(raw);
+    else if (opt.type === "bool") typedArgs[opt.name] = raw === "true" || raw === "1";
+    else typedArgs[opt.name] = raw;
+  }
+  return typedArgs;
+}
+
+function buildImageContent(content: string, images: PendingImage[]): string {
+  const imageUrls = images.map((img) => img.url);
+  return content.length > 0 ? content + "\n" + imageUrls.join("\n") : imageUrls.join("\n");
+}
+
+function processMessageContent(content: string): string {
+  return convertChannelMentionsToLinks(
+    replaceShortcodes(transformCustomEmojisToUrls(content)),
+    serverUrl.value,
+    new Set(channels.value.filter((c) => c.name).map((c) => c.name.toLowerCase()))
+  );
+}
+
 async function sendMessage() {
-  // ── Slash command mode ────────────────────────────────────────────────────
   if (activeSlashCmdRef) {
     if (!currentChannel.value) return;
     const cmd = activeSlashCmdRef;
     const args = slashArgsRef;
     const sUrl = serverUrl.value;
-    // Build the typed args object — coerce numeric types
-    const typedArgs: Record<string, string | number | boolean> = {};
-    for (const opt of cmd.options) {
-      const raw = args[opt.name];
-      if (raw === undefined || raw === "") continue;
-      if (opt.type === "int") typedArgs[opt.name] = parseInt(raw, 10);
-      else if (opt.type === "float") typedArgs[opt.name] = parseFloat(raw);
-      else if (opt.type === "bool") typedArgs[opt.name] = raw === "true" || raw === "1";
-      else typedArgs[opt.name] = raw;
-    }
+    const typedArgs = buildSlashCommandArgs(cmd, args);
     wsSend(
-      {
-        cmd: "slash_call",
-        channel: currentChannel.value.name,
-        command: cmd.name,
-        args: typedArgs,
-      },
+      { cmd: "slash_call", channel: currentChannel.value.name, command: cmd.name, args: typedArgs },
       sUrl
     );
     dismissSlashCmdRef?.();
@@ -275,51 +290,37 @@ async function sendMessage() {
   const hasImages = pendingImageUploads.length > 0;
   const hasAttachments = pendingAttachmentUploads.length > 0;
   const hasText = content.length > 0;
-
   if (!hasText && !hasImages && !hasAttachments) return;
   if (!currentChannel.value) return;
 
   const thread = currentThread.value;
   const myUsername = currentUserByServer.read(serverUrl.value)?.username;
   const isThread = currentChannel.value?.type === "thread";
+
   if (isThread && thread && hasCapability("thread_join")) {
     const isParticipant = thread.participants?.includes(myUsername || "");
-    if (!isParticipant) {
-      joinThread(thread.id);
-    }
+    if (!isParticipant) joinThread(thread.id);
   }
 
-  let finalContent = content;
-  if (hasImages && !hasCapability("attachment_upload")) {
-    const imageUrls = pendingImageUploads.map((img) => img.url);
-    if (hasText) {
-      finalContent = content + "\n" + imageUrls.join("\n");
-    } else {
-      finalContent = imageUrls.join("\n");
-    }
-  }
+  const finalContent =
+    hasImages && !hasCapability("attachment_upload")
+      ? buildImageContent(content, pendingImageUploads)
+      : content;
 
   if (input) {
     input.value = "";
     resetInputHeight();
   }
 
-  // Clear pending images
   pendingImageUploads = [];
   if (setPendingImagesRef) setPendingImagesRef([]);
-
-  // Clear pending attachments
   const attachmentsToSend = [...pendingAttachmentUploads];
   pendingAttachmentUploads = [];
   if (setPendingAttachmentsRef) setPendingAttachmentsRef([]);
 
   const msg: any = {
     cmd: "message_new",
-    content: convertChannelMentionsToLinks(
-      replaceShortcodes(transformCustomEmojisToUrls(finalContent)),
-      serverUrl.value,
-      new Set(channels.value.filter((c) => c.name).map((c) => c.name.toLowerCase()))
-    ),
+    content: processMessageContent(finalContent),
     ...(isThread
       ? {
           thread_id: currentThread.value?.id,
@@ -327,9 +328,11 @@ async function sendMessage() {
         }
       : { channel: currentChannel.value.name }),
   };
+
   if (attachmentsToSend.length > 0) {
     msg.attachments = attachmentsToSend.map((att) => ({ id: att.id }));
   }
+
   if (replyTo.value) {
     msg.reply_to = replyTo.value.id;
     if (!replyPing.value) msg.ping = false;
@@ -2078,74 +2081,78 @@ export function MessageArea() {
     return null;
   };
 
-  function renderMessageBody(
-    msg: Message,
-    displayName: string,
-    isHead: boolean,
-    webhook: any,
-    reactions: Record<string, string[]>,
-    showAttachmentMenu: boolean
-  ) {
-    const hasAttachments = msg.attachments && msg.attachments.length > 0;
-    return (
-      <div className="message-group-content">
-        {(isHead || webhook) && (
-          <div className="message-header">
-            <span
-              className="username clickable"
-              style={webhook ? undefined : { color: getUserColor(msg.user) }}
-              onClick={(e: any) => !webhook && openUserPopout(e, msg.user)}
-              onContextMenu={(e: any) => !webhook && showUserMenu(e, msg.user)}
-            >
-              {displayName}
-            </span>
-            {webhook && <WebhookBadge name={webhook.name} />}
-            <span className="timestamp">{formatMessageTime(msg.timestamp)}</span>
-          </div>
-        )}
-        <MessageContent
-          content={msg.content}
-          currentUsername={currentUser.value?.username}
-          authorUsername={msg.user}
-          messageId={msg.id}
-          pings={msg.pings}
-          messageEmbeds={msg.embeds}
-        />
-        {renderTranslation(msg)}
-        {hasAttachments && (
-          <AttachmentPreview
-            attachments={msg.attachments!}
-            hasContent={!!msg.content}
-            {...(showAttachmentMenu ? { onContextMenu: handleAttachmentContextMenu } : {})}
-          />
-        )}
-        {msg.edited && <span className="edited-indicator">(edited)</span>}
-        {renderReactions(msg, reactions)}
-      </div>
-    );
-  }
-
   function renderGroupedMessages(group: MessageGroup) {
     const allMessages = [group.head, ...group.following];
-    const headIsReply = !!group.head.reply_to;
 
     return allMessages.map((msg, idx) => {
-      const replyMsg = getReplyMessage(msg);
       const reactions = msg.reactions || {};
       const replyTo = msg.reply_to;
       const isOwn = msg.user === currentUser.value?.username;
       const isHead = idx === 0;
-
       const interaction = msg.interaction;
       const webhook = msg.webhook;
       const displayName = webhook?.name || getDisplayName(msg.user);
       const isPending = (msg as any)._pending;
+      const showHeader = isHead || interaction || webhook;
+
       const groupClass =
-        (isHead || interaction || webhook
+        (showHeader
           ? (replyTo && canReply) || interaction
             ? "message-group has-reply"
             : "message-group"
           : "message-single") + (isPending ? " pending-message" : "");
+
+      const msgAvatar = (
+        <UserAvatar
+          username={msg.user}
+          nickname={users.value[msg.user?.toLowerCase()]?.nickname}
+          pfp={webhook?.avatar || users.value[msg.user?.toLowerCase()]?.pfp}
+          cracked={users.value[msg.user?.toLowerCase()]?.cracked}
+          className="avatar clickable"
+          alt={displayName}
+          onClick={(e: any) => !webhook && openUserPopout(e, msg.user)}
+          onContextMenu={(e: any) => !webhook && showUserMenu(e, msg.user)}
+        />
+      );
+
+      const msgHeader = (
+        <div className="message-header">
+          <span
+            className="username clickable"
+            style={webhook ? undefined : { color: getUserColor(msg.user) }}
+            onClick={(e: any) => !webhook && openUserPopout(e, msg.user)}
+            onContextMenu={(e: any) => !webhook && showUserMenu(e, msg.user)}
+          >
+            {displayName}
+          </span>
+          {webhook && <WebhookBadge name={webhook.name} />}
+          <span className="timestamp">{formatMessageTime(msg.timestamp)}</span>
+        </div>
+      );
+
+      const msgBody = (
+        <>
+          {showHeader && msgHeader}
+          <MessageContent
+            content={msg.content}
+            currentUsername={currentUser.value?.username}
+            authorUsername={msg.user}
+            messageId={msg.id}
+            pings={msg.pings}
+            messageEmbeds={msg.embeds}
+          />
+          {renderTranslation(msg)}
+          {msg.attachments && msg.attachments.length > 0 && (
+            <AttachmentPreview
+              attachments={msg.attachments}
+              hasContent={!!msg.content}
+              onContextMenu={handleAttachmentContextMenu}
+            />
+          )}
+          {msg.edited && <span className="edited-indicator">(edited)</span>}
+          {renderReactions(msg, reactions)}
+        </>
+      );
 
       return (
         <SwipeableMessage
@@ -2250,118 +2257,20 @@ export function MessageArea() {
                 </div>
               </div>
             )}
-            {(isHead || interaction || webhook) && (
-              <>
-                {replyTo || interaction ? (
-                  <div className="message-group-body">
-                    <UserAvatar
-                      username={msg.user}
-                      nickname={users.value[msg.user?.toLowerCase()]?.nickname}
-                      pfp={users.value[msg.user?.toLowerCase()]?.pfp}
-                      cracked={users.value[msg.user?.toLowerCase()]?.cracked}
-                      className="avatar clickable"
-                      alt={displayName}
-                      onClick={(e: any) => !webhook && openUserPopout(e, msg.user)}
-                      onContextMenu={(e: any) => !webhook && showUserMenu(e, msg.user)}
-                    />
-                    <div className="message-group-content">
-                      <div className="message-header">
-                        <span
-                          className="username clickable"
-                          style={webhook ? undefined : { color: getUserColor(msg.user) }}
-                          onClick={(e: any) => !webhook && openUserPopout(e, msg.user)}
-                          onContextMenu={(e: any) => !webhook && showUserMenu(e, msg.user)}
-                        >
-                          {displayName}
-                        </span>
-                        {webhook && <WebhookBadge name={webhook.name} />}
-                        <span className="timestamp">{formatMessageTime(msg.timestamp)}</span>
-                      </div>
-                      <MessageContent
-                        content={msg.content}
-                        currentUsername={currentUser.value?.username}
-                        authorUsername={msg.user}
-                        messageId={msg.id}
-                        messageEmbeds={msg.embeds}
-                      />
-                      {renderTranslation(msg)}
-                      {msg.attachments && msg.attachments.length > 0 && (
-                        <AttachmentPreview
-                          attachments={msg.attachments}
-                          hasContent={!!msg.content}
-                        />
-                      )}
-                      {msg.edited && <span className="edited-indicator">(edited)</span>}
-                      {renderReactions(msg, reactions)}
-                    </div>
-                  </div>
-                ) : (
-                  <>
-                    <UserAvatar
-                      username={msg.user}
-                      nickname={users.value[msg.user?.toLowerCase()]?.nickname}
-                      pfp={webhook?.avatar || users.value[msg.user?.toLowerCase()]?.pfp}
-                      cracked={users.value[msg.user?.toLowerCase()]?.cracked}
-                      className="avatar clickable"
-                      alt={displayName}
-                      onClick={(e: any) => !webhook && openUserPopout(e, msg.user)}
-                      onContextMenu={(e: any) => !webhook && showUserMenu(e, msg.user)}
-                    />
-                    <div className="message-group-content">
-                      <div className="message-header">
-                        <span
-                          className="username clickable"
-                          style={webhook ? undefined : { color: getUserColor(msg.user) }}
-                          onClick={(e: any) => !webhook && openUserPopout(e, msg.user)}
-                          onContextMenu={(e: any) => !webhook && showUserMenu(e, msg.user)}
-                        >
-                          {displayName}
-                        </span>
-                        {webhook && <WebhookBadge name={webhook.name} />}
-                        <span className="timestamp">{formatMessageTime(msg.timestamp)}</span>
-                      </div>
-                      <MessageContent
-                        content={msg.content}
-                        currentUsername={currentUser.value?.username}
-                        authorUsername={msg.user}
-                        messageId={msg.id}
-                        pings={msg.pings}
-                        messageEmbeds={msg.embeds}
-                      />
-                      {renderTranslation(msg)}
-                      {msg.attachments && msg.attachments.length > 0 && (
-                        <AttachmentPreview
-                          attachments={msg.attachments}
-                          hasContent={!!msg.content}
-                          onContextMenu={handleAttachmentContextMenu}
-                        />
-                      )}
-                      {msg.edited && <span className="edited-indicator">(edited)</span>}
-                      {renderReactions(msg, reactions)}
-                    </div>
-                  </>
-                )}
-              </>
-            )}
-            {!isHead && !interaction && !webhook && (
-              <div className="message-group-content">
-                <MessageContent
-                  content={msg.content}
-                  currentUsername={currentUser.value?.username}
-                  authorUsername={msg.user}
-                  pings={msg.pings}
-                />
-                {renderTranslation(msg)}
-                {msg.attachments && msg.attachments.length > 0 && (
-                  <AttachmentPreview
-                    attachments={msg.attachments}
-                    hasContent={!!msg.content}
-                    onContextMenu={handleAttachmentContextMenu}
-                  />
-                )}
-                {msg.edited && <span className="edited-indicator">(edited)</span>}
-                {renderReactions(msg, reactions)}
-              </div>
+            {showHeader ? (
+              replyTo || interaction ? (
+                <div className="message-group-body">
+                  {msgAvatar}
+                  <div className="message-group-content">{msgBody}</div>
+                </div>
+              ) : (
+                <>
+                  {msgAvatar}
+                  <div className="message-group-content">{msgBody}</div>
+                </>
+              )
+            ) : (
+              <div className="message-group-content">{msgBody}</div>
             )}
           </div>
         </SwipeableMessage>
@@ -2720,25 +2629,7 @@ export function MessageArea() {
                 state={autocomplete.state.value}
                 onSelect={(index) => {
                   const item = autocomplete.state.value.items[index];
-                  if (item?.type === "slash") {
-                    const sUrl = serverUrl.value;
-                    const cmd = (slashCommandsByServer.read(sUrl) || []).find(
-                      (c) => c.name === item.label
-                    );
-                    if (cmd) {
-                      const input = document.getElementById(
-                        "message-input"
-                      ) as HTMLTextAreaElement | null;
-                      if (input) {
-                        input.value = "";
-                        resetInputHeight();
-                      }
-                      autocomplete.close();
-                      setActiveSlashCmd(cmd);
-                      setSlashArgs({});
-                      return;
-                    }
-                  }
+                  if (item?.type === "slash" && activateSlashCommand(item)) return;
                   autocomplete.selectItem(index);
                 }}
                 onHover={autocomplete.setSelectedIndex}
@@ -2766,48 +2657,32 @@ export function MessageArea() {
                         />
                       ))}
                     </div>
-                    {prevTypingUsers.length === 1 ? (
+                    {prevTypingUsers.length <= 3 ? (
                       <span className={styles.typingPillText}>
-                        <span style={{ color: prevTypingUsers[0].color ?? undefined }}>
-                          {prevTypingUsers[0].displayName}
-                        </span>
-                        {" is typing..."}
-                      </span>
-                    ) : prevTypingUsers.length === 2 ? (
-                      <span className={styles.typingPillText}>
-                        <span style={{ color: prevTypingUsers[0].color ?? undefined }}>
-                          {prevTypingUsers[0].displayName}
-                        </span>
-                        {" and "}
-                        <span style={{ color: prevTypingUsers[1].color ?? undefined }}>
-                          {prevTypingUsers[1].displayName}
-                        </span>
-                        {" are typing..."}
-                      </span>
-                    ) : prevTypingUsers.length === 3 ? (
-                      <span className={styles.typingPillText}>
-                        <span style={{ color: prevTypingUsers[0].color ?? undefined }}>
-                          {prevTypingUsers[0].displayName}
-                        </span>
-                        {", "}
-                        <span style={{ color: prevTypingUsers[1].color ?? undefined }}>
-                          {prevTypingUsers[1].displayName}
-                        </span>
-                        {", and "}
-                        <span style={{ color: prevTypingUsers[2].color ?? undefined }}>
-                          {prevTypingUsers[2].displayName}
-                        </span>
-                        {" are typing..."}
+                        {prevTypingUsers.map((u, i) => (
+                          <Fragment key={i}>
+                            {i > 0 &&
+                              i === prevTypingUsers.length - 1 &&
+                              prevTypingUsers.length === 2 &&
+                              " and "}
+                            {i > 0 &&
+                              i === prevTypingUsers.length - 1 &&
+                              prevTypingUsers.length > 2 &&
+                              ", and "}
+                            {i > 0 && i < prevTypingUsers.length - 1 && ", "}
+                            <span style={{ color: u.color ?? undefined }}>{u.displayName}</span>
+                          </Fragment>
+                        ))}
+                        {prevTypingUsers.length === 1 ? " is typing..." : " are typing..."}
                       </span>
                     ) : (
                       <span className={styles.typingPillText}>
-                        <span style={{ color: prevTypingUsers[0].color ?? undefined }}>
-                          {prevTypingUsers[0].displayName}
-                        </span>
-                        {", "}
-                        <span style={{ color: prevTypingUsers[1].color ?? undefined }}>
-                          {prevTypingUsers[1].displayName}
-                        </span>
+                        {prevTypingUsers.slice(0, 2).map((u, i) => (
+                          <Fragment key={i}>
+                            {i > 0 && ", "}
+                            <span style={{ color: u.color ?? undefined }}>{u.displayName}</span>
+                          </Fragment>
+                        ))}
                         {`, and ${prevTypingUsers.length - 2} others are typing...`}
                       </span>
                     )}
@@ -3088,14 +2963,7 @@ function GiftModal({ isOpen, onClose, onGiftCreated }: GiftModalProps) {
   const tax = parsedAmount * 0.01;
   const total = parsedAmount + tax;
 
-  useEffect(() => {
-    if (!isOpen) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [isOpen, onClose]);
+  useEscapeKey(onClose, isOpen);
 
   const handleClose = () => {
     setAmount("");
@@ -3248,13 +3116,7 @@ interface ReactionModalProps {
 }
 
 function ReactionModal({ emoji, users, onClose }: ReactionModalProps) {
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [onClose]);
+  useEscapeKey(onClose);
 
   return (
     <div

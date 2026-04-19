@@ -21,6 +21,43 @@ interface RoleCategory {
   roles: RoleWithStatus[];
 }
 
+function RolePill({
+  role,
+  onToggle,
+}: {
+  role: RoleWithStatus;
+  onToggle: (name: string, assigned: boolean) => void;
+}) {
+  return (
+    <button
+      key={role.name}
+      className={`${styles.rolePill} ${role.assigned ? styles.assigned : ""}`}
+      style={
+        role.color
+          ? {
+              "--role-color": role.color,
+              background: role.assigned ? `${role.color}15` : undefined,
+            }
+          : undefined
+      }
+      onClick={() => onToggle(role.name, role.assigned)}
+      disabled={role.pending}
+      title={role.description || role.name}
+    >
+      <span
+        className={styles.roleDot}
+        style={role.color ? { background: role.color } : undefined}
+      />
+      <span className={styles.roleName}>{role.name}</span>
+      {role.assigned && (
+        <span className={styles.checkIcon}>
+          <Icon name="Check" size={12} />
+        </span>
+      )}
+    </button>
+  );
+}
+
 export function RolesTab() {
   const [roles, setRoles] = useState<RoleWithStatus[]>([]);
   const [loading, setLoading] = useState(true);
@@ -149,32 +186,7 @@ export function RolesTab() {
                     </div>
                     <div className={styles.rolesGrid}>
                       {category.roles.map((role) => (
-                        <button
-                          key={role.name}
-                          className={`${styles.rolePill} ${role.assigned ? styles.assigned : ""}`}
-                          style={
-                            role.color
-                              ? {
-                                  "--role-color": role.color,
-                                  background: role.assigned ? `${role.color}15` : undefined,
-                                }
-                              : undefined
-                          }
-                          onClick={() => toggleRole(role.name, role.assigned)}
-                          disabled={role.pending}
-                          title={role.description || role.name}
-                        >
-                          <span
-                            className={styles.roleDot}
-                            style={role.color ? { background: role.color } : undefined}
-                          />
-                          <span className={styles.roleName}>{role.name}</span>
-                          {role.assigned && (
-                            <span className={styles.checkIcon}>
-                              <Icon name="Check" size={12} />
-                            </span>
-                          )}
-                        </button>
+                        <RolePill key={role.name} role={role} onToggle={toggleRole} />
                       ))}
                     </div>
                   </div>
@@ -188,32 +200,7 @@ export function RolesTab() {
                     )}
                     <div className={styles.rolesGrid}>
                       {categorizedRoles.uncategorized.map((role) => (
-                        <button
-                          key={role.name}
-                          className={`${styles.rolePill} ${role.assigned ? styles.assigned : ""}`}
-                          style={
-                            role.color
-                              ? {
-                                  "--role-color": role.color,
-                                  background: role.assigned ? `${role.color}15` : undefined,
-                                }
-                              : undefined
-                          }
-                          onClick={() => toggleRole(role.name, role.assigned)}
-                          disabled={role.pending}
-                          title={role.description || role.name}
-                        >
-                          <span
-                            className={styles.roleDot}
-                            style={role.color ? { background: role.color } : undefined}
-                          />
-                          <span className={styles.roleName}>{role.name}</span>
-                          {role.assigned && (
-                            <span className={styles.checkIcon}>
-                              <Icon name="Check" size={12} />
-                            </span>
-                          )}
-                        </button>
+                        <RolePill key={role.name} role={role} onToggle={toggleRole} />
                       ))}
                     </div>
                   </div>

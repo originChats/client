@@ -1,4 +1,5 @@
-import { ENTRY_SIZE, IDX, parsePathComponents, OriginFSBase } from "./origin-fs-base";
+import { ENTRY_SIZE, IDX } from "./fs-constants";
+import { parsePathComponents, OriginFSBase } from "./origin-fs-base";
 import { prepareFolderEntries } from "./fsHelpers";
 
 const BASE_URL = "https://api.rotur.dev";
@@ -66,6 +67,24 @@ export class OriginFSClientClass extends OriginFSBase {
     // Remote client uses dirty array + commit() instead
   }
 
+  async writeFile(path: string, data: string): Promise<void> {
+    await this.loadIndex();
+    const now = Date.now();
+    const uuid = this.index[path.toLowerCase()];
+    if (!uuid) {
+      throw new Error("create via createFile");
+    }
+    await this.ensureEntry(uuid);
+    const entry = this.entries[uuid];
+    entry[IDX.DATA] = data;
+    entry[IDX.EDITED] = now;
+    entry[IDX.SIZE] = data.length;
+    this.entries[uuid] = entry;
+    this.dirty.push({ command: "UUIDr", uuid, dta: data, idx: IDX.DATA + 1 });
+    this.dirty.push({ command: "UUIDr", uuid, dta: now, idx: IDX.EDITED + 1 });
+    this.dirty.push({ command: "UUIDr", uuid, dta: data.length, idx: IDX.SIZE + 1 });
+  }
+
   async readFile(path: string): Promise<any> {
     await this.loadIndex();
     const uuid = this.index[path.toLowerCase()];
@@ -88,24 +107,6 @@ export class OriginFSClientClass extends OriginFSBase {
       throw new Error("invalid data type");
     }
     return data;
-  }
-
-  async writeFile(path: string, data: string): Promise<void> {
-    await this.loadIndex();
-    const now = Date.now();
-    const uuid = this.index[path.toLowerCase()];
-    if (!uuid) {
-      throw new Error("create via createFile");
-    }
-    await this.ensureEntry(uuid);
-    const entry = this.entries[uuid];
-    entry[IDX.DATA] = data;
-    entry[IDX.EDITED] = now;
-    entry[IDX.SIZE] = data.length;
-    this.entries[uuid] = entry;
-    this.dirty.push({ command: "UUIDr", uuid, dta: data, idx: IDX.DATA + 1 });
-    this.dirty.push({ command: "UUIDr", uuid, dta: now, idx: IDX.EDITED + 1 });
-    this.dirty.push({ command: "UUIDr", uuid, dta: data.length, idx: IDX.SIZE + 1 });
   }
 
   async createFolders(dir: string): Promise<void> {

@@ -164,7 +164,6 @@ export function selectRolesChannel(): void {
 
 export async function switchServer(url: string): Promise<boolean> {
   console.log(`[switchServer] Switching to server: ${url}`);
-
   const currentSUrl = serverUrl.value;
   if (currentSUrl && currentSUrl !== url) {
     messagesByServer.value = Object.fromEntries(
@@ -173,99 +172,65 @@ export async function switchServer(url: string): Promise<boolean> {
   }
 
   const connStatus = wsConnections[url]?.status;
-
-  if (connStatus === "connected") {
-    serverUrl.value = url;
-    dbSession.set("serverUrl", url);
-    renderGuildSidebarSignal.value++;
-    renderChannelsSignal.value++;
-    if (url === DM_SERVER_URL) {
-      selectHomeChannel();
-    } else {
-      const saved = await dbSession.get<string>(`lastChannel_${url}`, "");
-      const chs = channelsByServer.read(url);
-      if (chs.length > 0) {
-        const textChannels = chs.filter(
-          (c) => c.type === "text" || c.type === "voice" || c.type === "category"
-        );
-        const target = (saved && textChannels.find((c) => c.name === saved)) || textChannels[0];
-        if (target) selectChannel(target);
-      }
+  if (connStatus !== "connected") {
+    const { reconnectServer } = await import("./websocket");
+    const connected = await reconnectServer(url);
+    if (!connected) {
+      console.error(`[switchServer] Failed to connect to ${url}`);
+      return false;
     }
-    return true;
   }
 
-  const { reconnectServer } = await import("./websocket");
-  const connected = await reconnectServer(url);
-
-  if (connected) {
-    serverUrl.value = url;
-    dbSession.set("serverUrl", url);
-    renderGuildSidebarSignal.value++;
-    renderChannelsSignal.value++;
-    if (url === DM_SERVER_URL) {
-      selectHomeChannel();
-    } else {
-      const saved = await dbSession.get<string>(`lastChannel_${url}`, "");
-      const chs = channelsByServer.read(url);
-      if (chs.length > 0) {
-        const target = (saved && chs.find((c) => c.name === saved)) || chs[0];
-        if (target) selectChannel(target);
-      }
-    }
-    return true;
+  serverUrl.value = url;
+  dbSession.set("serverUrl", url);
+  renderGuildSidebarSignal.value++;
+  renderChannelsSignal.value++;
+  if (url === DM_SERVER_URL) {
+    selectHomeChannel();
   } else {
-    console.error(`[switchServer] Failed to connect to ${url}`);
-    return false;
+    const saved = await dbSession.get<string>(`lastChannel_${url}`, "");
+    const chs = channelsByServer.read(url);
+    if (chs.length > 0) {
+      const textChannels = chs.filter(
+        (c) => c.type === "text" || c.type === "voice" || c.type === "category"
+      );
+      const target = (saved && textChannels.find((c) => c.name === saved)) || textChannels[0];
+      if (target) selectChannel(target);
+    }
   }
+  return true;
+}
+
+function persistReadTimes(sUrl: string): void {
+  try {
+    dbReadTimes.set(sUrl, readTimesByServer.read(sUrl) || {});
+  } catch (e) {
+    console.warn("[persistReadTimes] Failed to save read times:", e);
+  }
+  saveReadTimes().catch((e) =>
+    console.warn("[persistReadTimes] Failed to sync read times to cloud:", e)
+  );
 }
 
 function markChannelAsReadInternal(channelName: string): void {
   const sUrl = serverUrl.value;
-  if (!readTimesByServer.read(sUrl)) {
-    readTimesByServer.set(sUrl, {});
-  }
+  if (!readTimesByServer.read(sUrl)) readTimesByServer.set(sUrl, {});
   const currentTime = Date.now() / 1000;
-  readTimesByServer.update(sUrl, (times) => ({
-    ...times,
-    [channelName]: currentTime,
-  }));
-
+  readTimesByServer.update(sUrl, (times) => ({ ...times, [channelName]: currentTime }));
   clearChannelPings(sUrl, channelName);
-
-  try {
-    dbReadTimes.set(sUrl, readTimesByServer.read(sUrl) || {});
-  } catch (e) {
-    console.warn("[markChannelAsRead] Failed to save read times:", e);
-  }
-
-  saveReadTimes().catch((e) =>
-    console.warn("[markChannelAsRead] Failed to sync read times to cloud:", e)
-  );
+  persistReadTimes(sUrl);
 }
 
 export function markServerAsRead(sUrl: string): void {
-  console.log(`[markServerAsRead] Marking server ${sUrl} as read`);
   const serverChannels = channelsByServer.read(sUrl);
   const currentTime = Date.now() / 1000;
-
   const serverReadTimes = { ...(readTimesByServer.read(sUrl) || {}) };
   serverChannels.forEach((channel) => {
     serverReadTimes[channel.name] = currentTime;
   });
   readTimesByServer.set(sUrl, serverReadTimes);
-
   clearServerPings(sUrl);
-
-  try {
-    dbReadTimes.set(sUrl, readTimesByServer.read(sUrl) || {});
-  } catch (e) {
-    console.warn("[markServerAsRead] Failed to save read times:", e);
-  }
-
-  saveReadTimes().catch((e) =>
-    console.warn("[markServerAsRead] Failed to sync read times to cloud:", e)
-  );
+  persistReadTimes(sUrl);
 }
 
 export function removeServer(sUrl: string): void {

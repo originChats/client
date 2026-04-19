@@ -289,7 +289,7 @@ interface UserLeave {
   username: string;
 }
 
-interface UserStatus {
+interface UserStatusMessage {
   cmd: "user_status";
   username: string;
   status: {
@@ -650,7 +650,7 @@ export type {
   MessagesPinned,
   UserJoin,
   UserLeave,
-  UserStatus,
+  UserStatusMessage,
   NicknameUpdate,
   NicknameRemove,
   UserUpdate,

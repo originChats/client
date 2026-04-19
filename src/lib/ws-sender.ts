@@ -66,36 +66,3 @@ export function markChannelAsRead(channelName: string, messageId?: string, sUrl?
 export function markThreadAsRead(threadId: string, messageId?: string, sUrl?: string): boolean {
   return markChannelOrThreadAsRead(undefined, threadId, messageId, sUrl);
 }
-
-function getUnreadCount(channelName: string, sUrl?: string): boolean {
-  const url = sUrl || serverUrl.value;
-  const caps = serverCapabilitiesByServer.read(url) || [];
-
-  if (!caps.includes("unreads_count")) {
-    return false;
-  }
-
-  return wsSend({ cmd: "unreads_count", channel: channelName }, sUrl);
-}
-
-function getThreadUnreadCount(threadId: string, sUrl?: string): boolean {
-  const url = sUrl || serverUrl.value;
-  const caps = serverCapabilitiesByServer.read(url) || [];
-
-  if (!caps.includes("unreads_count")) {
-    return false;
-  }
-
-  return wsSend({ cmd: "unreads_count", thread_id: threadId }, sUrl);
-}
-
-function getAllUnreads(sUrl?: string): boolean {
-  const url = sUrl || serverUrl.value;
-  const caps = serverCapabilitiesByServer.read(url) || [];
-
-  if (!caps.includes("unreads_get")) {
-    return false;
-  }
-
-  return wsSend({ cmd: "unreads_get" }, sUrl);
-}

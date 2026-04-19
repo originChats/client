@@ -1,4 +1,4 @@
-import { ENTRY_SIZE, IDX } from "./origin-fs-base";
+import { ENTRY_SIZE, IDX } from "./fs-constants";
 
 export async function prepareFolderEntries(
   dir: string,

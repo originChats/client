@@ -1,15 +1,4 @@
-export const ENTRY_SIZE = 14;
-
-export const IDX = {
-  TYPE: 0,
-  NAME: 1,
-  LOCATION: 2,
-  DATA: 3,
-  CREATED: 8,
-  EDITED: 9,
-  SIZE: 11,
-  UUID: 13,
-};
+import { ENTRY_SIZE, IDX } from "./fs-constants";
 
 async function md5(text: string): Promise<string> {
   if (crypto.subtle) {
@@ -127,7 +116,6 @@ export abstract class OriginFSBase {
     }
     return joined.toLowerCase();
   }
-
   abstract loadIndex(): Promise<void>;
 
   abstract writeEntry(path: string, entry: any, op?: "put" | "delete"): Promise<void>;

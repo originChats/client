@@ -1,4 +1,5 @@
-import { IDX, parsePathComponents, OriginFSBase } from "./origin-fs-base";
+import { IDX } from "./fs-constants";
+import { parsePathComponents, OriginFSBase } from "./origin-fs-base";
 
 const DB_NAME = "localOriginFS";
 const DB_VERSION = 1;
@@ -50,21 +51,6 @@ export class LocalOriginFSClass extends OriginFSBase {
       tx.oncomplete = () => resolve();
       tx.onerror = () => reject(tx.error);
     });
-  }
-
-  async writeFile(path: string, data: string): Promise<void> {
-    await this.loadIndex();
-    const now = Date.now();
-    const uuid = this.index[path.toLowerCase()];
-    if (!uuid) {
-      throw new Error("create via createFile");
-    }
-    const entry = this.entries[uuid];
-    entry[IDX.DATA] = data;
-    entry[IDX.EDITED] = now;
-    entry[IDX.SIZE] = data.length;
-    this.entries[uuid] = entry;
-    await this.writeEntry(path, entry);
   }
 
   async remove(path: string): Promise<void> {

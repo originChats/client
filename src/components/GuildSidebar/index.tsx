@@ -66,6 +66,22 @@ export function GuildSidebar() {
     return "";
   };
 
+  const guildItemInner = (server: { url: string; name: string }) => {
+    const muted = serverNotifSettings.value[server.url] === "none";
+    const unreads = muted ? 0 : getServerUnreadCount(server.url);
+    const pings = muted ? 0 : getServerPingCount(server.url);
+    return (
+      <>
+        <div className={styles.guildIcon}>
+          <ServerIcon server={server} />
+        </div>
+        <div className={styles.guildPill} />
+        {unreads > 0 && pings === 0 && <div className={styles.guildUnreadDot} />}
+        {pings > 0 && <div className={styles.guildPingBadge}>{pings}</div>}
+      </>
+    );
+  };
+
   const handleServerMouseDown = (index: number, url: string, e: MouseEvent) => {
     if (e.button === 2) return;
     e.preventDefault();
@@ -435,9 +451,6 @@ export function GuildSidebar() {
                 {!isCollapsed && (
                   <div className={styles.folderServers}>
                     {folderServers.map((server) => {
-                      const muted = serverNotifSettings.value[server.url] === "none";
-                      const unreads = muted ? 0 : getServerUnreadCount(server.url);
-                      const pings = muted ? 0 : getServerPingCount(server.url);
                       return (
                         <div
                           key={server.url}
@@ -445,12 +458,7 @@ export function GuildSidebar() {
                           onClick={() => switchServer(server.url)}
                           onContextMenu={(e) => handleServerContextMenu(e, server)}
                         >
-                          <div className={styles.guildIcon}>
-                            <ServerIcon server={server} />
-                          </div>
-                          <div className={styles.guildPill} />
-                          {unreads > 0 && pings === 0 && <div className={styles.guildUnreadDot} />}
-                          {pings > 0 && <div className={styles.guildPingBadge}>{pings}</div>}
+                          {guildItemInner(server)}
                         </div>
                       );
                     })}
@@ -461,9 +469,6 @@ export function GuildSidebar() {
           })}
 
           {serversNotInFolders.map((server, index) => {
-            const muted = serverNotifSettings.value[server.url] === "none";
-            const unreads = muted ? 0 : getServerUnreadCount(server.url);
-            const pings = muted ? 0 : getServerPingCount(server.url);
             const isBeingDragged = fromIdx === index && (isDragging || isDropping);
 
             let shiftStyle: any;
@@ -488,12 +493,7 @@ export function GuildSidebar() {
                 onMouseDown={(e) => handleServerMouseDown(index, server.url, e)}
                 onContextMenu={(e) => handleServerContextMenu(e, server)}
               >
-                <div className={styles.guildIcon}>
-                  <ServerIcon server={server} />
-                </div>
-                <div className={styles.guildPill} />
-                {unreads > 0 && pings === 0 && <div className={styles.guildUnreadDot} />}
-                {pings > 0 && <div className={styles.guildPingBadge}>{pings}</div>}
+                {guildItemInner(server)}
               </div>
             );
           })}

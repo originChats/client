@@ -38,6 +38,21 @@ class NotesChannel {
     });
   }
 
+  private transactionPromise<T>(
+    mode: IDBTransactionMode,
+    fn: (store: IDBObjectStore) => IDBRequest<T>
+  ): Promise<T> {
+    return new Promise((resolve, reject) => {
+      this.init().then(() => {
+        const transaction = this.db!.transaction([this.storageName], mode);
+        const store = transaction.objectStore(this.storageName);
+        const request = fn(store);
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      });
+    });
+  }
+
   async saveMessage(content: string, user = "you"): Promise<NoteMessage> {
     await this.init();
     const transaction = this.db!.transaction([this.storageName], "readwrite");
@@ -55,61 +70,28 @@ class NotesChannel {
   }
 
   async editMessage(key: string, content: string): Promise<void> {
-    await this.init();
-    return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction([this.storageName], "readwrite");
-      const store = transaction.objectStore(this.storageName);
-      const getRequest = store.get(key);
-      getRequest.onsuccess = () => {
-        const existing = getRequest.result as NoteMessage | undefined;
-        if (!existing) {
-          resolve();
-          return;
-        }
-        const updated: NoteMessage = { ...existing, content, edited: true };
-        const putRequest = store.put(updated);
-        putRequest.onsuccess = () => resolve();
-        putRequest.onerror = () => reject(putRequest.error);
-      };
-      getRequest.onerror = () => reject(getRequest.error);
-    });
+    const existing = await this.transactionPromise<NoteMessage | undefined>("readwrite", (store) =>
+      store.get(key)
+    );
+    if (existing) {
+      const updated: NoteMessage = { ...existing, content, edited: true };
+      await this.transactionPromise<any>("readwrite", (store) => store.put(updated));
+    }
   }
 
   async deleteMessage(key: string): Promise<void> {
-    await this.init();
-    return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction([this.storageName], "readwrite");
-      const store = transaction.objectStore(this.storageName);
-      const request = store.delete(key);
-      request.onsuccess = () => resolve();
-      request.onerror = () => reject(request.error);
-    });
+    await this.transactionPromise<undefined>("readwrite", (store) => store.delete(key));
   }
 
   async getAllMessages(): Promise<NoteMessage[]> {
-    await this.init();
-    return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction([this.storageName], "readonly");
-      const store = transaction.objectStore(this.storageName);
-      const request = store.getAll();
-      request.onsuccess = () => {
-        const msgs = request.result || [];
-        msgs.sort((a, b) => a.timestamp - b.timestamp);
-        resolve(msgs);
-      };
-      request.onerror = () => reject(request.error);
-    });
+    const msgs =
+      (await this.transactionPromise<NoteMessage[]>("readonly", (store) => store.getAll())) || [];
+    msgs.sort((a, b) => a.timestamp - b.timestamp);
+    return msgs;
   }
 
   async clearMessages(): Promise<void> {
-    await this.init();
-    return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction([this.storageName], "readwrite");
-      const store = transaction.objectStore(this.storageName);
-      const request = store.clear();
-      request.onsuccess = () => resolve();
-      request.onerror = () => reject(request.error);
-    });
+    await this.transactionPromise<undefined>("readwrite", (store) => store.clear());
   }
 }
 

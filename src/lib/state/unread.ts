@@ -176,9 +176,6 @@ class UnreadStore {
     this.save();
   }
 
-  setPing(url: string, channel: string, count: number) {
-    this.set(url, channel, count, true);
-  }
   setUnread(url: string, channel: string, count: number) {
     this.set(url, channel, count, false);
   }
@@ -209,9 +206,6 @@ class UnreadStore {
     if (!lastId) return false;
     const lastRead = this.getLastRead(url, channel);
     return lastRead ? lastId !== lastRead : false;
-  }
-  isChannelUnreadByLastMessage(url: string, channel: string, lastId?: string) {
-    return this.isUnreadByLastMessage(url, channel, lastId);
   }
 }
 
