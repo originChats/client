@@ -1,29 +1,8 @@
 import { useState } from "preact/hooks";
 import { wsSend } from "../../lib/websocket";
 import { serverUrl, currentUser } from "../../state";
+import type { PollData } from "../../types";
 import styles from "./PollEmbed.module.css";
-
-interface PollOption {
-  id: string;
-  text: string;
-  emoji?: string;
-  votes?: number;
-  voted?: boolean;
-  voters?: string[];
-}
-
-interface PollData {
-  id?: string;
-  question: string;
-  options: PollOption[];
-  allow_multiselect?: boolean;
-  expires_at?: number;
-  ended?: boolean;
-  ended_at?: number;
-  total_votes?: number;
-  results?: PollOption[];
-  user_votes?: string[];
-}
 
 interface PollEmbedProps {
   poll: PollData;

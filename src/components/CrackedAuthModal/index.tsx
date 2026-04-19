@@ -6,7 +6,6 @@ import {
   crackedAuthError,
   pendingCrackedCredentials,
   crackedAuthLoading,
-  crackedAuthMode,
 } from "../../lib/ui-signals";
 import { servers, token } from "../../state";
 import { wsSend } from "../../lib/websocket";

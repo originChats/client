@@ -180,7 +180,6 @@ export const pendingCrackedCredentials = signal<{
   password: string;
 } | null>(null);
 export const crackedAuthLoading = signal<boolean>(false);
-export const crackedAuthMode = signal<"choice" | "login">("choice");
 
 interface ImageViewerState {
   url: string;

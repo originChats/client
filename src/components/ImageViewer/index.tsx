@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "preact/hooks";
 import { Icon } from "../Icon";
 import { favGifs as dbFavGifs } from "../../lib/db";
+import { formatExpiry } from "../../lib/date-utils";
 
 interface ImageResult {
   url: string;
@@ -16,21 +17,6 @@ interface ImageViewerProps {
   currentIndex?: number;
   onClose: () => void;
   onNavigate?: (index: number) => void;
-}
-
-function formatExpiry(expiresAt: number): string {
-  const now = Date.now() / 1000;
-  const secondsLeft = expiresAt - now;
-  if (secondsLeft <= 0) return "Expired";
-
-  const minutes = Math.floor(secondsLeft / 60);
-  const hours = Math.floor(secondsLeft / 3600);
-  const days = Math.floor(secondsLeft / 86400);
-
-  if (days > 0) return `${days}d left`;
-  if (hours > 0) return `${hours}h left`;
-  if (minutes > 0) return `${minutes}m left`;
-  return "<1m left";
 }
 
 export function ImageViewer({

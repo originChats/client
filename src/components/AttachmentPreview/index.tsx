@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "preact/hooks";
 import { Icon } from "../Icon";
 import { imageViewerState } from "../../lib/ui-signals";
 import { downloadAttachment } from "../../lib/download-attachment";
+import { formatExpiry } from "../../lib/date-utils";
 
 interface Attachment {
   id: string;
@@ -39,21 +40,7 @@ function formatFileSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-function formatExpiry(expiresAt: number | null | undefined): string {
-  if (expiresAt == null) return "";
-  const now = Date.now() / 1000;
-  const secondsLeft = expiresAt - now;
-  if (secondsLeft <= 0) return "Expired";
 
-  const minutes = Math.floor(secondsLeft / 60);
-  const hours = Math.floor(secondsLeft / 3600);
-  const days = Math.floor(secondsLeft / 86400);
-
-  if (days > 0) return `${days}d left`;
-  if (hours > 0) return `${hours}h left`;
-  if (minutes > 0) return `${minutes}m left`;
-  return "<1m left";
-}
 
 function formatTime(seconds: number): string {
   if (!isFinite(seconds) || seconds < 0) return "0:00";
@@ -333,7 +320,7 @@ export function AttachmentPreview({
           >
             <video src={att.url} className="message-attachment-video" controls preload="metadata" />
             {showExpiry && (
-              <div className="message-attachment-expiry">{formatExpiry(att.expires_at!)}</div>
+              <div className="message-attachment-expiry">{formatExpiry(att.expires_at)}</div>
             )}
           </div>
         );
@@ -377,7 +364,7 @@ export function AttachmentPreview({
                       <>
                         <span className="message-attachment-file-dot">·</span>
                         <span className="message-attachment-expiry-inline">
-                          {formatExpiry(att.expires_at!)}
+                          {formatExpiry(att.expires_at)}
                         </span>
                       </>
                     )}

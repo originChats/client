@@ -11,7 +11,7 @@ export const IDX = {
   UUID: 13,
 };
 
-export async function md5(text: string): Promise<string> {
+async function md5(text: string): Promise<string> {
   if (crypto.subtle) {
     const encoder = new TextEncoder();
     const data = encoder.encode(text);
@@ -30,7 +30,7 @@ export async function md5(text: string): Promise<string> {
   }
 }
 
-export function randomString(length: number): string {
+function randomString(length: number): string {
   const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
   let result = "";
   for (let i = 0; i < length; i++) {

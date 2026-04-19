@@ -13,7 +13,7 @@ import styles from "./MessageArea.module.css";
 import { addUniversalContextMenuItems } from "../../lib/link-context-menu";
 import { downloadAttachment } from "../../lib/download-attachment";
 
-const highlightTimeouts = new Set<ReturnType<typeof setTimeout>>();
+
 
 import {
   currentChannel,
@@ -161,35 +161,36 @@ import { createGift, ROTUR_GIFT_URL } from "../../lib/rotur-api";
 import { VoiceCallView } from "../VoiceCallView";
 import { Header } from "../Header";
 import { startChannelLoad } from "../../lib/image-cache";
+import { formatMessageTime, formatShortDateTime, formatRelativeTimeSec } from "../../lib/date-utils";
 
-function formatRelativeTime(timestamp: number): string {
-  const now = Date.now();
-  const diff = now - timestamp * 1000;
-  const seconds = Math.floor(diff / 1000);
-  const minutes = Math.floor(seconds / 60);
-  const hours = Math.floor(minutes / 60);
-  const days = Math.floor(hours / 24);
+const highlightTimeouts = new Set<ReturnType<typeof setTimeout>>();
 
-  if (seconds < 60) return "just now";
-  if (minutes < 60) return `${minutes}m ago`;
-  if (hours < 24) return `${hours}h ago`;
-  if (days < 7) return `${days}d ago`;
-  return new Date(timestamp * 1000).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-  });
+function highlightMessageElement(id: string): boolean {
+  const el = document.querySelector(`[data-msg-id="${id}"]`);
+  if (el) {
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+    el.classList.add("highlight-flash");
+    const timeoutId = setTimeout(() => {
+      el.classList.remove("highlight-flash");
+      highlightTimeouts.delete(timeoutId);
+    }, 2000);
+    highlightTimeouts.add(timeoutId);
+    return true;
+  }
+  return false;
 }
 
-function formatFullDateTime(timestamp: number): string {
-  const date = new Date(timestamp * 1000);
-  return date.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
-  });
+function getThreadInfo() {
+  const isThread = !!(currentChannel.value?.type === "thread" && currentThread.value);
+  const threadId = isThread ? currentThread.value!.id : null as string | null;
+  const ch = (isThread
+    ? (currentChannel.value as any).parent_channel
+    : currentChannel.value?.name) || "";
+  const messageKey = threadId || ch;
+  return { isThread, threadId, ch, messageKey };
 }
+
+
 
 interface PendingImage {
   url: string;
@@ -221,12 +222,12 @@ function commitEditOrSend() {
   if (editingMessageRef) {
     const input = document.getElementById("message-input") as HTMLTextAreaElement;
     if (input && input.value.trim()) {
-      const isThread = currentChannel.value?.type === "thread" && currentThread.value;
+      const { isThread, threadId } = getThreadInfo();
       wsSend({
         cmd: "message_edit",
         id: editingMessageRef.id,
         channel: currentChannel.value?.name,
-        ...(isThread && { thread_id: currentThread.value?.id }),
+        ...(isThread && { thread_id: threadId }),
         content: convertChannelMentionsToLinks(
           replaceShortcodes(input.value.trim()),
           serverUrl.value,
@@ -393,16 +394,7 @@ function scrollToMessage(id: string): void {
   const exists = msgs.some((m) => m.id === id);
 
   if (exists) {
-    const el = document.querySelector(`[data-msg-id="${id}"]`);
-    if (el) {
-      el.scrollIntoView({ behavior: "smooth", block: "center" });
-      el.classList.add("highlight-flash");
-      const timeoutId = setTimeout(() => {
-        el.classList.remove("highlight-flash");
-        highlightTimeouts.delete(timeoutId);
-      }, 2000);
-      highlightTimeouts.add(timeoutId);
-    }
+    highlightMessageElement(id);
   } else {
     const caps = serverCapabilities.value;
     const hasAround = caps.includes("messages_around");
@@ -434,7 +426,7 @@ function RightPanelMessageCard({
           color={users.value[msg.user?.toLowerCase()]?.color ?? undefined}
           className="right-panel-username"
         />
-        <span className="right-panel-time">{formatRelativeTime(msg.timestamp)}</span>
+        <span className="right-panel-time">{formatRelativeTimeSec(msg.timestamp)}</span>
       </div>
       <div className="right-panel-message-content">
         <MessageContent
@@ -737,20 +729,7 @@ function RightPanelInner() {
       if (hasAround && targetChannel) {
         jumpToMessageAround(sUrl, msg.channel, msg.id);
       } else {
-        const scrollToMsg = () => {
-          const el = document.querySelector(`[data-msg-id="${msg.id}"]`);
-          if (el) {
-            el.scrollIntoView({ behavior: "smooth", block: "center" });
-            el.classList.add("highlight-flash");
-            const timeoutId = setTimeout(() => {
-              el.classList.remove("highlight-flash");
-              highlightTimeouts.delete(timeoutId);
-            }, 2000);
-            highlightTimeouts.add(timeoutId);
-            return true;
-          }
-          return false;
-        };
+        const scrollToMsg = () => highlightMessageElement(msg.id);
 
         if (!scrollToMsg()) {
           const checkInterval = setInterval(() => {
@@ -776,7 +755,7 @@ function RightPanelInner() {
           <div className={styles.inboxMessageContext}>
             <Icon name="Hash" size={12} />
             <span className={styles.inboxContextChannel}>{msg.channel}</span>
-            <span className={styles.inboxContextTime}>{formatFullDateTime(msg.timestamp)}</span>
+            <span className={styles.inboxContextTime}>{formatShortDateTime(msg.timestamp)}</span>
           </div>
           <MessageGroupRow
             key={msg.id}
@@ -917,12 +896,7 @@ export function MessageArea() {
     isLoadingOlder: loadingOlder,
     onOlderLoaded: clearLoadingOlder,
     onLoadOlder: () => {
-      const isThread = currentChannel.value?.type === "thread" && currentThread.value;
-      const threadId = isThread ? currentThread.value!.id : null;
-      const ch = isThread
-        ? (currentChannel.value as any).parent_channel
-        : currentChannel.value?.name;
-      const messageKey = threadId || ch;
+      const { isThread, threadId, ch, messageKey } = getThreadInfo();
       const sUrl = serverUrl.value;
       if (!ch || !sUrl) return;
       if (!isThread && SPECIAL_CHANNELS.has(ch)) return;
@@ -980,12 +954,7 @@ export function MessageArea() {
       }
     },
     onLoadNewer: () => {
-      const isThread = currentChannel.value?.type === "thread" && currentThread.value;
-      const threadId = isThread ? currentThread.value!.id : null;
-      const ch = isThread
-        ? (currentChannel.value as any).parent_channel
-        : currentChannel.value?.name;
-      const messageKey = threadId || ch;
+      const { isThread, threadId, ch, messageKey } = getThreadInfo();
       const sUrl = serverUrl.value;
       if (!ch || !sUrl) return;
       if (!isThread && SPECIAL_CHANNELS.has(ch)) return;
@@ -1045,12 +1014,7 @@ export function MessageArea() {
     isLoadingNewer: loadingNewer,
     onNewerLoaded: clearLoadingNewer,
     onUnloadMessages: (count: number, fromStart: boolean) => {
-      const isThread = currentChannel.value?.type === "thread" && currentThread.value;
-      const threadId = isThread ? currentThread.value!.id : null;
-      const ch = isThread
-        ? (currentChannel.value as any).parent_channel
-        : currentChannel.value?.name;
-      const messageKey = threadId || ch;
+      const { isThread, threadId, ch, messageKey } = getThreadInfo();
       const sUrl = serverUrl.value;
       if (!ch || !sUrl || !messageKey) return;
 
@@ -1114,8 +1078,7 @@ export function MessageArea() {
 
   // Jump to bottom - request latest messages and scroll
   const jumpToBottom = useCallback(() => {
-    const isThread = currentChannel.value?.type === "thread" && currentThread.value;
-    const threadId = isThread ? currentThread.value!.id : null;
+    const { isThread, threadId } = getThreadInfo();
     const ch = isThread ? (currentChannel.value as any).parent_channel : currentChannel.value?.name;
     const messageKey = threadId || ch;
     const sUrl = serverUrl.value;
@@ -1184,6 +1147,22 @@ export function MessageArea() {
   // ── Slash command mode ─────────────────────────────────────────────────────
   const [activeSlashCmd, setActiveSlashCmd] = useState<SlashCommand | null>(null);
   const [slashArgs, setSlashArgs] = useState<SlashCommandArgs>({});
+
+  const activateSlashCommand = useCallback((item: { type: string; label: string }): boolean => {
+    if (item.type !== "slash") return false;
+    const sUrl = serverUrl.value;
+    const cmd = (slashCommandsByServer.read(sUrl) || []).find((c) => c.name === item.label);
+    if (!cmd) return false;
+    const input = document.getElementById("message-input") as HTMLTextAreaElement | null;
+    if (input) {
+      input.value = "";
+      resetInputHeight();
+    }
+    autocomplete.close();
+    setActiveSlashCmd(cmd);
+    setSlashArgs({});
+    return true;
+  }, [autocomplete, setActiveSlashCmd, setSlashArgs]);
 
   const dismissSlashCmd = useCallback(() => {
     setActiveSlashCmd(null);
@@ -1520,19 +1499,7 @@ export function MessageArea() {
       const item = autocomplete.state.value.items[autocomplete.state.value.selectedIndex];
       if (item?.type === "slash") {
         e.preventDefault();
-        const sUrl = serverUrl.value;
-        const cmd = (slashCommandsByServer.read(sUrl) || []).find((c) => c.name === item.label);
-        if (cmd) {
-          const input = document.getElementById("message-input") as HTMLTextAreaElement | null;
-          if (input) {
-            input.value = "";
-            resetInputHeight();
-          }
-          autocomplete.close();
-          setActiveSlashCmd(cmd);
-          setSlashArgs({});
-        }
-        return;
+        if (activateSlashCommand(item)) return;
       }
     }
 
@@ -2061,13 +2028,13 @@ export function MessageArea() {
           title: "Delete Message",
           message: "Are you sure you want to delete this message? This action cannot be undone.",
           onConfirm: () => {
-            const isThread = currentChannel.value?.type === "thread" && currentThread.value;
+            const { isThread, threadId } = getThreadInfo();
             wsSend(
               {
                 cmd: "message_delete",
                 id: msg.id,
                 channel: currentChannel.value?.name,
-                ...(isThread && { thread_id: currentThread.value?.id }),
+                ...(isThread && { thread_id: threadId }),
               },
               serverUrl.value
             );
@@ -2173,14 +2140,14 @@ export function MessageArea() {
     const liveMsg = channelMsgs.find((m) => m.id === msg.id);
     const liveUsers: string[] = (liveMsg?.reactions?.[emoji] ?? []) as string[];
     const hasReacted = liveUsers.includes(currentUser.value?.username ?? "");
-    const isThread = currentChannel.value?.type === "thread" && currentThread.value;
+    const { isThread, threadId } = getThreadInfo();
     wsSend(
       {
         cmd: hasReacted ? "message_react_remove" : "message_react_add",
         id: msg.id,
         emoji,
         channel: currentChannel.value?.name,
-        ...(isThread && { thread_id: currentThread.value?.id }),
+        ...(isThread && { thread_id: threadId }),
       },
       serverUrl.value
     );
@@ -2196,26 +2163,7 @@ export function MessageArea() {
     return replyMsg || null;
   };
 
-  const formatTimestamp = (timestamp: number): string => {
-    const date = new Date(timestamp * 1000);
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const msgDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
 
-    const time = date.toLocaleTimeString([], {
-      hour: "numeric",
-      minute: "2-digit",
-    });
-
-    if (msgDate < today) {
-      return `${date.toLocaleDateString([], {
-        month: "short",
-        day: "numeric",
-      })} ${time}`;
-    }
-
-    return time;
-  };
 
   const getReplyPreview = (msg: Message): string => {
     const replyMsg = getReplyMessage(msg);
@@ -2248,7 +2196,47 @@ export function MessageArea() {
     return null;
   };
 
-  function renderGroupedMessages(group: MessageGroup) {
+  function renderMessageBody(msg: Message, displayName: string, isHead: boolean, webhook: any, reactions: Record<string, string[]>, showAttachmentMenu: boolean) {
+  const hasAttachments = msg.attachments && msg.attachments.length > 0;
+  return (
+    <div className="message-group-content">
+      {(isHead || webhook) && (
+        <div className="message-header">
+          <span
+            className="username clickable"
+            style={webhook ? undefined : { color: getUserColor(msg.user) }}
+            onClick={(e: any) => !webhook && openUserPopout(e, msg.user)}
+            onContextMenu={(e: any) => !webhook && showUserMenu(e, msg.user)}
+          >
+            {displayName}
+          </span>
+          {webhook && <WebhookBadge name={webhook.name} />}
+          <span className="timestamp">{formatMessageTime(msg.timestamp)}</span>
+        </div>
+      )}
+      <MessageContent
+        content={msg.content}
+        currentUsername={currentUser.value?.username}
+        authorUsername={msg.user}
+        messageId={msg.id}
+        pings={msg.pings}
+        messageEmbeds={msg.embeds}
+      />
+      {renderTranslation(msg)}
+      {hasAttachments && (
+        <AttachmentPreview
+          attachments={msg.attachments}
+          hasContent={!!msg.content}
+          {...(showAttachmentMenu ? { onContextMenu: handleAttachmentContextMenu } : {})}
+        />
+      )}
+      {msg.edited && <span className="edited-indicator">(edited)</span>}
+      {renderReactions(msg, reactions)}
+    </div>
+  );
+}
+
+function renderGroupedMessages(group: MessageGroup) {
     const allMessages = [group.head, ...group.following];
     const headIsReply = !!group.head.reply_to;
 
@@ -2398,7 +2386,7 @@ export function MessageArea() {
                           {displayName}
                         </span>
                         {webhook && <WebhookBadge name={webhook.name} />}
-                        <span className="timestamp">{formatTimestamp(msg.timestamp)}</span>
+                        <span className="timestamp">{formatMessageTime(msg.timestamp)}</span>
                       </div>
                       <MessageContent
                         content={msg.content}
@@ -2441,7 +2429,7 @@ export function MessageArea() {
                           {displayName}
                         </span>
                         {webhook && <WebhookBadge name={webhook.name} />}
-                        <span className="timestamp">{formatTimestamp(msg.timestamp)}</span>
+                        <span className="timestamp">{formatMessageTime(msg.timestamp)}</span>
                       </div>
                       <MessageContent
                         content={msg.content}

@@ -113,28 +113,6 @@ export function emojiImgUrl(value: string, isChar = false): string | null {
   return `${TWEMOJI_CDN_BASE}/${hexcode}.svg`;
 }
 
-function getEmojiImgOrDataUri(emoji: string): string | null {
-  if (useSystemEmojis.value) return null;
-
-  const hexcode = twemoji.convert.toCodePoint(emoji);
-  if (!hexcode.includes("200d")) {
-    const cleaned = hexcode.replace(/-?fe0f/gi, "");
-    ensureCached(cleaned);
-    return dataUriCache.get(cleaned) || `${TWEMOJI_CDN_BASE}/${cleaned}.svg`;
-  }
-
-  ensureCached(hexcode);
-  return dataUriCache.get(hexcode) || `${TWEMOJI_CDN_BASE}/${hexcode}.svg`;
-}
-
-function getCachedEmojiDataUri(hexcode: string): string | null {
-  return dataUriCache.get(hexcode) || null;
-}
-
-function useEmojiImg(emoji: string): string | null {
-  return getEmojiImgOrDataUri(emoji);
-}
-
 const COMMON_EMOJI_HEXCODES = [
   "1f600",
   "1f601",
@@ -258,18 +236,6 @@ export function getCustomEmojiUrl(emoji: string): string | null {
   if (!isCustomEmoji(emoji)) return null;
   const urlPart = emoji.slice(ORIGINCHATS_PREFIX.length);
   return `https://${urlPart}`;
-}
-
-export function formatCustomEmojiForServer(emojiId: string, serverUrl: string): string {
-  const cleanServerUrl = serverUrl.replace(/^https?:\/\//, "");
-  return `${ORIGINCHATS_PREFIX}${cleanServerUrl}/emojis/${emojiId}`;
-}
-
-export function getEmojiImageUrl(emoji: string): string | null {
-  if (isCustomEmoji(emoji)) {
-    return getCustomEmojiUrl(emoji);
-  }
-  return emojiImgUrl(emoji, true);
 }
 
 export function parseEmojisInText(text: string): string {

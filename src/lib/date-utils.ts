@@ -128,10 +128,44 @@ function formatShortDateTime(timestamp: number): string {
   });
 }
 
+function formatRelativeTimeSec(timestamp: number): string {
+  const now = Date.now();
+  const diff = now - timestamp * 1000;
+  const seconds = Math.floor(diff / 1000);
+  const minutes = Math.floor(seconds / 60);
+  const hours = Math.floor(minutes / 60);
+  const days = Math.floor(hours / 24);
+  if (seconds < 60) return "just now";
+  if (minutes < 60) return `${minutes}m ago`;
+  if (hours < 24) return `${hours}h ago`;
+  if (days < 7) return `${days}d ago`;
+  return new Date(timestamp * 1000).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+  });
+}
+
+function formatExpiry(expiresAt: number | null | undefined): string {
+  if (expiresAt == null) return "";
+  const now = Date.now() / 1000;
+  const secondsLeft = expiresAt - now;
+  if (secondsLeft <= 0) return "Expired";
+  const minutes = Math.floor(secondsLeft / 60);
+  const hours = Math.floor(secondsLeft / 3600);
+  const days = Math.floor(secondsLeft / 86400);
+  if (days > 0) return `${days}d left`;
+  if (hours > 0) return `${hours}h left`;
+  if (minutes > 0) return `${minutes}m left`;
+  return "<1m left";
+}
+
 export {
   formatRelativeTimeShort,
   formatJoinDate,
   formatDateShort,
   formatMessageTime,
   formatThreadTime,
+  formatShortDateTime,
+  formatRelativeTimeSec,
+  formatExpiry,
 };

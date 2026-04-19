@@ -93,7 +93,7 @@ interface MessageEmbedFooter {
   icon_url?: string;
 }
 
-interface PollOption {
+export interface PollOption {
   id: string;
   text: string;
   emoji?: string;
@@ -102,7 +102,7 @@ interface PollOption {
   voters?: string[];
 }
 
-interface PollData {
+export interface PollData {
   id?: string;
   question: string;
   options: PollOption[];
