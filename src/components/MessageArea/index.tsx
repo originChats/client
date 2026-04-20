@@ -1136,7 +1136,12 @@ export function MessageArea() {
     if (now - lastTypingSent.current < 3000) return;
     if (!currentChannel.value) return;
     lastTypingSent.current = now;
-    wsSend({ cmd: "typing", channel: currentChannel.value.name });
+    const { isThread, threadId, ch } = getThreadInfo();
+    wsSend({
+      cmd: "typing",
+      channel: ch,
+      ...(isThread && { thread_id: threadId }),
+    });
   }, []);
 
   useEffect(() => {

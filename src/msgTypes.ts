@@ -93,6 +93,7 @@ interface Typing {
   cmd: "typing";
   channel: string;
   user: string;
+  thread_id?: string;
 }
 
 interface ThreadCreate {
