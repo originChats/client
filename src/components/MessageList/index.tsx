@@ -4,7 +4,7 @@ import { useSignalEffect } from "@preact/signals";
 import { Icon } from "../Icon";
 import { MessageGroupRow } from "../MessageGroupRow";
 import type { Message } from "../../types";
-import { messages, users } from "../../state";
+import { messages, users, currentThread } from "../../state";
 import { translatedMessages, translatingMessageId, showContextMenu } from "../../lib/ui-signals";
 import { formatShortDateTime } from "../../lib/date-utils";
 import type { MessageListProps } from "./types";
@@ -36,6 +36,8 @@ function MessageListInner({
 
   const messagesList = messagesProp ?? channelMessages;
   const messageGroups = useMemo(() => groupMessages(messagesList), [messagesList]);
+  const thread = currentThread.value;
+  const threadCreator = thread?.created_by;
 
   const translated = translatedMessages.value;
   const translating = translatingMessageId.value;
@@ -73,6 +75,7 @@ function MessageListInner({
     const replyUserColor = replyTo?.user
       ? users.value[replyTo.user?.toLowerCase()]?.color || undefined
       : undefined;
+    const isOriginalPoster = threadCreator ? msg.user === threadCreator : false;
 
     const ctx = getChannelContext(msg);
 
@@ -92,6 +95,7 @@ function MessageListInner({
             translatingMessageId={translating}
             showReply={showReplyPreview}
             replyUserColor={replyUserColor}
+            isOriginalPoster={isOriginalPoster}
           />
         </div>
       );
@@ -105,6 +109,7 @@ function MessageListInner({
         onContextMenu={(e: any) => handleMessageContextMenu(e, msg)}
         translatedMessages={translated}
         translatingMessageId={translating}
+        isOriginalPoster={threadCreator ? msg.user === threadCreator : false}
       />
     );
   };
@@ -153,6 +158,7 @@ function MessageListInner({
           onContextMenu={(e: any) => handleMessageContextMenu(e, group.head)}
           translatedMessages={translated}
           translatingMessageId={translating}
+          isOriginalPoster={threadCreator ? group.head.user === threadCreator : false}
         />
       ))}
       {hasMore && onLoadMore && (

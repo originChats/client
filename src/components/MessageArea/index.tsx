@@ -115,6 +115,7 @@ import {
   hideActionButtons,
 } from "../MessageActionButtons/FloatingActionButtons";
 import { WebhookBadge } from "../WebhookBadge";
+import { Badge } from "../Badge";
 import { AttachmentPreview } from "../AttachmentPreview";
 import { openUserPopout } from "../UserPopout";
 import { UserProfileCard } from "../UserProfile";
@@ -1948,6 +1949,8 @@ export function MessageArea() {
 
   function renderGroupedMessages(group: MessageGroup) {
     const allMessages = [group.head, ...group.following];
+    const thread = currentThread.value;
+    const threadCreator = thread?.created_by;
 
     return allMessages.map((msg, idx) => {
       const reactions = msg.reactions || {};
@@ -1959,6 +1962,7 @@ export function MessageArea() {
       const displayName = webhook?.name || getDisplayName(msg.user);
       const isPending = (msg as any)._pending;
       const showHeader = isHead || interaction || webhook;
+      const isOriginalPoster = threadCreator ? msg.user === threadCreator : false;
 
       const groupClass =
         (showHeader
@@ -1990,6 +1994,7 @@ export function MessageArea() {
           >
             {displayName}
           </span>
+          {isOriginalPoster && <Badge variant="op">OP</Badge>}
           {webhook && <WebhookBadge name={webhook.name} />}
           <span className="timestamp">{formatMessageTime(msg.timestamp)}</span>
         </div>

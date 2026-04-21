@@ -3,6 +3,7 @@ import { useMemo } from "preact/hooks";
 import { currentUser } from "../../state";
 import { UserAvatar } from "../UserAvatar";
 import { MessageContent } from "../MessageContent";
+import { Badge } from "../Badge";
 import type { Message } from "../../types";
 import { openUserPopout } from "../UserPopout";
 import { useDisplayName, useUserColor } from "../../lib/hooks/useDisplayName";
@@ -25,6 +26,7 @@ interface MessageGroupRowProps {
   replyUserColor?: string;
   avatarSize?: number;
   isPending?: boolean;
+  isOriginalPoster?: boolean;
 }
 
 function MessageGroupRowInner({
@@ -37,6 +39,7 @@ function MessageGroupRowInner({
   replyUserColor,
   avatarSize,
   isPending = false,
+  isOriginalPoster = false,
 }: MessageGroupRowProps) {
   const headUser = group.head.user;
   const displayName = useDisplayName(headUser);
@@ -113,6 +116,7 @@ function MessageGroupRowInner({
           >
             {displayName}
           </span>
+          {isOriginalPoster && <Badge variant="op">OP</Badge>}
           <span className={styles.timestamp}>{formatRelativeTimeShort(group.head.timestamp)}</span>
         </div>
         <div className={styles.messageBody}>

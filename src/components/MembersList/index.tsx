@@ -17,13 +17,14 @@ import { openUserPopout } from "../UserPopout";
 import { UserAvatar } from "../UserAvatar";
 import { useDisplayName } from "../../lib/hooks/useDisplayName";
 import { MessageContent } from "../MessageContent";
+import { Badge } from "../Badge";
 import styles from "./MembersList.module.css";
 
 function MembersListInner() {
   const { showUserMenu, closeUserMenu, userMenu } = useUserContextMenu();
 
-  const isDM = serverUrl.value === DM_SERVER_URL;
   const thread = currentThread.value;
+  const threadCreator = thread?.created_by;
 
   let memberList: Array<{
     username: string;
@@ -124,6 +125,7 @@ function MembersListInner() {
                   offline={!isOnline(user.status)}
                   onContextMenu={showUserMenu}
                   showStatus={showStatus}
+                  isOriginalPoster={threadCreator ? user.username === threadCreator : false}
                 />
               ))}
             </div>
@@ -138,6 +140,7 @@ function MembersListInner() {
                   user={user}
                   onContextMenu={showUserMenu}
                   showStatus={showStatus}
+                  isOriginalPoster={threadCreator ? user.username === threadCreator : false}
                 />
               ))}
             </>
@@ -152,6 +155,7 @@ function MembersListInner() {
                   offline
                   onContextMenu={showUserMenu}
                   showStatus={showStatus}
+                  isOriginalPoster={threadCreator ? user.username === threadCreator : false}
                 />
               ))}
             </>
@@ -176,11 +180,13 @@ function MemberItemInner({
   offline,
   onContextMenu,
   showStatus,
+  isOriginalPoster = false,
 }: {
   user: any;
   offline?: boolean;
   onContextMenu: (e: MouseEvent, username: string) => void;
   showStatus?: boolean;
+  isOriginalPoster?: boolean;
 }) {
   const displayName = useDisplayName(user.username);
   const statusClass = user.status?.status || "offline";
@@ -207,6 +213,7 @@ function MemberItemInner({
       <div className={styles.memberInfo}>
         <span className={styles.name} style={user.color ? { color: user.color } : undefined}>
           {displayName} {isOwner && <Icon name="Crown" size={14} />}
+          {isOriginalPoster && <Badge variant="op">OP</Badge>}
         </span>
         {showStatus && statusText && !offline && (
           <span className={styles.statusText}>
