@@ -7,10 +7,9 @@ import {
   currentChannel,
   currentThread,
   rolesByServer,
-  DM_SERVER_URL,
   hasCapability,
 } from "../../state";
-import { renderMembersSignal, mobilePanelOpen } from "../../lib/ui-signals";
+import { mobilePanelOpen } from "../../lib/ui-signals";
 import { Icon } from "../Icon";
 import { UserContextMenu, useUserContextMenu } from "../UserContextMenu";
 import { openUserPopout } from "../UserPopout";
@@ -26,13 +25,15 @@ function MembersListInner() {
   const thread = currentThread.value;
   const threadCreator = thread?.created_by;
 
-  let memberList: Array<{
+  interface MemberItem {
     username: string;
     nickname?: string;
     status?: { status: string; text?: string };
     color: string | null;
     roles: string[];
-  }>;
+  }
+
+  let memberList: Array<MemberItem>;
 
   memberList = Object.values(users.value)
     .filter((u) => canViewInChannel(u.roles || [], currentChannel.value?.permissions?.view))
@@ -42,7 +43,7 @@ function MembersListInner() {
       status: u.status,
       color: u.color || null,
       roles: u.roles || [],
-    }));
+    }) as MemberItem);
 
   if (thread && thread.participants) {
     memberList = memberList.filter((m) => thread.participants?.includes(m.username));
@@ -72,23 +73,28 @@ function MembersListInner() {
   const isOnline = (status: { status: string; text?: string } | undefined) =>
     typeof status === "undefined" || status.status !== "offline";
 
+  const byDisplayName = (a: MemberItem, b: MemberItem) =>
+    (a.nickname || a.username).localeCompare(b.nickname || b.username);
+
   const hoistedSections = hoistedRoles
     .map(({ name, color }) => {
       const members = memberList
         .filter((m) => isOnline(m.status) && getHoistedRole(m) === name)
-        .sort((a, b) => a.username.localeCompare(b.username));
+        .sort(byDisplayName);
+      
       members.forEach((m) => assignedToHoisted.add(m.username));
       return { roleName: name, color, members };
     })
     .filter((s) => s.members.length > 0);
 
-  const remainder = memberList.filter((m) => !assignedToHoisted.has(m.username));
+  const remainder = memberList
+    .filter((m) => !assignedToHoisted.has(m.username))
+    .sort(byDisplayName);
+
   const onlineRemainder = remainder
     .filter((u) => isOnline(u.status))
-    .sort((a, b) => a.username.localeCompare(b.username));
   const offlineRemainder = remainder
     .filter((u) => !isOnline(u.status))
-    .sort((a, b) => a.username.localeCompare(b.username));
 
   const totalOnline =
     hoistedSections.reduce((sum, s) => sum + s.members.length, 0) + onlineRemainder.length;
