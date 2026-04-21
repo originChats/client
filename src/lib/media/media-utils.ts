@@ -1,4 +1,4 @@
-export const TRUSTED_DOMAINS = [
+const TRUSTED_DOMAINS = [
   "avatars.rotur.dev",
   "photos.rotur.dev",
   "roturcdn.milosantos.com",
@@ -32,7 +32,7 @@ export function proxyImageUrl(url: string): string {
     if (TRUSTED_DOMAINS.some((d) => parsed.hostname.endsWith(d))) {
       return url;
     }
-    return `https://images.rotur.dev/${parsed.hostname}${parsed.pathname}`;
+    return `https://proxy.mistium.com?url=${encodeURIComponent(url)}`;
   } catch {
     return url;
   }

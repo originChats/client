@@ -1,8 +1,5 @@
 import { signal } from "@preact/signals";
 import {
-  TRUSTED_DOMAINS,
-  IMAGE_EXTENSIONS,
-  VIDEO_EXTENSIONS,
   hasExtension as hasExtensionUtil,
   proxyImageUrl as proxyImageUrlUtil,
 } from "./lib/media/media-utils";

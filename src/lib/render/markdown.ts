@@ -2,7 +2,6 @@ import hljs from "highlight.js/lib/core";
 import { servers, threadsByServer, customEmojisByServer, useSystemEmojis } from "../../state";
 import { lookupShortcode } from "../emoji/shortcodes";
 import {
-  TRUSTED_DOMAINS,
   IMAGE_EXTENSIONS,
   VIDEO_EXTENSIONS,
   hasExtension as hasExtensionUtil,
